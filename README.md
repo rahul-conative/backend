@@ -320,3 +320,4 @@ Route discovery endpoint (advanced reusable integration support):
 - Run app and workers independently behind autoscaling.
 - Add distributed tracing and a central config service as the next enterprise step.
 # Ecommerce-Backend
+# admin
