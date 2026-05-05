@@ -12,16 +12,16 @@ const { mongoose } = require("../../../infrastructure/mongo/mongo-client");
 const {
   postgresPool,
 } = require("../../../infrastructure/postgres/postgres-client");
-const { hashValue } = require("../../../shared/utils/hash");
+const { hashText } = require("../../../shared/tools/hash");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   DEFAULT_PLATFORM_MODULES,
   DEFAULT_SELLER_MODULES,
-  normalizeModuleName,
-} = require("../../../shared/auth/module-scope");
+  cleanModuleName,
+} = require("../../../shared/auth/module-access");
 const {
   SELLER_ONBOARDING_STATUS,
-  buildSellerOnboardingState,
+  makeSellerOnboardingState,
 } = require("../../../shared/domain/seller-onboarding");
 
 class AdminService {
@@ -68,7 +68,7 @@ class AdminService {
   enrichSellerForAdmin(seller, kyc = null) {
     const plainSeller = this.toPlainObject(seller);
     const sellerProfile = this.toPlainObject(plainSeller.sellerProfile || {});
-    const onboardingState = buildSellerOnboardingState({
+    const onboardingState = makeSellerOnboardingState({
       sellerProfile,
       user: plainSeller,
       kyc,
@@ -171,7 +171,7 @@ class AdminService {
     const requestedAccountStatus = payload.accountStatus || payload.status;
     const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
     const kyc = kycBySellerId.get(String(sellerId)) || null;
-    const onboardingState = buildSellerOnboardingState({
+    const onboardingState = makeSellerOnboardingState({
       sellerProfile: currentSeller.sellerProfile || {},
       user: currentSeller,
       kyc,
@@ -260,8 +260,8 @@ class AdminService {
     return this.taxService.getTaxReport(query);
   }
 
-  async generateInvoice(orderId) {
-    return this.taxService.generateInvoice(orderId);
+  async createInvoice(orderId) {
+    return this.taxService.createInvoice(orderId);
   }
 
   async createApiKey(payload, actor) {
@@ -509,7 +509,7 @@ class AdminService {
     return DEFAULT_PLATFORM_MODULES;
   }
 
-  buildRbacModuleLookup(modules = []) {
+  getRbacModuleMap(modules = []) {
     const lookup = new Map();
     const aliases = {
       product: "products",
@@ -553,7 +553,7 @@ class AdminService {
       });
     }
 
-    const rbacModulesBySlug = this.buildRbacModuleLookup(
+    const rbacModulesBySlug = this.getRbacModuleMap(
       permissionMatrix.modules,
     );
     const includePermissions = query.includePermissions !== false;
@@ -568,6 +568,12 @@ class AdminService {
         source: rbacModule ? "rbac" : "platform",
         permissions: includePermissions
           ? rbacModule?.permissions || []
+          : undefined,
+        permissionsByAction: includePermissions
+          ? rbacModule?.permissionsByAction || {}
+          : undefined,
+        permissionKeys: includePermissions
+          ? rbacModule?.permissionKeys || {}
           : undefined,
         assignedPermissionCount: rbacModule?.assignedPermissionCount || 0,
       };
@@ -588,12 +594,13 @@ class AdminService {
           0,
         ),
       },
+      actions: permissionMatrix.actions,
     };
   }
 
   sanitizeModules(modules) {
     const normalized = Array.from(
-      new Set((modules || []).map(normalizeModuleName).filter(Boolean)),
+      new Set((modules || []).map(cleanModuleName).filter(Boolean)),
     );
     return normalized.filter((moduleName) =>
       DEFAULT_PLATFORM_MODULES.includes(moduleName),
@@ -605,7 +612,7 @@ class AdminService {
     if (existing) {
       throw new AppError("User already exists", 409);
     }
-    const passwordHash = await hashValue(payload.password);
+    const passwordHash = await hashText(payload.password);
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
       phone: payload.phone,
@@ -648,7 +655,7 @@ class AdminService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
-    const passwordHash = await hashValue(payload.password);
+    const passwordHash = await hashText(payload.password);
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
       phone: payload.phone,

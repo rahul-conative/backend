@@ -12,7 +12,7 @@ class TaxService {
     this.orderRepository = orderRepository;
   }
 
-  async generateInvoice(orderId) {
+  async createInvoice(orderId) {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
       throw new AppError("Order not found", 404);
@@ -56,16 +56,16 @@ class TaxService {
 
     const ledgerEntries = [];
     if (cgstAmount > 0) {
-      ledgerEntries.push(this.buildLedgerEntry(orderId, invoice.id, "tax_collected", "cgst", cgstAmount));
+      ledgerEntries.push(this.makeLedgerEntry(orderId, invoice.id, "tax_collected", "cgst", cgstAmount));
     }
     if (sgstAmount > 0) {
-      ledgerEntries.push(this.buildLedgerEntry(orderId, invoice.id, "tax_collected", "sgst", sgstAmount));
+      ledgerEntries.push(this.makeLedgerEntry(orderId, invoice.id, "tax_collected", "sgst", sgstAmount));
     }
     if (igstAmount > 0) {
-      ledgerEntries.push(this.buildLedgerEntry(orderId, invoice.id, "tax_collected", "igst", igstAmount));
+      ledgerEntries.push(this.makeLedgerEntry(orderId, invoice.id, "tax_collected", "igst", igstAmount));
     }
     if (tcsAmount > 0) {
-      ledgerEntries.push(this.buildLedgerEntry(orderId, invoice.id, "tax_collected", "tcs", tcsAmount));
+      ledgerEntries.push(this.makeLedgerEntry(orderId, invoice.id, "tax_collected", "tcs", tcsAmount));
     }
 
     await this.taxRepository.insertLedgerEntries(ledgerEntries);
@@ -93,7 +93,7 @@ class TaxService {
     };
   }
 
-  buildLedgerEntry(orderId, invoiceId, entryType, taxComponent, amount) {
+  makeLedgerEntry(orderId, invoiceId, entryType, taxComponent, amount) {
     return {
       orderId,
       invoiceId,

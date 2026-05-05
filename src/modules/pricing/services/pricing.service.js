@@ -43,7 +43,7 @@ class PricingService {
           throw new AppError(`Insufficient stock for product ${product.title}`, 409);
         }
 
-        const taxData = await this.resolveProductTaxData(product);
+        const taxData = await this.getProductTaxData(product);
         const unitPrice = Number(product.price);
         const lineTotal = unitPrice * item.quantity;
 
@@ -317,7 +317,7 @@ class PricingService {
     return { walletAppliedAmount };
   }
 
-  async resolveProductTaxData(product) {
+  async getProductTaxData(product) {
     const defaultTax = {
       gstRate: Number(product.gstRate || 18),
       cessRate: 0,

@@ -1,11 +1,11 @@
 const express = require("express");
 const { TaxController } = require("../controllers/tax.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorize } = require("../../../shared/middleware/authorize");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowRoles } = require("../../../shared/middleware/access");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { ROLES } = require("../../../shared/constants/roles");
-const { generateOrderInvoiceSchema, taxReportSchema } = require("../validation/tax.validation");
+const { createOrderInvoiceSchema, taxReportSchema } = require("../validation/tax.validation");
 
 const taxRoutes = express.Router();
 const taxController = new TaxController();
@@ -13,17 +13,17 @@ const taxController = new TaxController();
 taxRoutes.post(
   "/orders/:orderId/invoice",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(generateOrderInvoiceSchema),
-  asyncHandler(taxController.generateOrderInvoice),
+  allowRoles(ROLES.ADMIN),
+  checkInput(createOrderInvoiceSchema),
+  catchErrors(taxController.createOrderInvoice),
 );
 
 taxRoutes.get(
   "/reports",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(taxReportSchema),
-  asyncHandler(taxController.getReport),
+  allowRoles(ROLES.ADMIN),
+  checkInput(taxReportSchema),
+  catchErrors(taxController.getReport),
 );
 
 module.exports = { taxRoutes };

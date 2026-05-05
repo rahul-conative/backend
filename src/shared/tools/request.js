@@ -1,4 +1,4 @@
-function buildRequestContext(req) {
+function getRequestInfo(req) {
   return {
     ipAddress: req.ip,
     userAgent: req.get("user-agent") || "unknown",
@@ -7,4 +7,4 @@ function buildRequestContext(req) {
   };
 }
 
-module.exports = { buildRequestContext };
+module.exports = { getRequestInfo };

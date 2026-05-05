@@ -1,5 +1,5 @@
-const { successResponse } = require("../../../shared/http/response");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { okResponse } = require("../../../shared/http/reply");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 const { WalletService } = require("../services/wallet.service");
 
 class WalletController {
@@ -8,9 +8,9 @@ class WalletController {
   }
 
   getMyWallet = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const wallet = await this.walletService.getWalletSummary(actor.userId);
-    res.json(successResponse(wallet));
+    res.json(okResponse(wallet));
   };
 }
 

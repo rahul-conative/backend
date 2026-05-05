@@ -1,13 +1,13 @@
 const { AuthRepository } = require("../repositories/auth.repository");
 const { AppError } = require("../../../shared/errors/app-error");
-const { hashValue, compareValue } = require("../../../shared/utils/hash");
+const { hashText, checkHash } = require("../../../shared/tools/hash");
 const {
-  generateAccessToken,
-  generateRefreshToken,
-  generateOnboardingToken,
-  verifyRefreshToken,
-} = require("../../../shared/utils/tokens");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+  makeAccessToken,
+  makeRefreshToken,
+  makeOnboardingToken,
+  readRefreshToken,
+} = require("../../../shared/tools/tokens");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { RbacService } = require("../../rbac/services/rbac.service");
 const { ROLES } = require("../../../shared/constants/roles");
@@ -17,7 +17,7 @@ const { securityEventService } = require("../../../shared/security/security-even
 const { SECURITY_EVENTS } = require("../../../shared/constants/security-events");
 const { WalletService } = require("../../wallet/services/wallet.service");
 const { ReferralService } = require("../../referral/services/referral.service");
-const { generateOTP } = require("../../../shared/utils/helpers");
+const { createOtp } = require("../../../shared/tools/otp");
 const { redis } = require("../../../infrastructure/redis/redis-client");
 const { sendMail } = require("../../../infrastructure/mail/mailer");
 const otpEmailTemplate = require("../../../../templates/otp-email.ejs");
@@ -27,12 +27,12 @@ const fs = require("fs");
 const { env } = require("../../../config/env");
 const {
   SELLER_ONBOARDING_STATUS,
-  buildSellerOnboardingChecklist,
-  buildSellerOnboardingState,
+  makeSellerOnboardingChecklist,
+  makeSellerOnboardingState,
   getSellerKycStatus,
   hasCompleteSellerBankDetails: hasCompleteSellerBankDetailsForOnboarding,
   hasCompleteSellerProfile: hasCompleteSellerProfileForOnboarding,
-  resolveSellerOnboardingStatus,
+  getSellerOnboardingStatus,
 } = require("../../../shared/domain/seller-onboarding");
 
 class AuthService {
@@ -68,7 +68,7 @@ class AuthService {
     return labels[purpose] || "Verification";
   }
 
-  buildInitialSellerProfile(payload = {}) {
+  makeInitialSellerProfile(payload = {}) {
     const profileName = [payload.profile?.firstName, payload.profile?.lastName]
       .map((value) => String(value || "").trim())
       .filter(Boolean)
@@ -98,24 +98,24 @@ class AuthService {
     return hasCompleteSellerBankDetailsForOnboarding(bankDetails);
   }
 
-  buildSellerChecklist(user, kyc) {
-    return buildSellerOnboardingChecklist({
+  makeSellerChecklist(user, kyc) {
+    return makeSellerOnboardingChecklist({
       sellerProfile: user?.sellerProfile || {},
       user,
       kyc,
     });
   }
 
-  resolveSellerAuthStatus(user, checklist, kycStatus) {
-    return resolveSellerOnboardingStatus(
+  getSellerAuthStatus(user, checklist, kycStatus) {
+    return getSellerOnboardingStatus(
       checklist,
       kycStatus,
       user?.sellerProfile?.onboardingStatus,
     );
   }
 
-  async buildOnboardingResponse(user) {
-    const onboardingToken = generateOnboardingToken({
+  async makeOnboardingResponse(user) {
+    const onboardingToken = makeOnboardingToken({
       sub: user.id,
       email: user.email,
       role: user.role,
@@ -130,7 +130,7 @@ class AuthService {
     };
   }
 
-  async buildTokenPayload(user) {
+  async makeTokenPayload(user) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -167,7 +167,7 @@ class AuthService {
 
   async register(payload, requestContext = {}) {
     this.validateSelfSignupRole(payload.role);
-    await this.referralService.resolveReferrer(payload.referralCode);
+    await this.referralService.getReferrerByCode(payload.referralCode);
     const existingUser = await this.authRepository.findUserByEmail(payload.email);
     if (existingUser) {
       await this.recordSecurityEvent(SECURITY_EVENTS.AUTH_LOGIN_FAILED, "failed", {
@@ -179,7 +179,7 @@ class AuthService {
       throw new AppError("User already exists", 409);
     }
 
-    const passwordHash = await hashValue(payload.password);
+    const passwordHash = await hashText(payload.password);
     const isSeller = payload.role === ROLES.SELLER;
     const user = await this.authRepository.createUser({
       email: payload.email,
@@ -187,9 +187,9 @@ class AuthService {
       passwordHash,
       role: payload.role,
       profile: payload.profile,
-      referralCode: this.generateReferralCode(payload.profile.firstName),
+      referralCode: this.makeReferralCode(payload.profile.firstName),
       accountStatus: isSeller ? "pending_approval" : "active",
-      ...(isSeller ? { sellerProfile: this.buildInitialSellerProfile(payload) } : {}),
+      ...(isSeller ? { sellerProfile: this.makeInitialSellerProfile(payload) } : {}),
       emailVerified: false,
       authProviders: [],
       refreshSessions: [],
@@ -199,7 +199,7 @@ class AuthService {
     await this.referralService.rewardReferral(payload.referralCode, user);
 
     if (isSeller) {
-      return this.buildOnboardingResponse(user);
+      return this.makeOnboardingResponse(user);
     }
 
     return this.issueTokens(user, requestContext, "password");
@@ -207,7 +207,7 @@ class AuthService {
 
   async registerWithOtp(payload, requestContext = {}) {
     this.validateSelfSignupRole(payload.role);
-    await this.referralService.resolveReferrer(payload.referralCode);
+    await this.referralService.getReferrerByCode(payload.referralCode);
     const existingUser = await this.authRepository.findUserByEmail(payload.email);
     if (existingUser) {
       throw new AppError("User already exists", 409);
@@ -245,7 +245,7 @@ class AuthService {
     await redis.del(regKey);
 
     // Create user
-    const passwordHash = await hashValue(registrationData.password);
+    const passwordHash = await hashText(registrationData.password);
     const isSeller = registrationData.role === ROLES.SELLER;
     const user = await this.authRepository.createUser({
       email: registrationData.email,
@@ -253,10 +253,10 @@ class AuthService {
       passwordHash,
       role: registrationData.role,
       profile: registrationData.profile,
-      referralCode: this.generateReferralCode(registrationData.profile.firstName),
+      referralCode: this.makeReferralCode(registrationData.profile.firstName),
       emailVerified: true,
       accountStatus: isSeller ? "pending_approval" : "active",
-      ...(isSeller ? { sellerProfile: this.buildInitialSellerProfile(registrationData) } : {}),
+      ...(isSeller ? { sellerProfile: this.makeInitialSellerProfile(registrationData) } : {}),
       authProviders: [],
       refreshSessions: [],
     });
@@ -265,7 +265,7 @@ class AuthService {
     await this.referralService.rewardReferral(registrationData.referralCode, user);
 
     if (isSeller) {
-      return this.buildOnboardingResponse(user);
+      return this.makeOnboardingResponse(user);
     }
 
     return this.issueTokens(user, requestContext, "password");
@@ -283,10 +283,10 @@ class AuthService {
       kyc = await this.authRepository.findSellerKycBySellerId(user.id);
     }
 
-    const onboardingChecklist = isSeller ? this.buildSellerChecklist(user, kyc) : {};
+    const onboardingChecklist = isSeller ? this.makeSellerChecklist(user, kyc) : {};
     const kycStatus = getSellerKycStatus(kyc, onboardingChecklist);
     const onboardingStatus = isSeller
-      ? this.resolveSellerAuthStatus(user, onboardingChecklist, kycStatus)
+      ? this.getSellerAuthStatus(user, onboardingChecklist, kycStatus)
       : user?.sellerProfile?.onboardingStatus || "initiated";
     const sellerOnboardingComplete = onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE;
     const flowState = {
@@ -299,7 +299,7 @@ class AuthService {
       kycStatus,
       kycRejectionReason: kyc?.rejection_reason || null,
       requirements: isSeller
-        ? buildSellerOnboardingState({ sellerProfile: user?.sellerProfile || {}, user, kyc }).requirements
+        ? makeSellerOnboardingState({ sellerProfile: user?.sellerProfile || {}, user, kyc }).requirements
         : {},
     };
 
@@ -334,7 +334,7 @@ class AuthService {
       throw new AppError("Password login is not enabled for this account", 401);
     }
 
-    const isMatch = await compareValue(payload.password, user.passwordHash);
+    const isMatch = await checkHash(payload.password, user.passwordHash);
     if (!isMatch) {
       await this.recordSecurityEvent(SECURITY_EVENTS.AUTH_LOGIN_FAILED, "failed", {
         userId: user.id,
@@ -348,7 +348,7 @@ class AuthService {
 
     // Sellers must complete onboarding before full app access.
     if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
-      return this.buildOnboardingResponse(user);
+      return this.makeOnboardingResponse(user);
     }
 
     if (user.accountStatus !== "active") {
@@ -369,7 +369,7 @@ class AuthService {
   async socialLogin(payload, requestContext = {}) {
     try {
       this.validateSelfSignupRole(payload.role);
-      await this.referralService.resolveReferrer(payload.referralCode);
+      await this.referralService.getReferrerByCode(payload.referralCode);
       const providerProfile = await socialAuthService.verifyIdentityToken(payload);
       let user = await this.authRepository.findUserByProvider(
         providerProfile.provider,
@@ -390,14 +390,14 @@ class AuthService {
         user = await this.authRepository.createUser({
           email: providerProfile.email,
           role: payload.role,
-          referralCode: this.generateReferralCode(providerProfile.firstName || "user"),
+          referralCode: this.makeReferralCode(providerProfile.firstName || "user"),
           emailVerified: providerProfile.emailVerified,
           passwordHash: undefined,
           profile,
           accountStatus: isSeller ? "pending_approval" : "active",
           ...(isSeller
             ? {
-                sellerProfile: this.buildInitialSellerProfile({
+                sellerProfile: this.makeInitialSellerProfile({
                   email: providerProfile.email,
                   phone: null,
                   profile,
@@ -419,7 +419,7 @@ class AuthService {
       }
 
       if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
-        return this.buildOnboardingResponse(user);
+        return this.makeOnboardingResponse(user);
       }
 
       await this.authRepository.updateLastLogin(user.id, new Date());
@@ -457,7 +457,7 @@ class AuthService {
       }
     }
     const isProduction = env.production;
-    const otp = isProduction ? generateOTP() : "123456";
+    const otp = isProduction ? createOtp() : "123456";
     const otpKey = `otp:${email}:${purpose}`;
 
     // Store OTP in Redis with 10 minute expiration
@@ -482,7 +482,7 @@ class AuthService {
 
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.OTP_SENT_V1,
         {
           email,
@@ -521,7 +521,7 @@ class AuthService {
         throw new AppError("Account is suspended. Please contact support.", 403);
       }
       if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
-        return this.buildOnboardingResponse(user);
+        return this.makeOnboardingResponse(user);
       }
       if (user.accountStatus !== "active") {
         throw new AppError("Account is not active. Please complete onboarding or contact support.", 403);
@@ -551,7 +551,7 @@ class AuthService {
     await this.verifyOtp({ email, otp, purpose: "forgot_password" }, requestContext);
 
     // Update password
-    const passwordHash = await hashValue(newPassword);
+    const passwordHash = await hashText(newPassword);
     const user = await this.authRepository.findUserByEmail(email);
     if (!user) {
       throw new AppError("User not found", 404);
@@ -574,12 +574,12 @@ class AuthService {
       throw new AppError("Password login not enabled", 400);
     }
 
-    const isMatch = await compareValue(currentPassword, user.passwordHash);
+    const isMatch = await checkHash(currentPassword, user.passwordHash);
     if (!isMatch) {
       throw new AppError("Current password is incorrect", 400);
     }
 
-    const passwordHash = await hashValue(newPassword);
+    const passwordHash = await hashText(newPassword);
     await this.authRepository.updatePassword(user.id, passwordHash);
 
     return { message: "Password changed successfully" };
@@ -593,7 +593,7 @@ class AuthService {
     let payload;
 
     try {
-      payload = verifyRefreshToken(refreshToken);
+      payload = readRefreshToken(refreshToken);
     } catch (error) {
       await this.recordSecurityEvent(SECURITY_EVENTS.AUTH_REFRESH_FAILED, "failed", {
         provider: "session",
@@ -627,7 +627,7 @@ class AuthService {
     }
 
     if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
-      return this.buildOnboardingResponse(user);
+      return this.makeOnboardingResponse(user);
     }
 
     return this.issueTokens(
@@ -646,12 +646,12 @@ class AuthService {
     successEventType = SECURITY_EVENTS.AUTH_LOGIN_SUCCESS,
     replacedSessionId = null,
   ) {
-    const tokenPayload = await this.buildTokenPayload(user);
+    const tokenPayload = await this.makeTokenPayload(user);
 
-    const accessToken = generateAccessToken(tokenPayload);
-    const refreshToken = generateRefreshToken(tokenPayload);
-    const refreshPayload = verifyRefreshToken(refreshToken);
-    const tokenHash = await hashValue(refreshToken);
+    const accessToken = makeAccessToken(tokenPayload);
+    const refreshToken = makeRefreshToken(tokenPayload);
+    const refreshPayload = readRefreshToken(refreshToken);
+    const tokenHash = await hashText(refreshToken);
     const refreshSessions = (user.refreshSessions || [])
       .filter((session) => session.sessionId !== replacedSessionId)
       .slice(-4);
@@ -688,7 +688,7 @@ class AuthService {
 
   async findMatchingRefreshSession(refreshSessions, refreshToken) {
     for (const session of refreshSessions) {
-      const matches = await compareValue(refreshToken, session.tokenHash);
+      const matches = await checkHash(refreshToken, session.tokenHash);
       if (matches) {
         return session;
       }
@@ -716,10 +716,10 @@ class AuthService {
     }
   }
 
-  generateReferralCode(seed) {
-    const normalizedSeed = (seed || "user").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4) || "USER";
+  makeReferralCode(seed) {
+    const cleanSeed = (seed || "user").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4) || "USER";
     const randomCode = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return `${normalizedSeed}${randomCode}`;
+    return `${cleanSeed}${randomCode}`;
   }
 }
 

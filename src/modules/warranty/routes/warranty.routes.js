@@ -1,9 +1,9 @@
 const express = require("express");
 const { WarrantyController } = require("../controllers/warranty.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorize } = require("../../../shared/middleware/authorize");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowRoles } = require("../../../shared/middleware/access");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   registerWarrantySchema,
@@ -21,8 +21,8 @@ const warrantyController = new WarrantyController();
 // Public routes
 warrantyRoutes.get(
   "/products/:productId/warranty",
-  validateRequest(productIdSchema),
-  asyncHandler(warrantyController.getProductWarranty),
+  checkInput(productIdSchema),
+  catchErrors(warrantyController.getProductWarranty),
 );
 
 // Authenticated routes
@@ -30,40 +30,40 @@ warrantyRoutes.use(authenticate);
 
 warrantyRoutes.post(
   "/register",
-  validateRequest(registerWarrantySchema),
-  asyncHandler(warrantyController.registerWarranty),
+  checkInput(registerWarrantySchema),
+  catchErrors(warrantyController.registerWarranty),
 );
 
 warrantyRoutes.get(
   "/:warrantyId",
-  validateRequest(warrantyIdSchema),
-  asyncHandler(warrantyController.getWarranty),
+  checkInput(warrantyIdSchema),
+  catchErrors(warrantyController.getWarranty),
 );
 
 warrantyRoutes.get(
   "/orders/:orderId",
-  validateRequest(orderIdSchema),
-  asyncHandler(warrantyController.getWarrantiesByOrder),
+  checkInput(orderIdSchema),
+  catchErrors(warrantyController.getWarrantiesByOrder),
 );
 
 warrantyRoutes.get(
   "/customers/:customerId",
-  validateRequest(customerIdSchema),
-  asyncHandler(warrantyController.getWarrantiesByCustomer),
+  checkInput(customerIdSchema),
+  catchErrors(warrantyController.getWarrantiesByCustomer),
 );
 
 warrantyRoutes.post(
   "/:warrantyId/claims",
-  validateRequest(claimWarrantySchema),
-  asyncHandler(warrantyController.claimWarranty),
+  checkInput(claimWarrantySchema),
+  catchErrors(warrantyController.claimWarranty),
 );
 
 // Admin routes
 warrantyRoutes.patch(
   "/:warrantyId/claims/:claimId/status",
-  authorize(ROLES.ADMIN),
-  validateRequest(updateClaimStatusSchema),
-  asyncHandler(warrantyController.updateClaimStatus),
+  allowRoles(ROLES.ADMIN),
+  checkInput(updateClaimStatusSchema),
+  catchErrors(warrantyController.updateClaimStatus),
 );
 
 module.exports = { warrantyRoutes };

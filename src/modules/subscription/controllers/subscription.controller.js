@@ -1,5 +1,5 @@
-const { successResponse } = require("../../../shared/http/response");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { okResponse } = require("../../../shared/http/reply");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 const { SubscriptionService } = require("../services/subscription.service");
 
 class SubscriptionController {
@@ -9,67 +9,67 @@ class SubscriptionController {
 
   listPlans = async (req, res) => {
     const plans = await this.subscriptionService.listPlans();
-    res.json(successResponse(plans));
+    res.json(okResponse(plans));
   };
 
   purchasePlan = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscription = await this.subscriptionService.purchasePlan(req.body, actor);
-    res.status(201).json(successResponse(subscription));
+    res.status(201).json(okResponse(subscription));
   };
 
   listMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscriptions = await this.subscriptionService.listMySubscriptions(actor);
-    res.json(successResponse(subscriptions));
+    res.json(okResponse(subscriptions));
   };
 
   pauseMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscription = await this.subscriptionService.pauseSubscription(req.params.subscriptionId, actor);
-    res.json(successResponse(subscription));
+    res.json(okResponse(subscription));
   };
 
   resumeMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscription = await this.subscriptionService.resumeSubscription(req.params.subscriptionId, actor);
-    res.json(successResponse(subscription));
+    res.json(okResponse(subscription));
   };
 
   cancelMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscription = await this.subscriptionService.cancelSubscription(req.params.subscriptionId, actor);
-    res.json(successResponse(subscription));
+    res.json(okResponse(subscription));
   };
 
   createPlan = async (req, res) => {
     const plan = await this.subscriptionService.createPlan(req.body);
-    res.status(201).json(successResponse(plan));
+    res.status(201).json(okResponse(plan));
   };
 
   listPlansAdmin = async (req, res) => {
     const plans = await this.subscriptionService.listPlansAdmin(req.query);
-    res.json(successResponse(plans));
+    res.json(okResponse(plans));
   };
 
   getPlan = async (req, res) => {
     const plan = await this.subscriptionService.getPlan(req.params.planId);
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   updatePlan = async (req, res) => {
     const plan = await this.subscriptionService.updatePlan(req.params.planId, req.body);
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   deletePlan = async (req, res) => {
     const plan = await this.subscriptionService.deletePlan(req.params.planId);
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   listSubscriptionsAdmin = async (req, res) => {
     const subscriptions = await this.subscriptionService.listSubscriptionsAdmin(req.query);
-    res.json(successResponse(subscriptions));
+    res.json(okResponse(subscriptions));
   };
 
   updateSubscriptionStatusAdmin = async (req, res) => {
@@ -77,32 +77,32 @@ class SubscriptionController {
       req.params.subscriptionId,
       req.body.status,
     );
-    res.json(successResponse(subscription));
+    res.json(okResponse(subscription));
   };
 
   createPlatformFeeConfig = async (req, res) => {
     const config = await this.subscriptionService.createPlatformFeeConfig(req.body);
-    res.status(201).json(successResponse(config));
+    res.status(201).json(okResponse(config));
   };
 
   listPlatformFeeConfigs = async (req, res) => {
     const configs = await this.subscriptionService.listPlatformFeeConfigs(req.query);
-    res.json(successResponse(configs));
+    res.json(okResponse(configs));
   };
 
   getPlatformFeeConfig = async (req, res) => {
     const config = await this.subscriptionService.getPlatformFeeConfig(req.params.configId);
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 
   updatePlatformFeeConfig = async (req, res) => {
     const config = await this.subscriptionService.updatePlatformFeeConfig(req.params.configId, req.body);
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 
   deletePlatformFeeConfig = async (req, res) => {
     const config = await this.subscriptionService.deletePlatformFeeConfig(req.params.configId);
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 }
 

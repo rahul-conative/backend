@@ -1,7 +1,7 @@
 const { AppError } = require("../errors/app-error");
 const Joi = require("joi");
 
-function normalizeSchema(schema) {
+function getSchema(schema) {
   if (schema && typeof schema.validate === "function") {
     return schema;
   }
@@ -17,10 +17,10 @@ function normalizeSchema(schema) {
   });
 }
 
-function validateRequest(schema) {
+function checkInput(schema) {
   return (req, res, next) => {
-    const normalizedSchema = normalizeSchema(schema);
-    const { error, value } = normalizedSchema.validate(
+    const schemaToCheck = getSchema(schema);
+    const { error, value } = schemaToCheck.validate(
       {
         body: req.body,
         query: req.query,
@@ -45,4 +45,4 @@ function validateRequest(schema) {
   };
 }
 
-module.exports = { validateRequest };
+module.exports = { checkInput };

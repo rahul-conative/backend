@@ -3,7 +3,7 @@ const { UserModel } = require("../../user/models/user.model");
 const { ProductModel } = require("../../product/models/product.model");
 const { v4: uuidv4 } = require("uuid");
 const { randomBytes } = require("crypto");
-const { hashValue } = require("../../../shared/utils/hash");
+const { hashText } = require("../../../shared/tools/hash");
 
 class AdminRepository {
   async getOverviewStats() {
@@ -334,7 +334,7 @@ class AdminRepository {
   async createApiKey({ ownerId, keyName, scopes = [], expiresAt = null }) {
     const rawKey = `mkp_${randomBytes(24).toString("hex")}`;
     const keyPrefix = rawKey.slice(0, 12);
-    const keyHash = await hashValue(rawKey);
+    const keyHash = await hashText(rawKey);
 
     const { rows } = await postgresPool.query(
       `INSERT INTO api_keys (
@@ -379,7 +379,7 @@ class AdminRepository {
   }
 
   async createWebhookSubscription({ ownerId, endpointUrl, secret, eventTypes = [], retryPolicy = {} }) {
-    const secretHash = await hashValue(secret);
+    const secretHash = await hashText(secret);
     const { rows } = await postgresPool.query(
       `INSERT INTO webhook_subscriptions (
         id, owner_id, endpoint_url, secret_hash, event_types, status, retry_policy, created_at, updated_at

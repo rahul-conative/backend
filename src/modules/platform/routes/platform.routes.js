@@ -1,10 +1,10 @@
 const express = require("express");
 const { PlatformController } = require("../controllers/platform.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { allowActions } = require("../../../shared/middleware/access");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
+const { ACTIONS } = require("../../../shared/constants/actions");
 const {
   createCategorySchema,
   updateCategorySchema,
@@ -35,148 +35,148 @@ const {
 const platformRoutes = express.Router();
 const platformController = new PlatformController();
 
-platformRoutes.get("/categories", validateRequest(listCategoriesSchema), asyncHandler(platformController.listCategories));
-platformRoutes.get("/categories/:categoryKey", validateRequest(categoryKeySchema), asyncHandler(platformController.getCategory));
+platformRoutes.get("/categories", checkInput(listCategoriesSchema), catchErrors(platformController.listCategories));
+platformRoutes.get("/categories/:categoryKey", checkInput(categoryKeySchema), catchErrors(platformController.getCategory));
 platformRoutes.post(
   "/categories",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createCategorySchema),
-  asyncHandler(platformController.createCategory),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createCategorySchema),
+  catchErrors(platformController.createCategory),
 );
 platformRoutes.patch(
   "/categories/:categoryKey",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateCategorySchema),
-  asyncHandler(platformController.updateCategory),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateCategorySchema),
+  catchErrors(platformController.updateCategory),
 );
 platformRoutes.delete(
   "/categories/:categoryKey",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(categoryKeySchema),
-  asyncHandler(platformController.deleteCategory),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.deleteCategory),
 );
 
-platformRoutes.get("/families", validateRequest(listProductFamiliesSchema), asyncHandler(platformController.listProductFamilies));
-platformRoutes.get("/families/:familyCode", validateRequest(productFamilyCodeSchema), asyncHandler(platformController.getProductFamily));
+platformRoutes.get("/families", checkInput(listProductFamiliesSchema), catchErrors(platformController.listProductFamilies));
+platformRoutes.get("/families/:familyCode", checkInput(productFamilyCodeSchema), catchErrors(platformController.getProductFamily));
 platformRoutes.post(
   "/families",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createProductFamilySchema),
-  asyncHandler(platformController.createProductFamily),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createProductFamilySchema),
+  catchErrors(platformController.createProductFamily),
 );
 platformRoutes.patch(
   "/families/:familyCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateProductFamilySchema),
-  asyncHandler(platformController.updateProductFamily),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateProductFamilySchema),
+  catchErrors(platformController.updateProductFamily),
 );
 platformRoutes.delete(
   "/families/:familyCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(productFamilyCodeSchema),
-  asyncHandler(platformController.deleteProductFamily),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(productFamilyCodeSchema),
+  catchErrors(platformController.deleteProductFamily),
 );
 
-platformRoutes.get("/variants", validateRequest(listProductVariantsSchema), asyncHandler(platformController.listProductVariants));
-platformRoutes.get("/variants/:variantId", validateRequest(productVariantIdSchema), asyncHandler(platformController.getProductVariant));
+platformRoutes.get("/variants", checkInput(listProductVariantsSchema), catchErrors(platformController.listProductVariants));
+platformRoutes.get("/variants/:variantId", checkInput(productVariantIdSchema), catchErrors(platformController.getProductVariant));
 platformRoutes.post(
   "/variants",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createProductVariantSchema),
-  asyncHandler(platformController.createProductVariant),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createProductVariantSchema),
+  catchErrors(platformController.createProductVariant),
 );
 platformRoutes.patch(
   "/variants/:variantId",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateProductVariantSchema),
-  asyncHandler(platformController.updateProductVariant),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateProductVariantSchema),
+  catchErrors(platformController.updateProductVariant),
 );
 platformRoutes.delete(
   "/variants/:variantId",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(productVariantIdSchema),
-  asyncHandler(platformController.deleteProductVariant),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(productVariantIdSchema),
+  catchErrors(platformController.deleteProductVariant),
 );
 
-platformRoutes.get("/hsn-codes", validateRequest(listHsnCodesSchema), asyncHandler(platformController.listHsnCodes));
-platformRoutes.get("/hsn-codes/:hsnCode", validateRequest(hsnCodeParamSchema), asyncHandler(platformController.getHsnCode));
+platformRoutes.get("/hsn-codes", checkInput(listHsnCodesSchema), catchErrors(platformController.listHsnCodes));
+platformRoutes.get("/hsn-codes/:hsnCode", checkInput(hsnCodeParamSchema), catchErrors(platformController.getHsnCode));
 platformRoutes.post(
   "/hsn-codes",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createHsnCodeSchema),
-  asyncHandler(platformController.createHsnCode),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createHsnCodeSchema),
+  catchErrors(platformController.createHsnCode),
 );
 platformRoutes.patch(
   "/hsn-codes/:hsnCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateHsnCodeSchema),
-  asyncHandler(platformController.updateHsnCode),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateHsnCodeSchema),
+  catchErrors(platformController.updateHsnCode),
 );
 platformRoutes.delete(
   "/hsn-codes/:hsnCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(hsnCodeParamSchema),
-  asyncHandler(platformController.deleteHsnCode),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(hsnCodeParamSchema),
+  catchErrors(platformController.deleteHsnCode),
 );
 
-platformRoutes.get("/geographies", validateRequest(listGeographiesSchema), asyncHandler(platformController.listGeographies));
-platformRoutes.get("/geographies/:countryCode", validateRequest(geographyParamSchema), asyncHandler(platformController.getGeography));
+platformRoutes.get("/geographies", checkInput(listGeographiesSchema), catchErrors(platformController.listGeographies));
+platformRoutes.get("/geographies/:countryCode", checkInput(geographyParamSchema), catchErrors(platformController.getGeography));
 platformRoutes.post(
   "/geographies",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createGeographySchema),
-  asyncHandler(platformController.createGeography),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createGeographySchema),
+  catchErrors(platformController.createGeography),
 );
 platformRoutes.patch(
   "/geographies/:countryCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateGeographySchema),
-  asyncHandler(platformController.updateGeography),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateGeographySchema),
+  catchErrors(platformController.updateGeography),
 );
 platformRoutes.delete(
   "/geographies/:countryCode",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(geographyParamSchema),
-  asyncHandler(platformController.deleteGeography),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(geographyParamSchema),
+  catchErrors(platformController.deleteGeography),
 );
 
-platformRoutes.get("/cms", validateRequest(listContentPagesSchema), asyncHandler(platformController.listContentPages));
-platformRoutes.get("/cms/:slug", validateRequest(contentPageSlugSchema), asyncHandler(platformController.getContentPage));
+platformRoutes.get("/cms", checkInput(listContentPagesSchema), catchErrors(platformController.listContentPages));
+platformRoutes.get("/cms/:slug", checkInput(contentPageSlugSchema), catchErrors(platformController.getContentPage));
 platformRoutes.post(
   "/cms",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createContentPageSchema),
-  asyncHandler(platformController.createContentPage),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createContentPageSchema),
+  catchErrors(platformController.createContentPage),
 );
 platformRoutes.patch(
   "/cms/:slug",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateContentPageSchema),
-  asyncHandler(platformController.updateContentPage),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateContentPageSchema),
+  catchErrors(platformController.updateContentPage),
 );
 platformRoutes.delete(
   "/cms/:slug",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(contentPageSlugSchema),
-  asyncHandler(platformController.deleteContentPage),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(contentPageSlugSchema),
+  catchErrors(platformController.deleteContentPage),
 );
 
 module.exports = { platformRoutes };

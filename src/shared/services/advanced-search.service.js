@@ -2,7 +2,7 @@
  * Advanced Search Service (PRODUCTION READY)
  */
 
-const { elasticsearchClient } = require("../../infrastructure/search/elasticsearch-client");
+const { elasticsearchClient } = require("../search/elasticsearch-client");
 const { logger } = require("../logger/logger");
 
 class AdvancedSearchService {

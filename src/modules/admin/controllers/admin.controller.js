@@ -1,5 +1,5 @@
-const { successResponse } = require("../../../shared/http/response");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { okResponse } = require("../../../shared/http/reply");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 const { AdminService } = require("../services/admin.service");
 
 class AdminController {
@@ -9,22 +9,22 @@ class AdminController {
 
   overview = async (req, res) => {
     const data = await this.adminService.getOverview();
-    res.json(successResponse(data));
+    res.json(okResponse(data));
   };
 
   listVendors = async (req, res) => {
     const result = await this.adminService.listVendors(req.query);
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   listUsers = async (req, res) => {
     const result = await this.adminService.listUsers(req.query);
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   getUser = async (req, res) => {
     const user = await this.adminService.getUser(req.params.userId);
-    res.json(successResponse(user));
+    res.json(okResponse(user));
   };
 
   updateUser = async (req, res) => {
@@ -32,7 +32,7 @@ class AdminController {
       req.params.userId,
       req.body,
     );
-    res.json(successResponse(user));
+    res.json(okResponse(user));
   };
 
   deactivateUser = async (req, res) => {
@@ -40,7 +40,7 @@ class AdminController {
       req.params.userId,
       req.body,
     );
-    res.json(successResponse(user));
+    res.json(okResponse(user));
   };
 
   updateVendorStatus = async (req, res) => {
@@ -48,132 +48,132 @@ class AdminController {
       req.params.sellerId,
       req.body,
     );
-    res.json(successResponse(seller));
+    res.json(okResponse(seller));
   };
 
   moderationQueue = async (req, res) => {
     const result = await this.adminService.listProductModerationQueue(
       req.query,
     );
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   moderateProduct = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const product = await this.adminService.moderateProduct(
       req.params.productId,
       req.body,
       actor,
     );
-    res.json(successResponse(product));
+    res.json(okResponse(product));
   };
 
   listOrders = async (req, res) => {
     const items = await this.adminService.listOrders(req.query);
-    res.json(successResponse(items));
+    res.json(okResponse(items));
   };
 
   listPayments = async (req, res) => {
     const items = await this.adminService.listPayments(req.query);
-    res.json(successResponse(items));
+    res.json(okResponse(items));
   };
 
   createPayout = async (req, res) => {
     const payout = await this.adminService.createPayout(req.body);
-    res.status(201).json(successResponse(payout));
+    res.status(201).json(okResponse(payout));
   };
 
   listPayouts = async (req, res) => {
     const payouts = await this.adminService.listPayouts(req.query);
-    res.json(successResponse(payouts));
+    res.json(okResponse(payouts));
   };
 
   taxReport = async (req, res) => {
     const report = await this.adminService.getTaxReport(req.query);
-    res.json(successResponse(report));
+    res.json(okResponse(report));
   };
 
-  generateInvoice = async (req, res) => {
-    const invoice = await this.adminService.generateInvoice(req.params.orderId);
-    res.status(201).json(successResponse(invoice));
+  createInvoice = async (req, res) => {
+    const invoice = await this.adminService.createInvoice(req.params.orderId);
+    res.status(201).json(okResponse(invoice));
   };
 
   createApiKey = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const result = await this.adminService.createApiKey(req.body, actor);
-    res.status(201).json(successResponse(result));
+    res.status(201).json(okResponse(result));
   };
 
   listApiKeys = async (req, res) => {
     const keys = await this.adminService.listApiKeys(req.query);
-    res.json(successResponse(keys));
+    res.json(okResponse(keys));
   };
 
   createWebhookSubscription = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const subscription = await this.adminService.createWebhookSubscription(
       req.body,
       actor,
     );
-    res.status(201).json(successResponse(subscription));
+    res.status(201).json(okResponse(subscription));
   };
 
   listWebhookSubscriptions = async (req, res) => {
     const subscriptions = await this.adminService.listWebhookSubscriptions(
       req.query,
     );
-    res.json(successResponse(subscriptions));
+    res.json(okResponse(subscriptions));
   };
 
   upsertFeatureFlag = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const flag = await this.adminService.upsertFeatureFlag(req.body, actor);
-    res.json(successResponse(flag));
+    res.json(okResponse(flag));
   };
 
   listFeatureFlags = async (req, res) => {
     const flags = await this.adminService.listFeatureFlags(req.query);
-    res.json(successResponse(flags));
+    res.json(okResponse(flags));
   };
 
   realtimeAnalytics = async (req, res) => {
     const data = await this.adminService.getRealtimeAnalytics(req.query);
-    res.json(successResponse(data));
+    res.json(okResponse(data));
   };
 
   returnsAnalytics = async (req, res) => {
     const data = await this.adminService.getReturnsAnalytics(req.query);
-    res.json(successResponse(data));
+    res.json(okResponse(data));
   };
 
   listChargebacks = async (req, res) => {
     const data = await this.adminService.listChargebacks(req.query);
-    res.json(successResponse(data.items, { total: data.total }));
+    res.json(okResponse(data.items, { total: data.total }));
   };
 
   systemHealth = async (req, res) => {
     const data = await this.adminService.getSystemHealth();
-    res.json(successResponse(data));
+    res.json(okResponse(data));
   };
 
   queueStatus = async (req, res) => {
     const data = await this.adminService.getQueueStatus();
-    res.json(successResponse(data));
+    res.json(okResponse(data));
   };
 
   pauseQueue = async (req, res) => {
     const result = await this.adminService.pauseQueue(req.params.queueName);
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   resumeQueue = async (req, res) => {
     const result = await this.adminService.resumeQueue(req.params.queueName);
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   listDeadLetterEvents = async (req, res) => {
     const data = await this.adminService.listDeadLetterEvents(req.query);
-    res.json(successResponse(data.items, { total: data.total }));
+    res.json(okResponse(data.items, { total: data.total }));
   };
 
   retryDeadLetterEvent = async (req, res) => {
@@ -181,7 +181,7 @@ class AdminController {
       req.params.eventId,
       req.body,
     );
-    res.json(successResponse(event));
+    res.json(okResponse(event));
   };
 
   discardDeadLetterEvent = async (req, res) => {
@@ -189,22 +189,22 @@ class AdminController {
       req.params.eventId,
       req.body,
     );
-    res.json(successResponse(event));
+    res.json(okResponse(event));
   };
 
   createSubscriptionPlan = async (req, res) => {
     const plan = await this.adminService.createSubscriptionPlan(req.body);
-    res.status(201).json(successResponse(plan));
+    res.status(201).json(okResponse(plan));
   };
 
   listSubscriptionPlans = async (req, res) => {
     const plans = await this.adminService.listSubscriptionPlans(req.query);
-    res.json(successResponse(plans));
+    res.json(okResponse(plans));
   };
 
   getSubscriptionPlan = async (req, res) => {
     const plan = await this.adminService.getSubscriptionPlan(req.params.planId);
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   updateSubscriptionPlan = async (req, res) => {
@@ -212,21 +212,21 @@ class AdminController {
       req.params.planId,
       req.body,
     );
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   deleteSubscriptionPlan = async (req, res) => {
     const plan = await this.adminService.deleteSubscriptionPlan(
       req.params.planId,
     );
-    res.json(successResponse(plan));
+    res.json(okResponse(plan));
   };
 
   listPlatformSubscriptions = async (req, res) => {
     const subscriptions = await this.adminService.listPlatformSubscriptions(
       req.query,
     );
-    res.json(successResponse(subscriptions));
+    res.json(okResponse(subscriptions));
   };
 
   updatePlatformSubscriptionStatus = async (req, res) => {
@@ -235,24 +235,24 @@ class AdminController {
         req.params.subscriptionId,
         req.body.status,
       );
-    res.json(successResponse(subscription));
+    res.json(okResponse(subscription));
   };
 
   createPlatformFeeConfig = async (req, res) => {
     const config = await this.adminService.createPlatformFeeConfig(req.body);
-    res.status(201).json(successResponse(config));
+    res.status(201).json(okResponse(config));
   };
 
   listPlatformFeeConfigs = async (req, res) => {
     const configs = await this.adminService.listPlatformFeeConfigs(req.query);
-    res.json(successResponse(configs));
+    res.json(okResponse(configs));
   };
 
   getPlatformFeeConfig = async (req, res) => {
     const config = await this.adminService.getPlatformFeeConfig(
       req.params.configId,
     );
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 
   updatePlatformFeeConfig = async (req, res) => {
@@ -260,58 +260,58 @@ class AdminController {
       req.params.configId,
       req.body,
     );
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 
   deletePlatformFeeConfig = async (req, res) => {
     const config = await this.adminService.deletePlatformFeeConfig(
       req.params.configId,
     );
-    res.json(successResponse(config));
+    res.json(okResponse(config));
   };
 
   listAccessModules = async (req, res) => {
     const modules = await this.adminService.listAccessModules(req.query);
-    res.json(successResponse(modules));
+    res.json(okResponse(modules));
   };
 
   createAdmin = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const user = await this.adminService.createAdmin(req.body, actor);
-    res.status(201).json(successResponse(user));
+    res.status(201).json(okResponse(user));
   };
 
   listAdmins = async (req, res) => {
     const result = await this.adminService.listAdmins(req.query);
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   createPlatformSubAdmin = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const user = await this.adminService.createPlatformSubAdmin(
       req.body,
       actor,
     );
-    res.status(201).json(successResponse(user));
+    res.status(201).json(okResponse(user));
   };
 
   listPlatformSubAdmins = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const users = await this.adminService.listPlatformSubAdmins(
       req.query,
       actor,
     );
-    res.json(successResponse(users));
+    res.json(okResponse(users));
   };
 
   updatePlatformSubAdminModules = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const user = await this.adminService.updatePlatformSubAdminModules(
       req.params.userId,
       req.body,
       actor,
     );
-    res.json(successResponse(user));
+    res.json(okResponse(user));
   };
 }
 

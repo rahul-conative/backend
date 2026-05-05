@@ -1,8 +1,8 @@
 const slugify = require("slugify");
-const { buildPagination } = require("../../../shared/lib/pagination");
+const { getPage } = require("../../../shared/tools/page");
 const { ProductRepository } = require("../repositories/product.repository");
 const { elasticsearchClient } = require("../../../shared/search/elasticsearch-client");
-const { getOrSetCache } = require("../../../shared/lib/cache");
+const { remember } = require("../../../shared/tools/cache");
 const { AppError } = require("../../../shared/errors/app-error");
 const { PRODUCT_STATUS } = require("../../../shared/domain/commerce-constants");
 const { logger } = require("../../../shared/logger/logger");
@@ -97,7 +97,7 @@ class ProductService {
   }
 
   async listProducts(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
 
     if (query.category) {
@@ -127,13 +127,13 @@ class ProductService {
 
     filter.status = query.status || PRODUCT_STATUS.ACTIVE;
 
-    return getOrSetCache(`products:${JSON.stringify({ filter, pagination })}`, 60, () =>
+    return remember(`products:${JSON.stringify({ filter, pagination })}`, 60, () =>
       this.productRepository.paginate(filter, pagination),
     );
   }
 
   async listSellerProducts(query, actor) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const sellerId = actor.ownerSellerId || actor.userId;
     const filter = {};
 

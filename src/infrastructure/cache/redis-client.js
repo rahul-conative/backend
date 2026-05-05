@@ -44,7 +44,7 @@ const cacheKeys = {
   trending: (period) => `trending:${period}`,
 };
 
-// Cache utilities
+// Cache tools
 async function getCached(key) {
   try {
     const value = await redisClient.get(key);

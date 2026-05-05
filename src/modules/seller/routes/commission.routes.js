@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  authenticateToken,
-  authorizeRole,
-} = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
+const { allowRoles } = require("../../../shared/middleware/access");
 
 const { CommissionService } = require("../services/commission.service");
 const { commissionValidation } = require("../../validation");
@@ -12,7 +10,7 @@ const { commissionValidation } = require("../../validation");
 // ==============================
 // Seller: View commission breakdown
 // ==============================
-router.get("/my-commissions", authenticateToken, async (req, res, next) => {
+router.get("/my-commissions", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.ownerSellerId || req.auth?.sub;
 
@@ -37,7 +35,7 @@ router.get("/my-commissions", authenticateToken, async (req, res, next) => {
 // ==============================
 // Seller: View payout history
 // ==============================
-router.get("/my-payouts", authenticateToken, async (req, res, next) => {
+router.get("/my-payouts", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.ownerSellerId || req.auth?.sub;
 
@@ -64,8 +62,8 @@ router.get("/my-payouts", authenticateToken, async (req, res, next) => {
 // ==============================
 router.post(
   "/calculate/:orderId",
-  authenticateToken,
-  authorizeRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const { error, value } =
@@ -99,8 +97,8 @@ router.post(
 // ==============================
 router.post(
   "/process-payouts",
-  authenticateToken,
-  authorizeRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const { error, value } =
@@ -134,8 +132,8 @@ router.post(
 // ==============================
 router.get(
   "/settlements",
-  authenticateToken,
-  authorizeRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const settlements = await CommissionService.getSettlements();

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { authenticateToken } = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
 const { NotificationService } = require("../services/notification.service");
 const { notificationValidation } = require("../../validation");
 const notificationService = new NotificationService();
@@ -9,7 +9,7 @@ const notificationService = new NotificationService();
 // ==============================
 // Get notification preferences
 // ==============================
-router.get("/preferences", authenticateToken, async (req, res, next) => {
+router.get("/preferences", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.sub;
 
@@ -34,7 +34,7 @@ router.get("/preferences", authenticateToken, async (req, res, next) => {
 // ==============================
 // Update notification preferences
 // ==============================
-router.put("/preferences", authenticateToken, async (req, res, next) => {
+router.put("/preferences", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.sub;
 

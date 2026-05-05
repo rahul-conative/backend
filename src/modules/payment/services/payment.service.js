@@ -1,5 +1,5 @@
 const { PaymentRepository } = require("../repositories/payment.repository");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { PAYMENT_STATUS } = require("../../../shared/domain/commerce-constants");
 const { paymentProviderRegistry } = require("../../../infrastructure/payments/provider-registry");
@@ -39,7 +39,7 @@ class PaymentService {
       },
     });
 
-    const paymentEvent = buildDomainEvent(
+    const paymentEvent = makeEvent(
       DOMAIN_EVENTS.PAYMENT_INITIATED_V1,
       {
         buyerId: actor.userId,
@@ -81,7 +81,7 @@ class PaymentService {
 
     const provider = paymentProviderRegistry.get(payload.provider);
     const verification = await provider.verifyPayment(payload);
-    const paymentEvent = buildDomainEvent(
+    const paymentEvent = makeEvent(
       DOMAIN_EVENTS.PAYMENT_VERIFIED_V1,
       {
         buyerId: actor.userId,
@@ -131,7 +131,7 @@ class PaymentService {
         return { acknowledged: true, ignored: true };
       }
 
-      const paymentEvent = buildDomainEvent(
+      const paymentEvent = makeEvent(
         DOMAIN_EVENTS.PAYMENT_VERIFIED_V1,
         {
           buyerId: payment.buyer_id,
@@ -166,7 +166,7 @@ class PaymentService {
         return { acknowledged: true, ignored: true };
       }
 
-      const paymentEvent = buildDomainEvent(
+      const paymentEvent = makeEvent(
         DOMAIN_EVENTS.PAYMENT_FAILED_V1,
         {
           buyerId: payment.buyer_id,

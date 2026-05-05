@@ -1,4 +1,4 @@
-const SCOPABLE_ROLES = new Set(["sub-admin", "seller-sub-admin"]);
+const ROLES_WITH_MODULE_ACCESS = new Set(["sub-admin", "seller-sub-admin"]);
 
 const DEFAULT_PLATFORM_MODULES = [
   "users",
@@ -37,13 +37,13 @@ const DEFAULT_SELLER_MODULES = [
   "delivery",
 ];
 
-function normalizeModuleName(value) {
+function cleanModuleName(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
 }
 
-function resolveRequestModule(req) {
+function getRequestModule(req) {
   const withoutQuery = String(req.originalUrl || "").split("?")[0];
   const parts = withoutQuery.split("/").filter(Boolean);
   const apiIndex = parts.indexOf("api");
@@ -58,15 +58,19 @@ function resolveRequestModule(req) {
   return first;
 }
 
-function isScopedRole(auth) {
-  const roles = [auth?.role, ...(Array.isArray(auth?.roles) ? auth.roles : [])].filter(Boolean);
-  return roles.some((role) => SCOPABLE_ROLES.has(role));
+function usesModuleAccess(auth) {
+  const roles = [
+    auth?.role,
+    ...(Array.isArray(auth?.roles) ? auth.roles : []),
+  ].filter(Boolean);
+
+  return roles.some((role) => ROLES_WITH_MODULE_ACCESS.has(role));
 }
 
 module.exports = {
   DEFAULT_PLATFORM_MODULES,
   DEFAULT_SELLER_MODULES,
-  normalizeModuleName,
-  resolveRequestModule,
-  isScopedRole,
+  cleanModuleName,
+  getRequestModule,
+  usesModuleAccess,
 };

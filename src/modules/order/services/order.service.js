@@ -1,5 +1,5 @@
 const { OrderRepository } = require("../repositories/order.repository");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { ORDER_STATUS } = require("../../../shared/domain/commerce-constants");
 const { PricingService } = require("../../pricing/services/pricing.service");
@@ -31,7 +31,7 @@ class OrderService {
       userId: actor.userId,
     });
     const orderId = uuidv4();
-    const orderEvent = buildDomainEvent(
+    const orderEvent = makeEvent(
       DOMAIN_EVENTS.ORDER_CREATED_V1,
       {
         orderId,
@@ -85,7 +85,7 @@ class OrderService {
         await this.walletService.capture(actor.userId, orderId);
         await this.inventoryService.commitForOrder(orderId);
         await eventPublisher.publish(
-          buildDomainEvent(
+          makeEvent(
             DOMAIN_EVENTS.ORDER_STATUS_UPDATED_V1,
             {
               orderId,
@@ -166,7 +166,7 @@ class OrderService {
     }
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.ORDER_STATUS_UPDATED_V1,
         {
           orderId,

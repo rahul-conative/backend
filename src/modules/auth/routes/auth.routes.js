@@ -1,7 +1,7 @@
 const express = require("express");
 const { AuthController } = require("../controllers/auth.controller");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { checkInput } = require("../../../shared/middleware/check-input");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authRateLimit } = require("../../../shared/middleware/auth-rate-limit");
 const { authenticate } = require("../../../shared/middleware/authenticate");
 const {
@@ -23,20 +23,20 @@ const authRoutes = express.Router();
 const authController = new AuthController();
 
 authRoutes.use(authRateLimit);
-authRoutes.post("/register", validateRequest(registerSchema), asyncHandler(authController.register));
-authRoutes.post("/register-otp", validateRequest(registerWithOtpSchema), asyncHandler(authController.registerWithOtp));
-authRoutes.post("/verify-registration", validateRequest(verifyRegistrationSchema), asyncHandler(authController.verifyRegistration));
-authRoutes.post("/login", validateRequest(loginSchema), asyncHandler(authController.login));
-authRoutes.post("/social", validateRequest(socialLoginSchema), asyncHandler(authController.socialLogin));
-authRoutes.post("/refresh", validateRequest(refreshSchema), asyncHandler(authController.refresh));
+authRoutes.post("/register", checkInput(registerSchema), catchErrors(authController.register));
+authRoutes.post("/register-otp", checkInput(registerWithOtpSchema), catchErrors(authController.registerWithOtp));
+authRoutes.post("/verify-registration", checkInput(verifyRegistrationSchema), catchErrors(authController.verifyRegistration));
+authRoutes.post("/login", checkInput(loginSchema), catchErrors(authController.login));
+authRoutes.post("/social", checkInput(socialLoginSchema), catchErrors(authController.socialLogin));
+authRoutes.post("/refresh", checkInput(refreshSchema), catchErrors(authController.refresh));
 
-authRoutes.post("/send-otp", validateRequest(sendOtpSchema), asyncHandler(authController.sendOtp));
-authRoutes.post("/verify-otp", validateRequest(verifyOtpSchema), asyncHandler(authController.verifyOtp));
-authRoutes.post("/resend-otp", validateRequest(resendOtpSchema), asyncHandler(authController.resendOtp));
-authRoutes.post("/forgot-password", validateRequest(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
-authRoutes.post("/reset-password", validateRequest(resetPasswordSchema), asyncHandler(authController.resetPassword));
-authRoutes.post("/change-password", authenticate, validateRequest(changePasswordSchema), asyncHandler(authController.changePassword));
-authRoutes.get("/status", authenticate, asyncHandler(authController.status));
+authRoutes.post("/send-otp", checkInput(sendOtpSchema), catchErrors(authController.sendOtp));
+authRoutes.post("/verify-otp", checkInput(verifyOtpSchema), catchErrors(authController.verifyOtp));
+authRoutes.post("/resend-otp", checkInput(resendOtpSchema), catchErrors(authController.resendOtp));
+authRoutes.post("/forgot-password", checkInput(forgotPasswordSchema), catchErrors(authController.forgotPassword));
+authRoutes.post("/reset-password", checkInput(resetPasswordSchema), catchErrors(authController.resetPassword));
+authRoutes.post("/change-password", authenticate, checkInput(changePasswordSchema), catchErrors(authController.changePassword));
+authRoutes.get("/status", authenticate, catchErrors(authController.status));
 
 module.exports = { authRoutes };
   

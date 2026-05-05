@@ -4,11 +4,11 @@ const {
   PlatformController,
 } = require("../../platform/controllers/platform.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorize } = require("../../../shared/middleware/authorize");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { allowRoles } = require("../../../shared/middleware/access");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
-  validateRequest,
-} = require("../../../shared/middleware/validate-request");
+  checkInput,
+} = require("../../../shared/middleware/check-input");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   adminOverviewSchema,
@@ -25,7 +25,7 @@ const {
   createPayoutSchema,
   listPayoutsSchema,
   taxReportSchema,
-  generateInvoiceSchema,
+  createInvoiceSchema,
   createApiKeySchema,
   listApiKeysSchema,
   createWebhookSubscriptionSchema,
@@ -87,412 +87,412 @@ const adminRoutes = express.Router();
 const adminController = new AdminController();
 const platformController = new PlatformController();
 
-adminRoutes.use(authenticate, authorize(ROLES.ADMIN));
+adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN));
 
 adminRoutes.get(
   "/access/modules",
-  validateRequest(listAccessModulesSchema),
-  asyncHandler(adminController.listAccessModules),
+  checkInput(listAccessModulesSchema),
+  catchErrors(adminController.listAccessModules),
 );
 adminRoutes.post(
   "/access/admins",
-  authorize(ROLES.SUPER_ADMIN),
-  validateRequest(createAdminSchema),
-  asyncHandler(adminController.createAdmin),
+  allowRoles(ROLES.SUPER_ADMIN),
+  checkInput(createAdminSchema),
+  catchErrors(adminController.createAdmin),
 );
 adminRoutes.get(
   "/access/admins",
-  authorize(ROLES.SUPER_ADMIN),
-  validateRequest(listAdminsSchema),
-  asyncHandler(adminController.listAdmins),
+  allowRoles(ROLES.SUPER_ADMIN),
+  checkInput(listAdminsSchema),
+  catchErrors(adminController.listAdmins),
 );
 adminRoutes.post(
   "/access/sub-admins",
-  validateRequest(createPlatformSubAdminSchema),
-  asyncHandler(adminController.createPlatformSubAdmin),
+  checkInput(createPlatformSubAdminSchema),
+  catchErrors(adminController.createPlatformSubAdmin),
 );
 adminRoutes.get(
   "/access/sub-admins",
-  validateRequest(listPlatformSubAdminsSchema),
-  asyncHandler(adminController.listPlatformSubAdmins),
+  checkInput(listPlatformSubAdminsSchema),
+  catchErrors(adminController.listPlatformSubAdmins),
 );
 adminRoutes.patch(
   "/access/sub-admins/:userId/modules",
-  validateRequest(updatePlatformSubAdminModulesSchema),
-  asyncHandler(adminController.updatePlatformSubAdminModules),
+  checkInput(updatePlatformSubAdminModulesSchema),
+  catchErrors(adminController.updatePlatformSubAdminModules),
 );
 
 adminRoutes.get(
   "/dashboard/overview",
-  validateRequest(adminOverviewSchema),
-  asyncHandler(adminController.overview),
+  checkInput(adminOverviewSchema),
+  catchErrors(adminController.overview),
 );
 adminRoutes.get(
   "/users",
-  validateRequest(listUsersSchema),
-  asyncHandler(adminController.listUsers),
+  checkInput(listUsersSchema),
+  catchErrors(adminController.listUsers),
 );
 adminRoutes.get(
   "/users/:userId",
-  validateRequest(userParamSchema),
-  asyncHandler(adminController.getUser),
+  checkInput(userParamSchema),
+  catchErrors(adminController.getUser),
 );
 adminRoutes.patch(
   "/users/:userId",
-  validateRequest(updateUserSchema),
-  asyncHandler(adminController.updateUser),
+  checkInput(updateUserSchema),
+  catchErrors(adminController.updateUser),
 );
 adminRoutes.delete(
   "/users/:userId",
-  validateRequest(deactivateUserSchema),
-  asyncHandler(adminController.deactivateUser),
+  checkInput(deactivateUserSchema),
+  catchErrors(adminController.deactivateUser),
 );
 adminRoutes.get(
   "/vendors",
-  validateRequest(listVendorsSchema),
-  asyncHandler(adminController.listVendors),
+  checkInput(listVendorsSchema),
+  catchErrors(adminController.listVendors),
 );
 adminRoutes.patch(
   "/vendors/:sellerId/status",
-  validateRequest(updateVendorStatusSchema),
-  asyncHandler(adminController.updateVendorStatus),
+  checkInput(updateVendorStatusSchema),
+  catchErrors(adminController.updateVendorStatus),
 );
 adminRoutes.get(
   "/products/moderation-queue",
-  validateRequest(moderationQueueSchema),
-  asyncHandler(adminController.moderationQueue),
+  checkInput(moderationQueueSchema),
+  catchErrors(adminController.moderationQueue),
 );
 adminRoutes.patch(
   "/products/:productId/moderate",
-  validateRequest(moderateProductSchema),
-  asyncHandler(adminController.moderateProduct),
+  checkInput(moderateProductSchema),
+  catchErrors(adminController.moderateProduct),
 );
 adminRoutes.get(
   "/orders",
-  validateRequest(listOrdersSchema),
-  asyncHandler(adminController.listOrders),
+  checkInput(listOrdersSchema),
+  catchErrors(adminController.listOrders),
 );
 adminRoutes.get(
   "/payments",
-  validateRequest(listPaymentsSchema),
-  asyncHandler(adminController.listPayments),
+  checkInput(listPaymentsSchema),
+  catchErrors(adminController.listPayments),
 );
 adminRoutes.post(
   "/payouts",
-  validateRequest(createPayoutSchema),
-  asyncHandler(adminController.createPayout),
+  checkInput(createPayoutSchema),
+  catchErrors(adminController.createPayout),
 );
 adminRoutes.get(
   "/payouts",
-  validateRequest(listPayoutsSchema),
-  asyncHandler(adminController.listPayouts),
+  checkInput(listPayoutsSchema),
+  catchErrors(adminController.listPayouts),
 );
 adminRoutes.get(
   "/tax/reports",
-  validateRequest(taxReportSchema),
-  asyncHandler(adminController.taxReport),
+  checkInput(taxReportSchema),
+  catchErrors(adminController.taxReport),
 );
 adminRoutes.post(
   "/tax/orders/:orderId/invoice",
-  validateRequest(generateInvoiceSchema),
-  asyncHandler(adminController.generateInvoice),
+  checkInput(createInvoiceSchema),
+  catchErrors(adminController.createInvoice),
 );
 adminRoutes.post(
   "/platform/api-keys",
-  validateRequest(createApiKeySchema),
-  asyncHandler(adminController.createApiKey),
+  checkInput(createApiKeySchema),
+  catchErrors(adminController.createApiKey),
 );
 adminRoutes.get(
   "/platform/api-keys",
-  validateRequest(listApiKeysSchema),
-  asyncHandler(adminController.listApiKeys),
+  checkInput(listApiKeysSchema),
+  catchErrors(adminController.listApiKeys),
 );
 adminRoutes.post(
   "/platform/webhooks",
-  validateRequest(createWebhookSubscriptionSchema),
-  asyncHandler(adminController.createWebhookSubscription),
+  checkInput(createWebhookSubscriptionSchema),
+  catchErrors(adminController.createWebhookSubscription),
 );
 adminRoutes.get(
   "/platform/webhooks",
-  validateRequest(listWebhookSubscriptionsSchema),
-  asyncHandler(adminController.listWebhookSubscriptions),
+  checkInput(listWebhookSubscriptionsSchema),
+  catchErrors(adminController.listWebhookSubscriptions),
 );
 adminRoutes.put(
   "/platform/feature-flags",
-  validateRequest(upsertFeatureFlagSchema),
-  asyncHandler(adminController.upsertFeatureFlag),
+  checkInput(upsertFeatureFlagSchema),
+  catchErrors(adminController.upsertFeatureFlag),
 );
 adminRoutes.get(
   "/platform/feature-flags",
-  validateRequest(listFeatureFlagsSchema),
-  asyncHandler(adminController.listFeatureFlags),
+  checkInput(listFeatureFlagsSchema),
+  catchErrors(adminController.listFeatureFlags),
 );
 adminRoutes.get(
   "/analytics/realtime",
-  validateRequest(realtimeAnalyticsSchema),
-  asyncHandler(adminController.realtimeAnalytics),
+  checkInput(realtimeAnalyticsSchema),
+  catchErrors(adminController.realtimeAnalytics),
 );
 adminRoutes.get(
   "/returns/analytics",
-  validateRequest(returnsAnalyticsSchema),
-  asyncHandler(adminController.returnsAnalytics),
+  checkInput(returnsAnalyticsSchema),
+  catchErrors(adminController.returnsAnalytics),
 );
 adminRoutes.get(
   "/chargebacks",
-  validateRequest(listChargebacksSchema),
-  asyncHandler(adminController.listChargebacks),
+  checkInput(listChargebacksSchema),
+  catchErrors(adminController.listChargebacks),
 );
 adminRoutes.get(
   "/system/health",
-  validateRequest(queueStatusSchema),
-  asyncHandler(adminController.systemHealth),
+  checkInput(queueStatusSchema),
+  catchErrors(adminController.systemHealth),
 );
 adminRoutes.get(
   "/system/queues",
-  validateRequest(queueStatusSchema),
-  asyncHandler(adminController.queueStatus),
+  checkInput(queueStatusSchema),
+  catchErrors(adminController.queueStatus),
 );
 adminRoutes.post(
   "/system/queues/:queueName/pause",
-  validateRequest(queueActionSchema),
-  asyncHandler(adminController.pauseQueue),
+  checkInput(queueActionSchema),
+  catchErrors(adminController.pauseQueue),
 );
 adminRoutes.post(
   "/system/queues/:queueName/resume",
-  validateRequest(queueActionSchema),
-  asyncHandler(adminController.resumeQueue),
+  checkInput(queueActionSchema),
+  catchErrors(adminController.resumeQueue),
 );
 adminRoutes.get(
   "/system/dead-letter",
-  validateRequest(listDeadLetterSchema),
-  asyncHandler(adminController.listDeadLetterEvents),
+  checkInput(listDeadLetterSchema),
+  catchErrors(adminController.listDeadLetterEvents),
 );
 adminRoutes.post(
   "/system/dead-letter/:eventId/retry",
-  validateRequest(deadLetterActionSchema),
-  asyncHandler(adminController.retryDeadLetterEvent),
+  checkInput(deadLetterActionSchema),
+  catchErrors(adminController.retryDeadLetterEvent),
 );
 adminRoutes.post(
   "/system/dead-letter/:eventId/discard",
-  validateRequest(deadLetterActionSchema),
-  asyncHandler(adminController.discardDeadLetterEvent),
+  checkInput(deadLetterActionSchema),
+  catchErrors(adminController.discardDeadLetterEvent),
 );
 adminRoutes.post(
   "/platform/subscription-plans",
-  validateRequest(createSubscriptionPlanSchema),
-  asyncHandler(adminController.createSubscriptionPlan),
+  checkInput(createSubscriptionPlanSchema),
+  catchErrors(adminController.createSubscriptionPlan),
 );
 adminRoutes.get(
   "/platform/subscription-plans",
-  validateRequest(listSubscriptionPlanSchema),
-  asyncHandler(adminController.listSubscriptionPlans),
+  checkInput(listSubscriptionPlanSchema),
+  catchErrors(adminController.listSubscriptionPlans),
 );
 adminRoutes.get(
   "/platform/subscription-plans/:planId",
-  validateRequest(subscriptionPlanParamSchema),
-  asyncHandler(adminController.getSubscriptionPlan),
+  checkInput(subscriptionPlanParamSchema),
+  catchErrors(adminController.getSubscriptionPlan),
 );
 adminRoutes.patch(
   "/platform/subscription-plans/:planId",
-  validateRequest(updateSubscriptionPlanSchema),
-  asyncHandler(adminController.updateSubscriptionPlan),
+  checkInput(updateSubscriptionPlanSchema),
+  catchErrors(adminController.updateSubscriptionPlan),
 );
 adminRoutes.delete(
   "/platform/subscription-plans/:planId",
-  validateRequest(subscriptionPlanParamSchema),
-  asyncHandler(adminController.deleteSubscriptionPlan),
+  checkInput(subscriptionPlanParamSchema),
+  catchErrors(adminController.deleteSubscriptionPlan),
 );
 adminRoutes.get(
   "/platform/subscriptions",
-  validateRequest(listPlatformSubscriptionsSchema),
-  asyncHandler(adminController.listPlatformSubscriptions),
+  checkInput(listPlatformSubscriptionsSchema),
+  catchErrors(adminController.listPlatformSubscriptions),
 );
 adminRoutes.patch(
   "/platform/subscriptions/:subscriptionId/status",
-  validateRequest(updatePlatformSubscriptionStatusSchema),
-  asyncHandler(adminController.updatePlatformSubscriptionStatus),
+  checkInput(updatePlatformSubscriptionStatusSchema),
+  catchErrors(adminController.updatePlatformSubscriptionStatus),
 );
 adminRoutes.post(
   "/platform/fee-config",
-  validateRequest(createPlatformFeeConfigSchema),
-  asyncHandler(adminController.createPlatformFeeConfig),
+  checkInput(createPlatformFeeConfigSchema),
+  catchErrors(adminController.createPlatformFeeConfig),
 );
 adminRoutes.get(
   "/platform/fee-config",
-  validateRequest(listPlatformFeeConfigSchema),
-  asyncHandler(adminController.listPlatformFeeConfigs),
+  checkInput(listPlatformFeeConfigSchema),
+  catchErrors(adminController.listPlatformFeeConfigs),
 );
 adminRoutes.get(
   "/platform/fee-config/:configId",
-  validateRequest(platformFeeConfigParamSchema),
-  asyncHandler(adminController.getPlatformFeeConfig),
+  checkInput(platformFeeConfigParamSchema),
+  catchErrors(adminController.getPlatformFeeConfig),
 );
 adminRoutes.patch(
   "/platform/fee-config/:configId",
-  validateRequest(updatePlatformFeeConfigSchema),
-  asyncHandler(adminController.updatePlatformFeeConfig),
+  checkInput(updatePlatformFeeConfigSchema),
+  catchErrors(adminController.updatePlatformFeeConfig),
 );
 adminRoutes.delete(
   "/platform/fee-config/:configId",
-  validateRequest(platformFeeConfigParamSchema),
-  asyncHandler(adminController.deletePlatformFeeConfig),
+  checkInput(platformFeeConfigParamSchema),
+  catchErrors(adminController.deletePlatformFeeConfig),
 );
 
 // Platform Management Routes
 adminRoutes.post(
   "/platform/categories",
-  validateRequest(createCategorySchema),
-  asyncHandler(platformController.createCategory),
+  checkInput(createCategorySchema),
+  catchErrors(platformController.createCategory),
 );
 adminRoutes.get(
   "/platform/categories",
-  validateRequest(listCategoriesSchema),
-  asyncHandler(platformController.listCategories),
+  checkInput(listCategoriesSchema),
+  catchErrors(platformController.listCategories),
 );
 adminRoutes.get(
   "/platform/categories/:categoryKey",
-  validateRequest(categoryKeySchema),
-  asyncHandler(platformController.getCategory),
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.getCategory),
 );
 adminRoutes.patch(
   "/platform/categories/:categoryKey",
-  validateRequest(updateCategorySchema),
-  asyncHandler(platformController.updateCategory),
+  checkInput(updateCategorySchema),
+  catchErrors(platformController.updateCategory),
 );
 adminRoutes.delete(
   "/platform/categories/:categoryKey",
-  validateRequest(categoryKeySchema),
-  asyncHandler(platformController.deleteCategory),
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.deleteCategory),
 );
 
 adminRoutes.post(
   "/platform/product-families",
-  validateRequest(createProductFamilySchema),
-  asyncHandler(platformController.createProductFamily),
+  checkInput(createProductFamilySchema),
+  catchErrors(platformController.createProductFamily),
 );
 adminRoutes.get(
   "/platform/product-families",
-  validateRequest(listProductFamiliesSchema),
-  asyncHandler(platformController.listProductFamilies),
+  checkInput(listProductFamiliesSchema),
+  catchErrors(platformController.listProductFamilies),
 );
 adminRoutes.get(
   "/platform/product-families/:familyCode",
-  validateRequest(productFamilyCodeSchema),
-  asyncHandler(platformController.getProductFamily),
+  checkInput(productFamilyCodeSchema),
+  catchErrors(platformController.getProductFamily),
 );
 adminRoutes.patch(
   "/platform/product-families/:familyCode",
-  validateRequest(updateProductFamilySchema),
-  asyncHandler(platformController.updateProductFamily),
+  checkInput(updateProductFamilySchema),
+  catchErrors(platformController.updateProductFamily),
 );
 adminRoutes.delete(
   "/platform/product-families/:familyCode",
-  validateRequest(productFamilyCodeSchema),
-  asyncHandler(platformController.deleteProductFamily),
+  checkInput(productFamilyCodeSchema),
+  catchErrors(platformController.deleteProductFamily),
 );
 
 adminRoutes.post(
   "/platform/product-variants",
-  validateRequest(createProductVariantSchema),
-  asyncHandler(platformController.createProductVariant),
+  checkInput(createProductVariantSchema),
+  catchErrors(platformController.createProductVariant),
 );
 adminRoutes.get(
   "/platform/product-variants",
-  validateRequest(listProductVariantsSchema),
-  asyncHandler(platformController.listProductVariants),
+  checkInput(listProductVariantsSchema),
+  catchErrors(platformController.listProductVariants),
 );
 adminRoutes.get(
   "/platform/product-variants/:variantId",
-  validateRequest(productVariantIdSchema),
-  asyncHandler(platformController.getProductVariant),
+  checkInput(productVariantIdSchema),
+  catchErrors(platformController.getProductVariant),
 );
 adminRoutes.patch(
   "/platform/product-variants/:variantId",
-  validateRequest(updateProductVariantSchema),
-  asyncHandler(platformController.updateProductVariant),
+  checkInput(updateProductVariantSchema),
+  catchErrors(platformController.updateProductVariant),
 );
 adminRoutes.delete(
   "/platform/product-variants/:variantId",
-  validateRequest(productVariantIdSchema),
-  asyncHandler(platformController.deleteProductVariant),
+  checkInput(productVariantIdSchema),
+  catchErrors(platformController.deleteProductVariant),
 );
 
 adminRoutes.post(
   "/platform/hsn-codes",
-  validateRequest(createHsnCodeSchema),
-  asyncHandler(platformController.createHsnCode),
+  checkInput(createHsnCodeSchema),
+  catchErrors(platformController.createHsnCode),
 );
 adminRoutes.get(
   "/platform/hsn-codes",
-  validateRequest(listHsnCodesSchema),
-  asyncHandler(platformController.listHsnCodes),
+  checkInput(listHsnCodesSchema),
+  catchErrors(platformController.listHsnCodes),
 );
 adminRoutes.get(
   "/platform/hsn-codes/:hsnCode",
-  validateRequest(hsnCodeSchema),
-  asyncHandler(platformController.getHsnCode),
+  checkInput(hsnCodeSchema),
+  catchErrors(platformController.getHsnCode),
 );
 adminRoutes.patch(
   "/platform/hsn-codes/:hsnCode",
-  validateRequest(updateHsnCodeSchema),
-  asyncHandler(platformController.updateHsnCode),
+  checkInput(updateHsnCodeSchema),
+  catchErrors(platformController.updateHsnCode),
 );
 adminRoutes.delete(
   "/platform/hsn-codes/:hsnCode",
-  validateRequest(hsnCodeSchema),
-  asyncHandler(platformController.deleteHsnCode),
+  checkInput(hsnCodeSchema),
+  catchErrors(platformController.deleteHsnCode),
 );
 
 adminRoutes.post(
   "/platform/geography",
-  validateRequest(createGeographySchema),
-  asyncHandler(platformController.createGeography),
+  checkInput(createGeographySchema),
+  catchErrors(platformController.createGeography),
 );
 adminRoutes.get(
   "/platform/geography",
-  validateRequest(listGeographiesSchema),
-  asyncHandler(platformController.listGeographies),
+  checkInput(listGeographiesSchema),
+  catchErrors(platformController.listGeographies),
 );
 adminRoutes.get(
   "/platform/geography/:countryCode",
-  validateRequest(geographyCodeSchema),
-  asyncHandler(platformController.getGeography),
+  checkInput(geographyCodeSchema),
+  catchErrors(platformController.getGeography),
 );
 adminRoutes.patch(
   "/platform/geography/:countryCode",
-  validateRequest(updateGeographySchema),
-  asyncHandler(platformController.updateGeography),
+  checkInput(updateGeographySchema),
+  catchErrors(platformController.updateGeography),
 );
 adminRoutes.delete(
   "/platform/geography/:countryCode",
-  validateRequest(geographyCodeSchema),
-  asyncHandler(platformController.deleteGeography),
+  checkInput(geographyCodeSchema),
+  catchErrors(platformController.deleteGeography),
 );
 
 adminRoutes.post(
   "/platform/content-pages",
-  validateRequest(createContentPageSchema),
-  asyncHandler(platformController.createContentPage),
+  checkInput(createContentPageSchema),
+  catchErrors(platformController.createContentPage),
 );
 adminRoutes.get(
   "/platform/content-pages",
-  validateRequest(listContentPagesSchema),
-  asyncHandler(platformController.listContentPages),
+  checkInput(listContentPagesSchema),
+  catchErrors(platformController.listContentPages),
 );
 adminRoutes.get(
   "/platform/content-pages/:slug",
-  validateRequest(contentPageSlugSchema),
-  asyncHandler(platformController.getContentPage),
+  checkInput(contentPageSlugSchema),
+  catchErrors(platformController.getContentPage),
 );
 adminRoutes.patch(
   "/platform/content-pages/:slug",
-  validateRequest(updateContentPageSchema),
-  asyncHandler(platformController.updateContentPage),
+  checkInput(updateContentPageSchema),
+  catchErrors(platformController.updateContentPage),
 );
 adminRoutes.delete(
   "/platform/content-pages/:slug",
-  validateRequest(contentPageSlugSchema),
-  asyncHandler(platformController.deleteContentPage),
+  checkInput(contentPageSlugSchema),
+  catchErrors(platformController.deleteContentPage),
 );
 
 module.exports = { adminRoutes };

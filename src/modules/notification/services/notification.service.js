@@ -3,7 +3,7 @@ const { createQueue } = require("../../../shared/queues/queue-factory");
 const { sendMail } = require("../../../infrastructure/mail/mailer");
 const { eventBus } = require("../../../infrastructure/events/event-bus");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { NotificationPreferenceModel } = require("../models/notification-preference.model");
 
@@ -41,7 +41,7 @@ class NotificationService {
     }
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.NOTIFICATION_CREATED_V1,
         {
           userId: notification.userId,

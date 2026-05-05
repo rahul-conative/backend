@@ -9,13 +9,13 @@ const {
 } = require("../controllers/permission-assignment.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
 const {
-  authorize,
-  authorizePermission,
-} = require("../../../shared/middleware/authorize");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+  allowRoles,
+  allowPermissions,
+} = require("../../../shared/middleware/access");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
-  validateRequest,
-} = require("../../../shared/middleware/validate-request");
+  checkInput,
+} = require("../../../shared/middleware/check-input");
 const {
   createModuleSchema,
   updateModuleSchema,
@@ -54,229 +54,239 @@ rbacRoutes.use(authenticate);
 // MODULES ROUTES
 rbacRoutes.get(
   "/permission-management/modules",
-  validateRequest(permissionManagementSchema),
-  asyncHandler(moduleController.permissionManagement),
+  allowPermissions("rbac:view"),
+  checkInput(permissionManagementSchema),
+  catchErrors(moduleController.permissionManagement),
 );
 
 rbacRoutes.get(
   "/modules",
-  validateRequest(listModulesSchema),
-  asyncHandler(moduleController.listModules),
+  allowPermissions("rbac:view"),
+  checkInput(listModulesSchema),
+  catchErrors(moduleController.listModules),
 );
 
 rbacRoutes.get(
   "/modules/:moduleId",
-  validateRequest(moduleParamSchema),
-  asyncHandler(moduleController.getModule),
+  allowPermissions("rbac:view"),
+  checkInput(moduleParamSchema),
+  catchErrors(moduleController.getModule),
 );
 
 rbacRoutes.post(
   "/modules",
-  authorizePermission("rbac:module:create"),
-  validateRequest(createModuleSchema),
-  asyncHandler(moduleController.createModule),
+  allowPermissions("rbac:add"),
+  checkInput(createModuleSchema),
+  catchErrors(moduleController.createModule),
 );
 
 rbacRoutes.patch(
   "/modules/:moduleId",
-  validateRequest({ ...moduleParamSchema, body: updateModuleSchema.body }),
-  authorizePermission("rbac:module:update"),
-  asyncHandler(moduleController.updateModule),
+  checkInput({ ...moduleParamSchema, body: updateModuleSchema.body }),
+  allowPermissions("rbac:update"),
+  catchErrors(moduleController.updateModule),
 );
 
 rbacRoutes.delete(
   "/modules/:moduleId",
-  validateRequest(moduleParamSchema),
-  authorizePermission("rbac:module:delete"),
-  asyncHandler(moduleController.deleteModule),
+  checkInput(moduleParamSchema),
+  allowPermissions("rbac:delete"),
+  catchErrors(moduleController.deleteModule),
 );
 
 // PERMISSIONS ROUTES
 rbacRoutes.get(
   "/permissions",
-  validateRequest(listPermissionsSchema),
-  asyncHandler(permissionController.listPermissions),
+  allowPermissions("rbac:view"),
+  checkInput(listPermissionsSchema),
+  catchErrors(permissionController.listPermissions),
 );
 
 rbacRoutes.get(
   "/permissions/:permissionId",
-  validateRequest(permissionParamSchema),
-  asyncHandler(permissionController.getPermission),
+  allowPermissions("rbac:view"),
+  checkInput(permissionParamSchema),
+  catchErrors(permissionController.getPermission),
 );
 
 rbacRoutes.post(
   "/permissions",
-  authorizePermission("rbac:permission:create"),
-  validateRequest(createPermissionSchema),
-  asyncHandler(permissionController.createPermission),
+  allowPermissions("rbac:add"),
+  checkInput(createPermissionSchema),
+  catchErrors(permissionController.createPermission),
 );
 
 rbacRoutes.patch(
   "/permissions/:permissionId",
-  validateRequest({
+  checkInput({
     ...permissionParamSchema,
     body: updatePermissionSchema.body,
   }),
-  authorizePermission("rbac:permission:update"),
-  asyncHandler(permissionController.updatePermission),
+  allowPermissions("rbac:update"),
+  catchErrors(permissionController.updatePermission),
 );
 
 // ROLES ROUTES
 rbacRoutes.get(
   "/roles",
-  validateRequest(listRolesSchema),
-  asyncHandler(roleController.listRoles),
+  allowPermissions("rbac:view"),
+  checkInput(listRolesSchema),
+  catchErrors(roleController.listRoles),
 );
 
 rbacRoutes.get(
   "/roles/:roleId",
-  validateRequest(roleParamSchema),
-  asyncHandler(roleController.getRole),
+  allowPermissions("rbac:view"),
+  checkInput(roleParamSchema),
+  catchErrors(roleController.getRole),
 );
 
 rbacRoutes.post(
   "/roles",
-  authorizePermission("rbac:role:create"),
-  validateRequest(createRoleSchema),
-  asyncHandler(roleController.createRole),
+  allowPermissions("rbac:add"),
+  checkInput(createRoleSchema),
+  catchErrors(roleController.createRole),
 );
 
 rbacRoutes.patch(
   "/roles/:roleId",
-  validateRequest({ ...roleParamSchema, body: updateRoleSchema.body }),
-  authorizePermission("rbac:role:update"),
-  asyncHandler(roleController.updateRole),
+  checkInput({ ...roleParamSchema, body: updateRoleSchema.body }),
+  allowPermissions("rbac:update"),
+  catchErrors(roleController.updateRole),
 );
 
 rbacRoutes.get(
   "/roles/:roleId/permissions",
-  validateRequest(roleParamSchema),
-  asyncHandler(roleController.getRolePermissions),
+  allowPermissions("rbac:view"),
+  checkInput(roleParamSchema),
+  catchErrors(roleController.getRolePermissions),
 );
 
 rbacRoutes.post(
   "/roles/:roleId/permissions",
-  validateRequest({ ...roleParamSchema, body: assignPermissionSchema.body }),
-  authorizePermission("rbac:role:assign-permission"),
-  asyncHandler(roleController.assignPermissionToRole),
+  checkInput({ ...roleParamSchema, body: assignPermissionSchema.body }),
+  allowPermissions("rbac:update"),
+  catchErrors(roleController.assignPermissionToRole),
 );
 
 rbacRoutes.delete(
   "/roles/:roleId/permissions",
-  validateRequest({ ...roleParamSchema, body: removePermissionSchema.body }),
-  authorizePermission("rbac:role:remove-permission"),
-  asyncHandler(roleController.removePermissionFromRole),
+  checkInput({ ...roleParamSchema, body: removePermissionSchema.body }),
+  allowPermissions("rbac:delete"),
+  catchErrors(roleController.removePermissionFromRole),
 );
 
 rbacRoutes.post(
   "/roles/:roleId/permissions/bulk",
-  validateRequest({
+  checkInput({
     ...roleParamSchema,
     body: bulkAssignPermissionsSchema.body,
   }),
-  authorizePermission("rbac:role:assign-permission"),
-  asyncHandler(roleController.bulkAssignPermissions),
+  allowPermissions("rbac:update"),
+  catchErrors(roleController.bulkAssignPermissions),
 );
 
 // USER PERMISSIONS ROUTES
 rbacRoutes.get(
   "/users/:userId/permissions",
-  validateRequest(userPermissionParamSchema),
-  authorizePermission("rbac:user:view-permissions"),
-  asyncHandler(permissionAssignmentController.getUserPermissions),
+  checkInput(userPermissionParamSchema),
+  allowPermissions("rbac:view"),
+  catchErrors(permissionAssignmentController.getUserPermissions),
 );
 
 rbacRoutes.get(
   "/users/:userId/permissions/effective",
-  validateRequest(userPermissionParamSchema),
-  authorizePermission("rbac:user:view-permissions"),
-  asyncHandler(permissionAssignmentController.getUserEffectivePermissions),
+  checkInput(userPermissionParamSchema),
+  allowPermissions("rbac:view"),
+  catchErrors(permissionAssignmentController.getUserEffectivePermissions),
 );
 
 rbacRoutes.get(
   "/users/:userId/permissions/check",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     query: checkPermissionSchema.query,
   }),
-  asyncHandler(permissionAssignmentController.checkUserPermission),
+  allowPermissions("rbac:view"),
+  catchErrors(permissionAssignmentController.checkUserPermission),
 );
 
 rbacRoutes.post(
   "/users/:userId/permissions",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: assignPermissionSchema.body,
   }),
-  authorizePermission("rbac:user:assign-permission"),
-  asyncHandler(permissionAssignmentController.assignPermissionToUser),
+  allowPermissions("rbac:update"),
+  catchErrors(permissionAssignmentController.assignPermissionToUser),
 );
 
 rbacRoutes.delete(
   "/users/:userId/permissions",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: removePermissionSchema.body,
   }),
-  authorizePermission("rbac:user:remove-permission"),
-  asyncHandler(permissionAssignmentController.removePermissionFromUser),
+  allowPermissions("rbac:delete"),
+  catchErrors(permissionAssignmentController.removePermissionFromUser),
 );
 
 rbacRoutes.post(
   "/users/:userId/permissions/bulk",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: bulkAssignPermissionsSchema.body,
   }),
-  authorizePermission("rbac:user:assign-permission"),
-  asyncHandler(permissionAssignmentController.bulkAssignPermissionsToUser),
+  allowPermissions("rbac:update"),
+  catchErrors(permissionAssignmentController.bulkAssignPermissionsToUser),
 );
 
 // USER ROLES ROUTES
 rbacRoutes.get(
   "/users/:userId/roles",
-  validateRequest(userPermissionParamSchema),
-  authorizePermission("rbac:user:view-roles"),
-  asyncHandler(permissionAssignmentController.getUserRoles),
+  checkInput(userPermissionParamSchema),
+  allowPermissions("rbac:view"),
+  catchErrors(permissionAssignmentController.getUserRoles),
 );
 
 rbacRoutes.get(
   "/users/:userId/roles/check",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     query: checkRoleSchema.query,
   }),
-  asyncHandler(permissionAssignmentController.checkUserRole),
+  allowPermissions("rbac:view"),
+  catchErrors(permissionAssignmentController.checkUserRole),
 );
 
 rbacRoutes.post(
   "/users/:userId/roles",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: assignRoleSchema.body,
   }),
-  authorizePermission("rbac:user:assign-role"),
-  asyncHandler(permissionAssignmentController.assignRoleToUser),
+  allowPermissions("rbac:update"),
+  catchErrors(permissionAssignmentController.assignRoleToUser),
 );
 
 rbacRoutes.delete(
   "/users/:userId/roles",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: removeRoleSchema.body,
   }),
-  authorizePermission("rbac:user:remove-role"),
-  asyncHandler(permissionAssignmentController.removeRoleFromUser),
+  allowPermissions("rbac:delete"),
+  catchErrors(permissionAssignmentController.removeRoleFromUser),
 );
 
 rbacRoutes.post(
   "/users/:userId/roles/bulk",
-  validateRequest({
+  checkInput({
     ...userPermissionParamSchema,
     body: bulkAssignRolesSchema.body,
   }),
-  authorizePermission("rbac:user:assign-role"),
-  asyncHandler(permissionAssignmentController.bulkAssignRolesToUser),
+  allowPermissions("rbac:update"),
+  catchErrors(permissionAssignmentController.bulkAssignRolesToUser),
 );
 
 module.exports = { rbacRoutes };

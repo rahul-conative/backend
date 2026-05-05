@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-const { authenticateToken } = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
 const { RecommendationService } = require("../services/recommendation.service");
 const { recommendationValidation } = require("../../validation");
 
 // ==============================
 // Get personalized recommendations
 // ==============================
-router.get("/", authenticateToken, async (req, res, next) => {
+router.get("/", authenticate, async (req, res, next) => {
   try {
     const { error, value } =
       recommendationValidation.getRecommendations.validate(req.query);
@@ -46,7 +46,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
 // ==============================
 router.post(
   "/:productId/interact",
-  authenticateToken,
+  authenticate,
   async (req, res, next) => {
     try {
       const { error } =

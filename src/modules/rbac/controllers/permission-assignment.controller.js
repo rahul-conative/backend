@@ -1,4 +1,4 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { RbacService } = require("../services/rbac.service");
 
 class PermissionAssignmentController {
@@ -10,7 +10,7 @@ class PermissionAssignmentController {
   getUserPermissions = async (req, res) => {
     const { userId } = req.params;
     const permissions = await this.rbacService.getUserPermissions(userId);
-    res.json(successResponse(permissions));
+    res.json(okResponse(permissions));
   };
 
   assignPermissionToUser = async (req, res) => {
@@ -23,7 +23,7 @@ class PermissionAssignmentController {
       permissionId,
       grantedBy,
     );
-    res.status(201).json(successResponse(result));
+    res.status(201).json(okResponse(result));
   };
 
   removePermissionFromUser = async (req, res) => {
@@ -34,7 +34,7 @@ class PermissionAssignmentController {
       userId,
       permissionId,
     );
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   bulkAssignPermissionsToUser = async (req, res) => {
@@ -47,21 +47,21 @@ class PermissionAssignmentController {
       permissionIds,
       grantedBy,
     );
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   getUserEffectivePermissions = async (req, res) => {
     const { userId } = req.params;
     const permissions =
       await this.rbacService.getUserEffectivePermissions(userId);
-    res.json(successResponse(permissions));
+    res.json(okResponse(permissions));
   };
 
   // USER ROLES
   getUserRoles = async (req, res) => {
     const { userId } = req.params;
     const roles = await this.rbacService.getUserRoles(userId);
-    res.json(successResponse(roles));
+    res.json(okResponse(roles));
   };
 
   assignRoleToUser = async (req, res) => {
@@ -74,7 +74,7 @@ class PermissionAssignmentController {
       roleId,
       assignedBy,
     );
-    res.status(201).json(successResponse(result));
+    res.status(201).json(okResponse(result));
   };
 
   removeRoleFromUser = async (req, res) => {
@@ -82,7 +82,7 @@ class PermissionAssignmentController {
     const { roleId } = req.body;
 
     const result = await this.rbacService.removeRoleFromUser(userId, roleId);
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   bulkAssignRolesToUser = async (req, res) => {
@@ -95,7 +95,7 @@ class PermissionAssignmentController {
       roleIds,
       assignedBy,
     );
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   // CHECK PERMISSIONS
@@ -107,7 +107,7 @@ class PermissionAssignmentController {
       userId,
       permissionSlug,
     );
-    res.json(successResponse({ hasPermission }));
+    res.json(okResponse({ hasPermission }));
   };
 
   checkUserRole = async (req, res) => {
@@ -115,7 +115,7 @@ class PermissionAssignmentController {
     const { roleSlug } = req.query;
 
     const hasRole = await this.rbacService.userHasRole(userId, roleSlug);
-    res.json(successResponse({ hasRole }));
+    res.json(okResponse({ hasRole }));
   };
 }
 

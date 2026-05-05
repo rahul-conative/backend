@@ -63,7 +63,7 @@ class LoyaltyService {
     }
 
     await loyalty.save();
-    await this.invalidateCache(userId);
+    await this.clearCache(userId);
 
     return loyalty;
   }
@@ -83,7 +83,7 @@ class LoyaltyService {
     });
 
     await loyalty.save();
-    await this.invalidateCache(userId);
+    await this.clearCache(userId);
 
     return loyalty;
   }
@@ -130,7 +130,7 @@ class LoyaltyService {
     return benefits[tier] || benefits.bronze;
   }
 
-  async invalidateCache(userId) {
+  async clearCache(userId) {
     await deleteCached(cacheKeys.userProfile(userId));
   }
 }

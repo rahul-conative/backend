@@ -1,7 +1,7 @@
-const { errorResponse } = require("../http/response");
+const { failResponse } = require("../http/reply");
 
 function notFoundHandler(req, res) {
-  res.status(404).json(errorResponse("Route not found"));
+  res.status(404).json(failResponse("Route not found"));
 }
 
 module.exports = { notFoundHandler };

@@ -1,6 +1,6 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { CartService } = require("../services/cart.service");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 
 class CartController {
   constructor({ cartService = new CartService() } = {}) {
@@ -8,15 +8,15 @@ class CartController {
   }
 
   getMyCart = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const cart = await this.cartService.getCart(actor.userId);
-    res.json(successResponse(cart));
+    res.json(okResponse(cart));
   };
 
   upsertMyCart = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const cart = await this.cartService.upsertCart(actor.userId, req.body);
-    res.json(successResponse(cart));
+    res.json(okResponse(cart));
   };
 }
 

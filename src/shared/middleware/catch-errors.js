@@ -1,4 +1,4 @@
-function asyncHandler(handler) {
+function catchErrors(handler) {
   return async (req, res, next) => {
     try {
       await handler(req, res, next);
@@ -8,4 +8,4 @@ function asyncHandler(handler) {
   };
 }
 
-module.exports = { asyncHandler };
+module.exports = { catchErrors };

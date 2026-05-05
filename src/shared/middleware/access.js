@@ -1,11 +1,11 @@
 const { AppError } = require("../errors/app-error");
-const { hasCapability } = require("../auth/access-control");
+const { canDo } = require("../auth/access-rules");
 const { ROLES } = require("../constants/roles");
 const {
-  isScopedRole,
-  resolveRequestModule,
-  normalizeModuleName,
-} = require("../auth/module-scope");
+  usesModuleAccess,
+  getRequestModule,
+  cleanModuleName,
+} = require("../auth/module-access");
 
 function getUserRoles(req) {
   const roles = [];
@@ -22,24 +22,24 @@ function isSuperAdmin(req) {
 }
 
 function enforceModuleScope(req) {
-  if (!isScopedRole(req.auth)) {
+  if (!usesModuleAccess(req.auth)) {
     return null;
   }
 
-  const requestModule = resolveRequestModule(req);
+  const requestModule = getRequestModule(req);
   if (!requestModule) {
     return null;
   }
 
   const allowedModules = Array.isArray(req.auth?.allowedModules)
-    ? req.auth.allowedModules.map(normalizeModuleName)
+    ? req.auth.allowedModules.map(cleanModuleName)
     : [];
 
   if (!allowedModules.length) {
     return new AppError("Forbidden: no modules assigned", 403);
   }
 
-  if (!allowedModules.includes(normalizeModuleName(requestModule))) {
+  if (!allowedModules.includes(cleanModuleName(requestModule))) {
     return new AppError(
       `Forbidden: module access denied for ${requestModule}`,
       403,
@@ -53,7 +53,7 @@ function flattenRoles(roles = []) {
   return roles.flatMap((role) => (Array.isArray(role) ? role : [role]));
 }
 
-function authorize(...roles) {
+function allowRoles(...roles) {
   return (req, res, next) => {
     if (!req.auth) {
       return next(new AppError("Authentication required", 401));
@@ -79,7 +79,7 @@ function authorize(...roles) {
   };
 }
 
-function authorizeCapability(...capabilities) {
+function allowActions(...actions) {
   return (req, res, next) => {
     if (!req.auth) {
       return next(new AppError("Authentication required", 401));
@@ -95,14 +95,14 @@ function authorizeCapability(...capabilities) {
     }
 
     const userRoles = getUserRoles(req);
-    const allowed = capabilities.every((capability) => {
+    const allowed = actions.every((action) => {
       if (
         Array.isArray(req.auth.permissions) &&
-        req.auth.permissions.includes(capability)
+        req.auth.permissions.includes(action)
       ) {
         return true;
       }
-      return userRoles.some((role) => hasCapability(role, capability));
+      return userRoles.some((role) => canDo(role, action));
     });
 
     if (!allowed) {
@@ -113,7 +113,7 @@ function authorizeCapability(...capabilities) {
   };
 }
 
-function authorizePermission(...permissionSlugs) {
+function allowPermissions(...permissionSlugs) {
   return (req, res, next) => {
     if (!req.auth) {
       return next(new AppError("Authentication required", 401));
@@ -151,4 +151,4 @@ function authorizePermission(...permissionSlugs) {
   };
 }
 
-module.exports = { authorize, authorizeCapability, authorizePermission };
+module.exports = { allowRoles, allowActions, allowPermissions };

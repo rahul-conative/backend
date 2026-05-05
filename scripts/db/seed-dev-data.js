@@ -15,14 +15,14 @@ const { DynamicPricingModel } = require("../../src/modules/pricing/models/dynami
 const { ReturnModel } = require("../../src/modules/returns/models/return.model");
 const { FraudDetectionModel } = require("../../src/modules/fraud/models/fraud-detection.model");
 const { NotificationPreferenceModel } = require("../../src/modules/notification/models/notification-preference.model");
-const { hashValue } = require("../../src/shared/utils/hash");
+const { hashText } = require("../../src/shared/tools/hash");
 
 async function seedMongo() {
   const adminEmail = "admin@gmail.com";
   const sellerEmail = "seller@gmail.com";
   const buyerEmail = "buyer@gmail.com";
 
-  const passwordHash = await hashValue("Password@123");
+  const passwordHash = await hashText("Password@123");
 
   const admin = await findOrCreateUser(adminEmail, {
     email: adminEmail,

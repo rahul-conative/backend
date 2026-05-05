@@ -635,7 +635,7 @@ productreviews        // review feed with helpful vote counters
 
 #### `POST /users/me/kyc`
 - **Authentication**: Required
-- **Authorization Capability**: `USER_KYC_SUBMIT`
+- **Authorization Action**: `USER_KYC_SUBMIT`
 - **Request Body**:
   ```json
   {
@@ -650,7 +650,7 @@ productreviews        // review feed with helpful vote counters
 
 #### `PATCH /users/:userId/kyc/review`
 - **Authentication**: Required
-- **Authorization Capability**: `KYC_REVIEW`
+- **Authorization Action**: `KYC_REVIEW`
 - **Request Body**:
   ```json
   {
@@ -698,7 +698,7 @@ productreviews        // review feed with helpful vote counters
 
 #### `POST /products`
 - **Authentication**: Required
-- **Authorization Capability**: `CATALOG_MANAGE`
+- **Authorization Action**: `CATALOG_MANAGE`
 - **Request Body**:
   ```json
   {
@@ -719,7 +719,7 @@ productreviews        // review feed with helpful vote counters
 
 #### `PATCH /products/:productId/review`
 - **Authentication**: Required
-- **Authorization Capability**: `CATALOG_REVIEW` (admin via wildcard capability)
+- **Authorization Action**: `CATALOG_REVIEW` (admin via wildcard action)
 - **Request Body**:
   ```json
   {
@@ -774,7 +774,7 @@ productreviews        // review feed with helpful vote counters
 
 #### `GET /orders/me`
 - **Authentication**: Required
-- **Authorization Capability**: `ORDER_SELF`
+- **Authorization Action**: `ORDER_SELF`
 - **Response**: `200 OK` User's orders
 
 #### `POST /orders`
@@ -844,7 +844,7 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `POST /payments/initiate`
 - **Authentication**: Required
-- **Authorization Capability**: `PAYMENT_SELF`
+- **Authorization Action**: `PAYMENT_SELF`
 - **Request Body**:
   ```json
   {
@@ -909,12 +909,12 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `GET /pricing/coupons`
 - **Authentication**: Required
-- **Authorization Capability**: `ORDER_MANAGE`
+- **Authorization Action**: `ORDER_MANAGE`
 - **Response**: `200 OK` List of active coupons
 
 #### `POST /pricing/coupons`
 - **Authentication**: Required
-- **Authorization Capability**: `ORDER_MANAGE`
+- **Authorization Action**: `ORDER_MANAGE`
 - **Request Body**:
   ```json
   {
@@ -934,7 +934,7 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `GET /wallets/me`
 - **Authentication**: Required
-- **Authorization Capability**: `WALLET_SELF`
+- **Authorization Action**: `WALLET_SELF`
 - **Response**: `200 OK`
   ```json
   {
@@ -960,7 +960,7 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `POST /sellers/kyc`
 - **Authentication**: Required
-- **Authorization Capability**: `SELLER_KYC_SUBMIT`
+- **Authorization Action**: `SELLER_KYC_SUBMIT`
 - **Request Body**:
   ```json
   {
@@ -979,21 +979,21 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `PATCH /sellers/:sellerId/kyc/review`
 - **Authentication**: Required
-- **Authorization Capability**: `KYC_REVIEW`
+- **Authorization Action**: `KYC_REVIEW`
 - **Request Body**: `{ "status": "verified|rejected", "rejectionReason": "..." }`
 - **Response**: `200 OK`
 - **Event**: `KYC_STATUS_UPDATED_V1`
 
 #### `PATCH /sellers/me/profile`
 - **Authentication**: Required
-- **Authorization Capability**: `SELLER_PROFILE_MANAGE`
+- **Authorization Action**: `SELLER_PROFILE_MANAGE`
 - **Request Body**: Seller store profile, support contacts, pickup address, onboarding checklist
 - **Response**: `200 OK`
 - **Behavior**: Auto-updates onboarding progression and GST verification marker from seller KYC
 
 #### `PATCH /sellers/me/settings`
 - **Authentication**: Required
-- **Authorization Capability**: `SELLER_PROFILE_MANAGE`
+- **Authorization Action**: `SELLER_PROFILE_MANAGE`
 - **Request Body**:
   ```json
   {
@@ -1009,7 +1009,7 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `GET /sellers/me/dashboard`
 - **Authentication**: Required
-- **Authorization Capability**: `SELLER_DASHBOARD_VIEW`
+- **Authorization Action**: `SELLER_DASHBOARD_VIEW`
 - **Query**: `fromDate`, `toDate` (ISO, optional; defaults to last 30 days)
 - **Response**: `200 OK`
 - **Includes**: Onboarding status, KYC status, GMV, delivered revenue, cancellation/return counts, top products, recent orders
@@ -1209,7 +1209,7 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `POST /notifications`
 - **Authentication**: Required
-- **Authorization Capability**: `NOTIFICATION_MANAGE`
+- **Authorization Action**: `NOTIFICATION_MANAGE`
 - **Request Body**:
   ```json
   {
@@ -1224,12 +1224,12 @@ Seller/Admin can update fulfillment states (packed, shipped, fulfilled)
 
 #### `GET /analytics`
 - **Authentication**: Required
-- **Authorization Capability**: `ANALYTICS_VIEW`
+- **Authorization Action**: `ANALYTICS_VIEW`
 - **Response**: `200 OK` Event logs
 
 #### `POST /analytics/events`
 - **Authentication**: Required
-- **Authorization Capability**: `ANALYTICS_VIEW`
+- **Authorization Action**: `ANALYTICS_VIEW`
 - **Request Body**:
   ```json
   {
@@ -1517,12 +1517,12 @@ module/
   - `listProductModerationQueue()` / `moderateProduct()`: Catalog governance
   - `listOrders()` / `listPayments()`: Full operational oversight
   - `createPayout()` / `listPayouts()`: Settlement scheduling and tracking
-  - `generateInvoice()` / `getTaxReport()`: Compliance operations
+  - `createInvoice()` / `getTaxReport()`: Compliance operations
 
 #### **14. TAX Module**
 - **Database**: PostgreSQL (`tax_invoices`, `tax_ledger_entries`, `gst_filings`)
 - **Key Services**:
-  - `generateInvoice()`: GST invoice generation with CGST/SGST/IGST/TCS support
+  - `createInvoice()`: GST invoice generation with CGST/SGST/IGST/TCS support
   - `getTaxReport()`: Component-wise tax ledger reporting
 - **Tax Components**: CGST, SGST, IGST, TCS
 - **Use Cases**: GSTR-8 preparation, audit trail, reconciliation
@@ -1803,9 +1803,9 @@ authenticate(req, res, next)
 
 ### **6.2 Authorization Middleware**
 ```javascript
-authorizeCapability(capability)
-- Checks if req.user.capabilities includes capability
-- Supports role-based and capability-based access
+allowActions(action)
+- Checks if req.auth.permissions includes the action
+- Supports role-based and action-based access
 - Returns 403 on insufficient permissions
 ```
 
@@ -1828,7 +1828,7 @@ Validation Libraries:
 - Zod: TypeScript-first validation (future migration)
 
 Validation Middleware:
-- validateRequest(schema)
+- checkInput(schema)
 - Sanitizes and validates request body/query/params
 - Returns 400 with detailed error messages
 - Prevents malicious input injection
@@ -2255,28 +2255,27 @@ src/
 │   ├── realtime/       # Socket.IO setup
 │   └── redis/          # Redis client
 ├── modules/             # Business modules
-├── shared/              # Shared utilities
-│   ├── auth/           # Auth utilities
+├── shared/              # Shared app code
+│   ├── auth/           # Auth rules
 │   ├── constants/      # App constants
 │   ├── domain/         # Domain models
 │   ├── errors/         # Custom errors
-│   ├── http/           # HTTP utilities
-│   ├── lib/            # Libraries
+│   ├── http/           # API replies
 │   ├── logger/         # Logging setup
 │   ├── middleware/     # Express middleware
-│   ├── queues/         # Queue utilities
-│   ├── search/         # Search utilities
-│   ├── security/       # Security utilities
+│   ├── queues/         # Queue setup
+│   ├── search/         # Search setup
+│   ├── security/       # Security logs
 │   ├── storage/        # File storage
-│   ├── utils/          # General utilities
-│   └── validation/     # Validation utilities
+│   ├── tools/          # Shared tools
+│   └── validation/     # Validation rules
 ├── workers/             # Background workers
 └── server.js           # Server entry point
 ```
 
 ### **11.2 Testing Strategy**
 ```javascript
-- Unit tests: Services, utilities, validation
+- Unit tests: Services, shared tools, validation
 - Integration tests: API endpoints, database operations
 - E2E tests: Critical user flows
 - Test databases: Separate instances for testing

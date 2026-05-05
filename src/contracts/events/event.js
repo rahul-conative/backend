@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
 
-function buildDomainEvent(eventName, payload, meta = {}) {
+function makeEvent(eventName, payload, meta = {}) {
   return {
     id: uuidv4(),
     eventName,
@@ -12,4 +12,4 @@ function buildDomainEvent(eventName, payload, meta = {}) {
   };
 }
 
-module.exports = { buildDomainEvent };
+module.exports = { makeEvent };

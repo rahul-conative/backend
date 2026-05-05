@@ -13,6 +13,15 @@ const {
   sequelize,
 } = require("../../../infrastructure/sequelize/sequelize-client");
 
+const PERMISSION_ACTIONS = ["add", "edit", "update", "delete", "view"];
+const PERMISSION_ACTION_ORDER = PERMISSION_ACTIONS.reduce(
+  (lookup, action, index) => {
+    lookup[action] = index;
+    return lookup;
+  },
+  {},
+);
+
 class RbacRepository {
   // MODULES
   async createModule(moduleData) {
@@ -99,9 +108,9 @@ class RbacRepository {
       const plainModule = module.toJSON();
       const permissions = (plainModule.permissions || [])
         .sort((left, right) => {
-          const actionCompare = String(left.action || "").localeCompare(
-            String(right.action || ""),
-          );
+          const actionCompare =
+            (PERMISSION_ACTION_ORDER[left.action] ?? Number.MAX_SAFE_INTEGER) -
+            (PERMISSION_ACTION_ORDER[right.action] ?? Number.MAX_SAFE_INTEGER);
           return (
             actionCompare ||
             String(left.name || "").localeCompare(String(right.name || ""))
@@ -117,6 +126,15 @@ class RbacRepository {
           active: permission.active,
           assigned: assignedPermissionIds.has(permission.id),
         }));
+      const permissionsByAction = PERMISSION_ACTIONS.reduce((lookup, action) => {
+        lookup[action] =
+          permissions.find((permission) => permission.action === action) || null;
+        return lookup;
+      }, {});
+      const permissionKeys = PERMISSION_ACTIONS.reduce((lookup, action) => {
+        lookup[action] = Boolean(permissionsByAction[action]?.assigned);
+        return lookup;
+      }, {});
 
       return {
         id: plainModule.id,
@@ -127,6 +145,8 @@ class RbacRepository {
         order: plainModule.order,
         active: plainModule.active,
         permissions,
+        permissionsByAction,
+        permissionKeys,
         assignedPermissionCount: permissions.filter(
           (permission) => permission.assigned,
         ).length,

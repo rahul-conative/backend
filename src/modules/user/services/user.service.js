@@ -2,7 +2,7 @@ const { AppError } = require("../../../shared/errors/app-error");
 const { UserRepository } = require("../repositories/user.repository");
 const { UserKycRepository } = require("../repositories/user-kyc.repository");
 const { KYC_STATUS } = require("../../../shared/domain/commerce-constants");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 
@@ -98,7 +98,7 @@ class UserService {
     });
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.USER_KYC_SUBMITTED_V1,
         {
           userId,
@@ -126,7 +126,7 @@ class UserService {
     }
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.KYC_STATUS_UPDATED_V1,
         {
           userId,

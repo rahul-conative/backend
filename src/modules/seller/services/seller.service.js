@@ -1,19 +1,19 @@
 const { SellerRepository } = require("../repositories/seller.repository");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { KYC_STATUS } = require("../../../shared/domain/commerce-constants");
 const { AppError } = require("../../../shared/errors/app-error");
-const { hashValue } = require("../../../shared/utils/hash");
+const { hashText } = require("../../../shared/tools/hash");
 const { ROLES } = require("../../../shared/constants/roles");
-const { DEFAULT_SELLER_MODULES, normalizeModuleName } = require("../../../shared/auth/module-scope");
+const { DEFAULT_SELLER_MODULES, cleanModuleName } = require("../../../shared/auth/module-access");
 const {
   SELLER_ONBOARDING_STATUS,
-  buildSellerOnboardingState,
+  makeSellerOnboardingState,
   getSellerKycStatus,
   hasCompleteSellerBankDetails: hasCompleteSellerBankDetailsForOnboarding,
   hasCompleteSellerProfile: hasCompleteSellerProfileForOnboarding,
-  resolveSellerOnboardingStatus,
+  getSellerOnboardingStatus,
 } = require("../../../shared/domain/seller-onboarding");
 
 class SellerService {
@@ -21,7 +21,7 @@ class SellerService {
     this.sellerRepository = sellerRepository;
   }
 
-  resolveSellerId(actor) {
+  getSellerId(actor) {
     return actor.ownerSellerId || actor.userId;
   }
 
@@ -92,7 +92,7 @@ class SellerService {
 
   withOnboardingState(sellerProfile = {}, kyc = null, user = {}) {
     const profile = this.applySellerProfileDefaults(sellerProfile, user, kyc);
-    const { checklist, onboardingStatus } = buildSellerOnboardingState({
+    const { checklist, onboardingStatus } = makeSellerOnboardingState({
       sellerProfile: profile,
       user,
       kyc,
@@ -106,7 +106,7 @@ class SellerService {
   }
 
   async submitKyc(payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const record = await this.sellerRepository.upsertKyc({
       ...payload,
       sellerId,
@@ -126,7 +126,7 @@ class SellerService {
     }
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.SELLER_KYC_SUBMITTED_V1,
         {
           sellerId,
@@ -143,7 +143,7 @@ class SellerService {
   }
 
   async updateProfile(payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const existingSeller = await this.sellerRepository.findSellerById(sellerId);
     if (!existingSeller) {
       throw new AppError("Seller profile not found", 404);
@@ -169,7 +169,7 @@ class SellerService {
   }
 
   async getProfile(actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const [seller, kyc] = await Promise.all([
       this.sellerRepository.findSellerById(sellerId),
       this.sellerRepository.findKycBySellerId(sellerId),
@@ -193,7 +193,7 @@ class SellerService {
     }
 
     if (actor.role === ROLES.SELLER_SUB_ADMIN) {
-      const allowedModules = (actor.allowedModules || []).map(normalizeModuleName);
+      const allowedModules = (actor.allowedModules || []).map(cleanModuleName);
       const canViewSellerWeb = ["sellers", "orders", "delivery"].some((moduleName) =>
         allowedModules.includes(moduleName),
       );
@@ -202,15 +202,15 @@ class SellerService {
       }
     }
 
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     if (!sellerId) {
-      throw new AppError("Seller account could not be resolved", 403);
+      throw new AppError("Seller account could not be found", 403);
     }
 
     return sellerId;
   }
 
-  buildSellerWebNextSteps(checklist = {}, kycStatus = null) {
+  getSellerWebNextSteps(checklist = {}, kycStatus = null) {
     const labels = {
       profileCompleted: "Complete seller profile",
       kycSubmitted: "Submit seller KYC",
@@ -245,7 +245,7 @@ class SellerService {
       throw new AppError("Seller profile not found", 404);
     }
 
-    const onboardingState = buildSellerOnboardingState({
+    const onboardingState = makeSellerOnboardingState({
       sellerProfile: seller.sellerProfile || {},
       user: seller || {},
       kyc,
@@ -272,7 +272,7 @@ class SellerService {
         complete: onboardingState.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE,
         checklist: onboardingState.checklist,
         kycStatus: onboardingState.kycStatus,
-        nextSteps: this.buildSellerWebNextSteps(onboardingState.checklist, onboardingState.kycStatus),
+        nextSteps: this.getSellerWebNextSteps(onboardingState.checklist, onboardingState.kycStatus),
       },
       kyc: kyc
         ? {
@@ -320,7 +320,7 @@ class SellerService {
     };
   }
 
-  normalizeTrackingQuery(query = {}) {
+  cleanTrackingQuery(query = {}) {
     return {
       status: query.status || null,
       deliveryStatus: query.deliveryStatus || null,
@@ -333,7 +333,7 @@ class SellerService {
 
   async listWebTracking(query, actor) {
     const sellerId = this.assertSellerWebActor(actor);
-    const filters = this.normalizeTrackingQuery(query);
+    const filters = this.cleanTrackingQuery(query);
     const [orders, summary] = await Promise.all([
       this.sellerRepository.fetchSellerTrackingOrders(sellerId, filters),
       this.sellerRepository.fetchSellerTrackingSummary(sellerId, filters),
@@ -371,7 +371,7 @@ class SellerService {
   }
 
   async patchProfileSection(section, payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const [existingSeller, kycRecord] = await Promise.all([
       this.sellerRepository.findSellerById(sellerId),
       this.sellerRepository.findKycBySellerId(sellerId),
@@ -397,7 +397,7 @@ class SellerService {
   }
 
   async updateMoreInfo(payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const [existingSeller, kycRecord] = await Promise.all([
       this.sellerRepository.findSellerById(sellerId),
       this.sellerRepository.findKycBySellerId(sellerId),
@@ -415,11 +415,11 @@ class SellerService {
     return updatedSeller?.sellerProfile || null;
   }
 
-  resolveOnboardingStatus(checklist, kycStatus = null, currentStatus = SELLER_ONBOARDING_STATUS.INITIATED) {
-    const resolvedKycStatus =
+  getOnboardingStatus(checklist, kycStatus = null, currentStatus = SELLER_ONBOARDING_STATUS.INITIATED) {
+    const nextKycStatus =
       kycStatus || (checklist?.gstVerified === true ? KYC_STATUS.VERIFIED : getSellerKycStatus(null, checklist));
 
-    return resolveSellerOnboardingStatus(checklist, resolvedKycStatus, currentStatus);
+    return getSellerOnboardingStatus(checklist, nextKycStatus, currentStatus);
   }
 
   hasCompleteBankDetails(bankDetails = {}) {
@@ -431,7 +431,7 @@ class SellerService {
   }
 
   async updateSettings(payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const existingSeller = await this.sellerRepository.findSellerById(sellerId);
     if (!existingSeller) {
       throw new AppError("Seller profile not found", 404);
@@ -447,7 +447,7 @@ class SellerService {
   }
 
   async getDashboard(query, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const fromDate = query.fromDate ? new Date(query.fromDate) : this.getDateBeforeDays(30);
     const toDate = query.toDate ? new Date(query.toDate) : new Date();
 
@@ -461,7 +461,7 @@ class SellerService {
 
     const totalOrders = Number(summary?.total_orders || 0);
     const gmv = Number(summary?.gmv || 0);
-    const onboardingState = buildSellerOnboardingState({
+    const onboardingState = makeSellerOnboardingState({
       sellerProfile: seller?.sellerProfile || {},
       user: seller || {},
       kyc,
@@ -525,7 +525,7 @@ class SellerService {
     }
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.KYC_STATUS_UPDATED_V1,
         {
           sellerId,
@@ -543,12 +543,12 @@ class SellerService {
   }
 
   sanitizeModules(modules) {
-    const normalized = Array.from(new Set((modules || []).map(normalizeModuleName).filter(Boolean)));
+    const normalized = Array.from(new Set((modules || []).map(cleanModuleName).filter(Boolean)));
     return normalized.filter((moduleName) => DEFAULT_SELLER_MODULES.includes(moduleName));
   }
 
   async createSellerSubAdmin(payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const existing = await this.sellerRepository.findUserByEmail(payload.email);
     if (existing) {
       throw new AppError("User already exists", 409);
@@ -557,7 +557,7 @@ class SellerService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid seller module is required", 400);
     }
-    const passwordHash = await hashValue(payload.password);
+    const passwordHash = await hashText(payload.password);
     return this.sellerRepository.createManagedUser({
       email: payload.email,
       phone: payload.phone,
@@ -574,12 +574,12 @@ class SellerService {
   }
 
   async listSellerSubAdmins(actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     return this.sellerRepository.listSellerSubAdmins(sellerId);
   }
 
   async updateSellerSubAdminModules(userId, payload, actor) {
-    const sellerId = this.resolveSellerId(actor);
+    const sellerId = this.getSellerId(actor);
     const allowedModules = this.sanitizeModules(payload.allowedModules);
     if (!allowedModules.length) {
       throw new AppError("At least one valid seller module is required", 400);

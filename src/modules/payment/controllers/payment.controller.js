@@ -1,6 +1,6 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { PaymentService } = require("../services/payment.service");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 
 class PaymentController {
   constructor({ paymentService = new PaymentService() } = {}) {
@@ -8,21 +8,21 @@ class PaymentController {
   }
 
   initiate = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const payment = await this.paymentService.initiatePayment(req.body, actor);
-    res.status(201).json(successResponse(payment));
+    res.status(201).json(okResponse(payment));
   };
 
   verify = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const payment = await this.paymentService.verifyPayment(req.body, actor);
-    res.json(successResponse(payment));
+    res.json(okResponse(payment));
   };
 
   listMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const payments = await this.paymentService.listPayments(actor);
-    res.json(successResponse(payments));
+    res.json(okResponse(payments));
   };
 
   webhook = async (req, res) => {
@@ -30,7 +30,7 @@ class PaymentController {
       req.headers["x-razorpay-signature"],
       req.rawBody,
     );
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 }
 

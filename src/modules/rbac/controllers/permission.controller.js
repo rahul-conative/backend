@@ -1,4 +1,4 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { RbacService } = require("../services/rbac.service");
 
 class PermissionController {
@@ -8,17 +8,17 @@ class PermissionController {
 
   listPermissions = async (req, res) => {
     const result = await this.rbacService.listPermissions(req.query);
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   getPermission = async (req, res) => {
     const permission = await this.rbacService.getPermission(req.params.permissionId);
-    res.json(successResponse(permission));
+    res.json(okResponse(permission));
   };
 
   createPermission = async (req, res) => {
     const permission = await this.rbacService.createPermission(req.body);
-    res.status(201).json(successResponse(permission));
+    res.status(201).json(okResponse(permission));
   };
 
   updatePermission = async (req, res) => {
@@ -26,7 +26,7 @@ class PermissionController {
       req.params.permissionId,
       req.body,
     );
-    res.json(successResponse(permission));
+    res.json(okResponse(permission));
   };
 }
 

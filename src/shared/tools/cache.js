@@ -1,6 +1,6 @@
 const { redis } = require("../../infrastructure/redis/redis-client");
 
-async function getOrSetCache(key, ttlSeconds, fetcher) {
+async function remember(key, ttlSeconds, fetcher) {
   const cachedValue = await redis.get(key);
   if (cachedValue) {
     return JSON.parse(cachedValue);
@@ -11,4 +11,4 @@ async function getOrSetCache(key, ttlSeconds, fetcher) {
   return value;
 }
 
-module.exports = { getOrSetCache };
+module.exports = { remember };

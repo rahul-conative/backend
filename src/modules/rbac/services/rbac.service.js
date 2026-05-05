@@ -51,6 +51,7 @@ class RbacService {
         permissions: permissionCount,
         assignedPermissions: assignedPermissionCount,
       },
+      actions: ["add", "edit", "update", "delete", "view"],
       assignedPermissionIds: matrix.assignedPermissionIds,
     };
   }

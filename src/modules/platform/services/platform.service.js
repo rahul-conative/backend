@@ -1,4 +1,4 @@
-const { buildPagination } = require("../../../shared/lib/pagination");
+const { getPage } = require("../../../shared/tools/page");
 const { PlatformRepository } = require("../repositories/platform.repository");
 const { AppError } = require("../../../shared/errors/app-error");
 
@@ -28,7 +28,7 @@ class PlatformService {
   }
 
   async listCategories(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.parentKey) filter.parentKey = query.parentKey;
     if (query.active !== undefined) filter.active = query.active === "true";
@@ -65,7 +65,7 @@ class PlatformService {
   }
 
   async listProductFamilies(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.category) filter.category = query.category;
     if (query.sellerId) filter.sellerId = query.sellerId;
@@ -102,7 +102,7 @@ class PlatformService {
   }
 
   async listProductVariants(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.productId) filter.productId = query.productId;
     if (query.familyCode) filter.familyCode = query.familyCode;
@@ -140,7 +140,7 @@ class PlatformService {
   }
 
   async listHsnCodes(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.active !== undefined) filter.active = query.active === "true";
     if (query.category) filter.category = query.category;
@@ -176,7 +176,7 @@ class PlatformService {
   }
 
   async listGeographies(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.active !== undefined) filter.active = query.active === "true";
     return this.platformRepository.listGeographies(filter, pagination);
@@ -217,7 +217,7 @@ class PlatformService {
   }
 
   async listContentPages(query) {
-    const pagination = buildPagination(query);
+    const pagination = getPage(query);
     const filter = {};
     if (query.pageType) filter.pageType = query.pageType;
     if (query.language) filter.language = query.language;

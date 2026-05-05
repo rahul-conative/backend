@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  authenticateToken,
-  requireRole,
-} = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
+const { allowRoles } = require("../../../shared/middleware/access");
 
 const { DynamicPricingService } = require("../services/dynamic-pricing.service");
 const { dynamicPricingValidation } = require("../../validation");
@@ -13,7 +11,7 @@ const { LoyaltyService } = require("../../loyalty/services/loyalty.service");
 // ==============================
 // Get price for product (Customer)
 // ==============================
-router.get("/price", authenticateToken, async (req, res, next) => {
+router.get("/price", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.sub;
 
@@ -58,8 +56,8 @@ router.get("/price", authenticateToken, async (req, res, next) => {
 // ==============================
 router.post(
   "/adjust",
-  authenticateToken,
-  requireRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const userId = req.auth?.sub;

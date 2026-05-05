@@ -1,5 +1,5 @@
 const { AppError } = require("../../../shared/errors/app-error");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { InventoryRepository } = require("../repositories/inventory.repository");
@@ -13,7 +13,7 @@ class InventoryService {
     try {
       const reservation = await this.inventoryRepository.reserveItems(orderId, buyerId, items);
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.INVENTORY_RESERVED_V1,
           { orderId, buyerId, itemCount: items.length },
           { source: "inventory-module", aggregateId: orderId },
@@ -29,7 +29,7 @@ class InventoryService {
     const reservation = await this.inventoryRepository.releaseReservation(orderId);
     if (reservation) {
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.INVENTORY_RELEASED_V1,
           { orderId, buyerId: reservation.buyerId, itemCount: reservation.items.length },
           { source: "inventory-module", aggregateId: orderId },
@@ -44,7 +44,7 @@ class InventoryService {
     const reservation = await this.inventoryRepository.commitReservation(orderId);
     if (reservation) {
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.INVENTORY_COMMITTED_V1,
           { orderId, buyerId: reservation.buyerId, itemCount: reservation.items.length },
           { source: "inventory-module", aggregateId: orderId },

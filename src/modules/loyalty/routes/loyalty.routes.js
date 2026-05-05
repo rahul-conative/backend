@@ -1,12 +1,12 @@
 const express = require("express");
-const { authenticateToken } = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
 const { LoyaltyService } = require("../services/loyalty.service");
 const { loyaltyValidation } = require("../../validation");
 
 const router = express.Router();
 
 // Get loyalty profile
-router.get("/profile", authenticateToken, async (req, res, next) => {
+router.get("/profile", authenticate, async (req, res, next) => {
   try {
     const loyalty = await LoyaltyService.getOrCreateLoyalty(req.auth.sub);
     res.json(loyalty);
@@ -16,7 +16,7 @@ router.get("/profile", authenticateToken, async (req, res, next) => {
 });
 
 // Get tier benefits
-router.get("/benefits", authenticateToken, async (req, res, next) => {
+router.get("/benefits", authenticate, async (req, res, next) => {
   try {
     const loyalty = await LoyaltyService.getOrCreateLoyalty(req.auth.sub);
     const benefits = await LoyaltyService.getTierBenefits(loyalty.tier);
@@ -27,7 +27,7 @@ router.get("/benefits", authenticateToken, async (req, res, next) => {
 });
 
 // Add points to loyalty balance
-router.post("/points", authenticateToken, async (req, res, next) => {
+router.post("/points", authenticate, async (req, res, next) => {
   try {
     const { error, value } = loyaltyValidation.addPoints.validate(req.body);
     if (error) return res.status(400).json({ error: error.details });
@@ -47,7 +47,7 @@ router.post("/points", authenticateToken, async (req, res, next) => {
 });
 
 // Get points transaction history
-router.get("/history", authenticateToken, async (req, res, next) => {
+router.get("/history", authenticate, async (req, res, next) => {
   try {
     const { error, value } = loyaltyValidation.getPointsHistory.validate(req.query);
     if (error) return res.status(400).json({ error: error.details });
@@ -60,7 +60,7 @@ router.get("/history", authenticateToken, async (req, res, next) => {
 });
 
 // Redeem points
-router.post("/redeem", authenticateToken, async (req, res, next) => {
+router.post("/redeem", authenticate, async (req, res, next) => {
   try {
     const { error, value } = loyaltyValidation.redeemPoints.validate(req.body);
     if (error) return res.status(400).json({ error: error.details });

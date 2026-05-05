@@ -770,21 +770,21 @@ Base path:
 | --- | --- | --- | --- | --- | --- | --- |
 | Submit onboarding KYC | POST | `/onboarding/kyc` | `sellerSlice` | onboarding seller token | none | `SellerKycPayload` |
 | Update onboarding profile | PATCH | `/onboarding/profile` | `sellerSlice` | onboarding seller token | none | `SellerProfilePayload` |
-| Review seller KYC | PATCH | `/:sellerId/kyc/review` | `adminVendorsSlice` | `kyc:review` capability | none | `ReviewSellerKycPayload` |
+| Review seller KYC | PATCH | `/:sellerId/kyc/review` | `adminVendorsSlice` | `kyc:review` action | none | `ReviewSellerKycPayload` |
 | Seller web status | GET | `/me/status` | `sellerSlice` | seller or seller-sub-admin | none | none |
 | Seller tracking list | GET | `/me/tracking` | `sellerTrackingSlice` | seller or seller-sub-admin | `SellerTrackingQuery` | none |
 | Seller tracking detail | GET | `/me/tracking/:orderId` | `sellerTrackingSlice` | seller or seller-sub-admin | none | none |
-| Get seller profile | GET | `/me/profile` | `sellerSlice` | `seller:profile:manage` capability | none | none |
-| Update seller profile | PATCH | `/me/profile` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerProfilePayload` |
-| Update business address | PATCH | `/me/business-address` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerAddressPayload` |
-| Update pickup address | PATCH | `/me/pickup-address` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerAddressPayload` |
-| Update bank details | PATCH | `/me/bank-details` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerBankPayload` |
-| Update more info | PATCH | `/me/more-info` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerMoreInfoPayload` |
-| Update settings | PATCH | `/me/settings` | `sellerSlice` | `seller:profile:manage` capability | none | `SellerSettingsPayload` |
-| Seller dashboard | GET | `/me/dashboard` | `sellerDashboardSlice` | `seller:dashboard:view` capability | `SellerDashboardQuery` | none |
-| Create seller sub-admin | POST | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | `CreateSellerSubAdminPayload` |
-| List seller sub-admins | GET | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | none |
-| Update seller sub-admin modules | PATCH | `/me/sub-admins/:userId/modules` | `sellerSubAdminsSlice` | `seller:profile:manage` capability | none | `UpdateAllowedModulesPayload` |
+| Get seller profile | GET | `/me/profile` | `sellerSlice` | `seller:profile:manage` action | none | none |
+| Update seller profile | PATCH | `/me/profile` | `sellerSlice` | `seller:profile:manage` action | none | `SellerProfilePayload` |
+| Update business address | PATCH | `/me/business-address` | `sellerSlice` | `seller:profile:manage` action | none | `SellerAddressPayload` |
+| Update pickup address | PATCH | `/me/pickup-address` | `sellerSlice` | `seller:profile:manage` action | none | `SellerAddressPayload` |
+| Update bank details | PATCH | `/me/bank-details` | `sellerSlice` | `seller:profile:manage` action | none | `SellerBankPayload` |
+| Update more info | PATCH | `/me/more-info` | `sellerSlice` | `seller:profile:manage` action | none | `SellerMoreInfoPayload` |
+| Update settings | PATCH | `/me/settings` | `sellerSlice` | `seller:profile:manage` action | none | `SellerSettingsPayload` |
+| Seller dashboard | GET | `/me/dashboard` | `sellerDashboardSlice` | `seller:dashboard:view` action | `SellerDashboardQuery` | none |
+| Create seller sub-admin | POST | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` action | none | `CreateSellerSubAdminPayload` |
+| List seller sub-admins | GET | `/me/sub-admins` | `sellerSubAdminsSlice` | `seller:profile:manage` action | none | none |
+| Update seller sub-admin modules | PATCH | `/me/sub-admins/:userId/modules` | `sellerSubAdminsSlice` | `seller:profile:manage` action | none | `UpdateAllowedModulesPayload` |
 
 ## Seller Query Types
 
@@ -1064,7 +1064,7 @@ Every API-backed screen should implement:
 - retry action for GET APIs
 - optimistic or disabled-submit state for POST/PATCH/DELETE
 - success toast after mutation
-- role/capability guard before showing actions
+- role/action guard before showing actions
 
 ## Important Implementation Notes
 

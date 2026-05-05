@@ -1,4 +1,4 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { AnalyticsService } = require("../services/analytics.service");
 
 class AnalyticsController {
@@ -8,12 +8,12 @@ class AnalyticsController {
 
   track = async (req, res) => {
     const event = await this.analyticsService.track(req.body);
-    res.status(201).json(successResponse(event));
+    res.status(201).json(okResponse(event));
   };
 
   list = async (req, res) => {
     const events = await this.analyticsService.listEvents();
-    res.json(successResponse(events));
+    res.json(okResponse(events));
   };
 }
 

@@ -1,6 +1,6 @@
 const { env } = require("../../../config/env");
 const { AppError } = require("../../../shared/errors/app-error");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { ReferralRepository } = require("../repositories/referral.repository");
@@ -15,7 +15,7 @@ class ReferralService {
     this.walletService = walletService;
   }
 
-  async resolveReferrer(referralCode) {
+  async getReferrerByCode(referralCode) {
     if (!referralCode) {
       return null;
     }
@@ -38,7 +38,7 @@ class ReferralService {
       return existingReferral;
     }
 
-    const referrer = await this.resolveReferrer(referralCode);
+    const referrer = await this.getReferrerByCode(referralCode);
 
     if (String(referrer.id) === String(refereeUser.id)) {
       throw new AppError("You cannot refer yourself", 400);
@@ -64,7 +64,7 @@ class ReferralService {
     });
 
     await eventPublisher.publish(
-      buildDomainEvent(
+      makeEvent(
         DOMAIN_EVENTS.REFERRAL_REWARDED_V1,
         {
           referrerUserId: referrer.id,

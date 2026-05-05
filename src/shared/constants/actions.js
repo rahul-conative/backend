@@ -1,4 +1,4 @@
-const CAPABILITIES = {
+const ACTIONS = {
   PROFILE_SELF: "profile:self",
   CART_SELF: "cart:self",
   ORDER_SELF: "order:self",
@@ -18,4 +18,4 @@ const CAPABILITIES = {
   TAX_MANAGE: "tax:manage",
 };
 
-module.exports = { CAPABILITIES };
+module.exports = { ACTIONS };

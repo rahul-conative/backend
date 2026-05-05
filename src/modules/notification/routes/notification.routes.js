@@ -1,22 +1,22 @@
 const express = require("express");
 const { NotificationController } = require("../controllers/notification.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { createNotificationSchema } = require("../validation/notification.validation");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { allowActions } = require("../../../shared/middleware/access");
+const { ACTIONS } = require("../../../shared/constants/actions");
 
 const notificationRoutes = express.Router();
 const notificationController = new NotificationController();
 
-notificationRoutes.get("/me", authenticate, asyncHandler(notificationController.listMine));
+notificationRoutes.get("/me", authenticate, catchErrors(notificationController.listMine));
 notificationRoutes.post(
   "/",
   authenticate,
-  authorizeCapability(CAPABILITIES.NOTIFICATION_MANAGE),
-  validateRequest(createNotificationSchema),
-  asyncHandler(notificationController.create),
+  allowActions(ACTIONS.NOTIFICATION_MANAGE),
+  checkInput(createNotificationSchema),
+  catchErrors(notificationController.create),
 );
 
 module.exports = { notificationRoutes };

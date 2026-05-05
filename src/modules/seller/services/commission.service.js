@@ -18,7 +18,7 @@ class SellerCommissionService {
   // ==============================
   // Calculate Commission
   // ==============================
-  async resolveCommissionInputs(orderId, sellerId, orderAmount) {
+  async getCommissionInputs(orderId, sellerId, orderAmount) {
     if (sellerId && orderAmount > 0) {
       return { sellerId, orderAmount };
     }
@@ -33,7 +33,7 @@ class SellerCommissionService {
       .first();
 
     if (!orderItem?.seller_id || Number(order?.subtotal_amount || 0) <= 0) {
-      throw new AppError("Unable to resolve order commission data", 400);
+      throw new AppError("Unable to get order commission data", 400);
     }
 
     return {
@@ -47,7 +47,7 @@ class SellerCommissionService {
       throw new AppError("Invalid commission input", 400);
     }
 
-    const resolved = await this.resolveCommissionInputs(orderId, sellerId, orderAmount);
+    const commissionData = await this.getCommissionInputs(orderId, sellerId, orderAmount);
 
     const commissionRates = {
       bronze: 0.15,
@@ -58,15 +58,15 @@ class SellerCommissionService {
 
     const rate = commissionRates[sellerTier] ?? commissionRates.bronze;
 
-    const commissionAmount = this.round(orderAmount * rate);
+    const commissionAmount = this.round(commissionData.orderAmount * rate);
     const taxAmount = this.round(commissionAmount * 0.18);
     const netAmount = this.round(commissionAmount - taxAmount);
 
     await knex("seller_commissions").insert({
       id: uuidv4(),
-      seller_id: resolved.sellerId,
+      seller_id: commissionData.sellerId,
       order_id: orderId,
-      amount: resolved.orderAmount,
+      amount: commissionData.orderAmount,
       commission_rate: rate,
       commission_amount: commissionAmount,
       tax_amount: taxAmount,
@@ -75,7 +75,7 @@ class SellerCommissionService {
       created_at: knex.fn.now(),
     });
 
-    logger.info({ orderId, sellerId: resolved.sellerId, commissionAmount, taxAmount }, "Commission calculated");
+    logger.info({ orderId, sellerId: commissionData.sellerId, commissionAmount, taxAmount }, "Commission calculated");
 
     return { commissionAmount, taxAmount, netAmount };
   }

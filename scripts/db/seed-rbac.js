@@ -2,6 +2,220 @@ const { v4: uuidv4 } = require("uuid");
 const {
   sequelize,
 } = require("../../src/infrastructure/sequelize/sequelize-client");
+const {
+  DEFAULT_PLATFORM_MODULES,
+  DEFAULT_SELLER_MODULES,
+} = require("../../src/shared/auth/module-access");
+
+const STANDARD_PERMISSION_ACTIONS = [
+  { key: "add", label: "Add" },
+  { key: "edit", label: "Edit" },
+  { key: "update", label: "Update" },
+  { key: "delete", label: "Delete" },
+  { key: "view", label: "View" },
+];
+
+const LEGACY_MODULE_SLUGS = ["product", "user", "order", "seller", "settings"];
+
+const MODULE_DETAILS = {
+  rbac: {
+    name: "RBAC Management",
+    description: "Role-Based Access Control management",
+    icon: "shield",
+    order: 1,
+  },
+  users: {
+    name: "User Management",
+    description: "User accounts and profiles",
+    icon: "user",
+    order: 2,
+  },
+  products: {
+    name: "Product Management",
+    description: "Product catalog and management",
+    icon: "box",
+    order: 3,
+  },
+  carts: {
+    name: "Cart Management",
+    description: "Shopping carts and checkout baskets",
+    icon: "shopping-bag",
+    order: 4,
+  },
+  orders: {
+    name: "Order Management",
+    description: "Orders and transactions",
+    icon: "shopping-cart",
+    order: 5,
+  },
+  payments: {
+    name: "Payment Management",
+    description: "Payments, refunds, and payment operations",
+    icon: "credit-card",
+    order: 6,
+  },
+  platform: {
+    name: "Platform Management",
+    description: "Platform catalog, geography, and content configuration",
+    icon: "settings",
+    order: 7,
+  },
+  sellers: {
+    name: "Seller Management",
+    description: "Seller accounts and administration",
+    icon: "store",
+    order: 8,
+  },
+  notifications: {
+    name: "Notification Management",
+    description: "Notifications and communication preferences",
+    icon: "bell",
+    order: 9,
+  },
+  analytics: {
+    name: "Analytics",
+    description: "Analytics and reporting",
+    icon: "chart",
+    order: 10,
+  },
+  pricing: {
+    name: "Pricing Management",
+    description: "Coupons, pricing rules, and promotions",
+    icon: "tag",
+    order: 11,
+  },
+  wallets: {
+    name: "Wallet Management",
+    description: "Wallet balances and wallet transactions",
+    icon: "wallet",
+    order: 12,
+  },
+  tax: {
+    name: "Tax Management",
+    description: "Tax invoices, reports, and filings",
+    icon: "receipt",
+    order: 13,
+  },
+  subscriptions: {
+    name: "Subscription Management",
+    description: "Plans, subscriptions, and platform fees",
+    icon: "repeat",
+    order: 14,
+  },
+  warranty: {
+    name: "Warranty Management",
+    description: "Warranty registration and claims",
+    icon: "badge-check",
+    order: 15,
+  },
+  loyalty: {
+    name: "Loyalty Management",
+    description: "Loyalty points and customer rewards",
+    icon: "gift",
+    order: 16,
+  },
+  recommendations: {
+    name: "Recommendation Management",
+    description: "Product recommendations and personalization",
+    icon: "sparkles",
+    order: 17,
+  },
+  returns: {
+    name: "Return Management",
+    description: "Returns, refunds, and reverse logistics",
+    icon: "undo",
+    order: 18,
+  },
+  fraud: {
+    name: "Fraud Management",
+    description: "Fraud detection and risk review",
+    icon: "alert-triangle",
+    order: 19,
+  },
+  "dynamic-pricing": {
+    name: "Dynamic Pricing",
+    description: "Dynamic pricing rules and simulations",
+    icon: "activity",
+    order: 20,
+  },
+  delivery: {
+    name: "Delivery Management",
+    description: "Delivery, tracking, and logistics",
+    icon: "truck",
+    order: 21,
+  },
+  admin: {
+    name: "Admin Dashboard",
+    description: "Admin panel and operations dashboard",
+    icon: "dashboard",
+    order: 22,
+  },
+  "sellers/commissions": {
+    name: "Seller Commission Management",
+    description: "Seller commissions, settlements, and payouts",
+    icon: "percent",
+    order: 23,
+  },
+};
+
+function titleize(value) {
+  return String(value)
+    .replace(/[/-]+/g, " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function makeModuleList() {
+  const moduleSlugs = Array.from(
+    new Set(["rbac", ...DEFAULT_PLATFORM_MODULES, ...DEFAULT_SELLER_MODULES]),
+  );
+
+  return moduleSlugs
+    .map((slug, index) => {
+      const details = MODULE_DETAILS[slug] || {};
+      const name = details.name || `${titleize(slug)} Management`;
+
+      return {
+        id: uuidv4(),
+        name,
+        slug,
+        description:
+          details.description || `${name} permissions and access controls`,
+        icon: details.icon || "grid",
+        order: details.order || index + 1,
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.order - right.order || left.name.localeCompare(right.name),
+    );
+}
+
+function makePermissionList(modules) {
+  return modules.flatMap((module) =>
+    STANDARD_PERMISSION_ACTIONS.map((action) => ({
+      moduleId: module.id,
+      name: `${action.label} ${module.name}`,
+      slug: `${module.slug}:${action.key}`,
+      action: action.key,
+    })),
+  );
+}
+
+function permissionSlugsFor(moduleSlug, actions = STANDARD_PERMISSION_ACTIONS) {
+  return actions.map((action) => {
+    const actionKey = typeof action === "string" ? action : action.key;
+    return `${moduleSlug}:${actionKey}`;
+  });
+}
+
+function permissionSlugsForModules(
+  moduleSlugs,
+  actions = STANDARD_PERMISSION_ACTIONS,
+) {
+  return moduleSlugs.flatMap((moduleSlug) =>
+    permissionSlugsFor(moduleSlug, actions),
+  );
+}
 
 async function seedRbac() {
   const transaction = await sequelize.transaction();
@@ -10,79 +224,16 @@ async function seedRbac() {
     await sequelize.authenticate();
     console.log("✓ Database connected\n");
 
-    const modules = [
-      {
-        id: uuidv4(),
-        name: "RBAC Management",
-        slug: "rbac",
-        description: "Role-Based Access Control management",
-        icon: "shield",
-        order: 1,
-      },
-      {
-        id: uuidv4(),
-        name: "Product Management",
-        slug: "product",
-        description: "Product catalog and management",
-        icon: "box",
-        order: 2,
-      },
-      {
-        id: uuidv4(),
-        name: "User Management",
-        slug: "user",
-        description: "User accounts and profiles",
-        icon: "user",
-        order: 3,
-      },
-      {
-        id: uuidv4(),
-        name: "Order Management",
-        slug: "order",
-        description: "Orders and transactions",
-        icon: "shopping-cart",
-        order: 4,
-      },
-      {
-        id: uuidv4(),
-        name: "Seller Management",
-        slug: "seller",
-        description: "Seller accounts and administration",
-        icon: "store",
-        order: 5,
-      },
-      {
-        id: uuidv4(),
-        name: "Admin Dashboard",
-        slug: "admin",
-        description: "Admin panel and analytics",
-        icon: "dashboard",
-        order: 6,
-      },
-      {
-        id: uuidv4(),
-        name: "Analytics",
-        slug: "analytics",
-        description: "Analytics and reporting",
-        icon: "chart",
-        order: 7,
-      },
-      {
-        id: uuidv4(),
-        name: "Settings",
-        slug: "settings",
-        description: "Platform settings and configuration",
-        icon: "settings",
-        order: 8,
-      },
-    ];
+    const modules = makeModuleList();
 
     // Insert or update modules
     for (const module of modules) {
       const [existingModules] = await sequelize.query(
-        `SELECT id FROM modules WHERE slug = :slug LIMIT 1`,
+        `SELECT id FROM modules
+         WHERE slug = :slug OR name = :name
+         LIMIT 1`,
         {
-          replacements: { slug: module.slug },
+          replacements: { slug: module.slug, name: module.name },
           transaction,
         },
       );
@@ -92,6 +243,7 @@ async function seedRbac() {
         await sequelize.query(
           `UPDATE modules
            SET name = :name,
+               slug = :slug,
                description = :description,
                icon = :icon,
                "order" = :order,
@@ -117,324 +269,7 @@ async function seedRbac() {
 
     console.log(`✓ Created ${modules.length} modules`);
 
-    // Define permissions by module
-    const permissions = [
-      // RBAC permissions
-      {
-        moduleId: modules[0].id,
-        name: "Create Module",
-        slug: "rbac:module:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Read Module",
-        slug: "rbac:module:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Update Module",
-        slug: "rbac:module:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Delete Module",
-        slug: "rbac:module:delete",
-        action: "delete",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Create Permission",
-        slug: "rbac:permission:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Read Permission",
-        slug: "rbac:permission:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Update Permission",
-        slug: "rbac:permission:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Create Role",
-        slug: "rbac:role:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Read Role",
-        slug: "rbac:role:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Update Role",
-        slug: "rbac:role:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Assign Role Permission",
-        slug: "rbac:role:assign-permission",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Remove Role Permission",
-        slug: "rbac:role:remove-permission",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Assign User Permission",
-        slug: "rbac:user:assign-permission",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Remove User Permission",
-        slug: "rbac:user:remove-permission",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "View User Permissions",
-        slug: "rbac:user:view-permissions",
-        action: "read",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Assign User Role",
-        slug: "rbac:user:assign-role",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "Remove User Role",
-        slug: "rbac:user:remove-role",
-        action: "manage",
-      },
-      {
-        moduleId: modules[0].id,
-        name: "View User Roles",
-        slug: "rbac:user:view-roles",
-        action: "read",
-      },
-
-      // Product permissions
-      {
-        moduleId: modules[1].id,
-        name: "Create Product",
-        slug: "product:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[1].id,
-        name: "Read Product",
-        slug: "product:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[1].id,
-        name: "Update Product",
-        slug: "product:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[1].id,
-        name: "Delete Product",
-        slug: "product:delete",
-        action: "delete",
-      },
-      {
-        moduleId: modules[1].id,
-        name: "Manage Categories",
-        slug: "product:manage-categories",
-        action: "manage",
-      },
-
-      // User permissions
-      {
-        moduleId: modules[2].id,
-        name: "Create User",
-        slug: "user:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[2].id,
-        name: "Read User",
-        slug: "user:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[2].id,
-        name: "Update User",
-        slug: "user:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[2].id,
-        name: "Delete User",
-        slug: "user:delete",
-        action: "delete",
-      },
-      {
-        moduleId: modules[2].id,
-        name: "View User Profile",
-        slug: "user:view-profile",
-        action: "read",
-      },
-
-      // Order permissions
-      {
-        moduleId: modules[3].id,
-        name: "Create Order",
-        slug: "order:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[3].id,
-        name: "Read Order",
-        slug: "order:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[3].id,
-        name: "Update Order",
-        slug: "order:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[3].id,
-        name: "Cancel Order",
-        slug: "order:cancel",
-        action: "manage",
-      },
-      {
-        moduleId: modules[3].id,
-        name: "Manage Returns",
-        slug: "order:manage-returns",
-        action: "manage",
-      },
-
-      // Seller permissions
-      {
-        moduleId: modules[4].id,
-        name: "Create Seller",
-        slug: "seller:create",
-        action: "create",
-      },
-      {
-        moduleId: modules[4].id,
-        name: "Read Seller",
-        slug: "seller:read",
-        action: "read",
-      },
-      {
-        moduleId: modules[4].id,
-        name: "Update Seller",
-        slug: "seller:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[4].id,
-        name: "Approve Seller",
-        slug: "seller:approve",
-        action: "manage",
-      },
-      {
-        moduleId: modules[4].id,
-        name: "Manage Commission",
-        slug: "seller:manage-commission",
-        action: "manage",
-      },
-
-      // Admin permissions
-      {
-        moduleId: modules[5].id,
-        name: "View Dashboard",
-        slug: "admin:view-dashboard",
-        action: "read",
-      },
-      {
-        moduleId: modules[5].id,
-        name: "Manage Users",
-        slug: "admin:manage-users",
-        action: "manage",
-      },
-      {
-        moduleId: modules[5].id,
-        name: "Manage Sellers",
-        slug: "admin:manage-sellers",
-        action: "manage",
-      },
-      {
-        moduleId: modules[5].id,
-        name: "View Transactions",
-        slug: "admin:view-transactions",
-        action: "read",
-      },
-      {
-        moduleId: modules[5].id,
-        name: "Manage Content",
-        slug: "admin:manage-content",
-        action: "manage",
-      },
-
-      // Analytics permissions
-      {
-        moduleId: modules[6].id,
-        name: "View Analytics",
-        slug: "analytics:view",
-        action: "read",
-      },
-      {
-        moduleId: modules[6].id,
-        name: "Generate Reports",
-        slug: "analytics:generate-reports",
-        action: "create",
-      },
-      {
-        moduleId: modules[6].id,
-        name: "Export Data",
-        slug: "analytics:export",
-        action: "read",
-      },
-
-      // Settings permissions
-      {
-        moduleId: modules[7].id,
-        name: "View Settings",
-        slug: "settings:view",
-        action: "read",
-      },
-      {
-        moduleId: modules[7].id,
-        name: "Update Settings",
-        slug: "settings:update",
-        action: "update",
-      },
-      {
-        moduleId: modules[7].id,
-        name: "Manage API Keys",
-        slug: "settings:manage-api-keys",
-        action: "manage",
-      },
-      {
-        moduleId: modules[7].id,
-        name: "Manage Webhooks",
-        slug: "settings:manage-webhooks",
-        action: "manage",
-      },
-    ];
+    const permissions = makePermissionList(modules);
 
     // Insert permissions
     const permissionIds = {};
@@ -480,7 +315,87 @@ async function seedRbac() {
 
     console.log(`✓ Created ${permissions.length} permissions`);
 
+    await sequelize.query(
+      `UPDATE permissions
+       SET active = false,
+           updated_at = NOW()
+       WHERE module_id = ANY($1::uuid[])
+         AND slug <> ALL($2::text[])`,
+      {
+        bind: [
+          modules.map((module) => module.id),
+          permissions.map((permission) => permission.slug),
+        ],
+        transaction,
+      },
+    );
+
+    await sequelize.query(
+      `DELETE FROM role_permissions
+       WHERE permission_id IN (
+         SELECT id
+         FROM permissions
+         WHERE module_id = ANY($1::uuid[])
+           AND active = false
+       )`,
+      {
+        bind: [modules.map((module) => module.id)],
+        transaction,
+      },
+    );
+
+    await sequelize.query(
+      `UPDATE permissions
+       SET active = false,
+           updated_at = NOW()
+       WHERE module_id IN (
+         SELECT id
+         FROM modules
+         WHERE slug = ANY($1::text[])
+       )`,
+      {
+        bind: [LEGACY_MODULE_SLUGS],
+        transaction,
+      },
+    );
+
+    await sequelize.query(
+      `DELETE FROM role_permissions
+       WHERE permission_id IN (
+         SELECT p.id
+         FROM permissions p
+         INNER JOIN modules m ON m.id = p.module_id
+         WHERE m.slug = ANY($1::text[])
+       )`,
+      {
+        bind: [LEGACY_MODULE_SLUGS],
+        transaction,
+      },
+    );
+
+    await sequelize.query(
+      `UPDATE modules
+       SET active = false,
+           updated_at = NOW()
+       WHERE slug = ANY($1::text[])`,
+      {
+        bind: [LEGACY_MODULE_SLUGS],
+        transaction,
+      },
+    );
+
     // Create default roles and assign permissions
+    const allModuleSlugs = modules.map((module) => module.slug);
+    const subAdminModules = [
+      "products",
+      "users",
+      "orders",
+      "sellers",
+      "admin",
+      "analytics",
+    ];
+    const moderatorModules = ["products", "users", "orders", "sellers", "admin"];
+
     const rolesToCreate = [
       {
         id: uuidv4(),
@@ -498,32 +413,7 @@ async function seedRbac() {
         description: "Administrator with broad access",
         type: "system",
         isSuperAdmin: false,
-        permissionSlugs: [
-          "rbac:module:read",
-          "rbac:permission:read",
-          "rbac:role:read",
-          "rbac:user:view-permissions",
-          "rbac:user:view-roles",
-          "rbac:user:assign-role",
-          "product:create",
-          "product:read",
-          "product:update",
-          "product:delete",
-          "product:manage-categories",
-          "user:read",
-          "user:update",
-          "order:read",
-          "order:update",
-          "order:manage-returns",
-          "seller:read",
-          "seller:approve",
-          "admin:view-dashboard",
-          "admin:manage-users",
-          "admin:manage-sellers",
-          "analytics:view",
-          "analytics:generate-reports",
-          "settings:view",
-        ],
+        permissionSlugs: permissionSlugsForModules(allModuleSlugs),
       },
       {
         id: uuidv4(),
@@ -532,15 +422,11 @@ async function seedRbac() {
         description: "Scoped platform admin with module-based access",
         type: "system",
         isSuperAdmin: false,
-        permissionSlugs: [
-          "product:read",
-          "product:update",
-          "user:read",
-          "order:read",
-          "seller:read",
-          "admin:view-dashboard",
-          "analytics:view",
-        ],
+        permissionSlugs: permissionSlugsForModules(subAdminModules, [
+          "edit",
+          "update",
+          "view",
+        ]),
       },
       {
         id: uuidv4(),
@@ -549,15 +435,11 @@ async function seedRbac() {
         description: "Content and user moderator",
         type: "system",
         isSuperAdmin: false,
-        permissionSlugs: [
-          "product:read",
-          "product:update",
-          "user:read",
-          "user:update",
-          "order:read",
-          "seller:read",
-          "admin:view-dashboard",
-        ],
+        permissionSlugs: permissionSlugsForModules(moderatorModules, [
+          "edit",
+          "update",
+          "view",
+        ]),
       },
       {
         id: uuidv4(),
@@ -566,13 +448,7 @@ async function seedRbac() {
         description: "Manages product catalog",
         type: "custom",
         isSuperAdmin: false,
-        permissionSlugs: [
-          "product:create",
-          "product:read",
-          "product:update",
-          "product:delete",
-          "product:manage-categories",
-        ],
+        permissionSlugs: permissionSlugsFor("products"),
       },
     ];
 
@@ -641,6 +517,51 @@ async function seedRbac() {
       } else {
         // Use existing role ID
         roleId = existingRoles[0].id;
+        await sequelize.query(
+          `UPDATE roles
+           SET name = :name,
+               description = :description,
+               type = :type,
+               is_super_admin = :isSuperAdmin,
+               active = true,
+               updated_at = NOW()
+           WHERE id = :roleId`,
+          {
+            replacements: {
+              roleId,
+              name,
+              description,
+              type,
+              isSuperAdmin,
+            },
+            transaction,
+          },
+        );
+      }
+
+      const desiredPermissionIds = permissionSlugs
+        .map((permSlug) => permissionIds[permSlug])
+        .filter(Boolean);
+
+      if (desiredPermissionIds.length > 0) {
+        await sequelize.query(
+          `DELETE FROM role_permissions
+           WHERE role_id = $1
+             AND NOT (permission_id = ANY($2::uuid[]))`,
+          {
+            bind: [roleId, desiredPermissionIds],
+            transaction,
+          },
+        );
+      } else {
+        await sequelize.query(
+          `DELETE FROM role_permissions
+           WHERE role_id = :roleId`,
+          {
+            replacements: { roleId },
+            transaction,
+          },
+        );
       }
 
       // Assign permissions

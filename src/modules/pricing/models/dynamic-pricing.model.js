@@ -7,7 +7,10 @@ const dynamicPricingSchema = new mongoose.Schema(
     currentPrice: { type: Number, required: true },
     rules: [
       {
-        type: String, // "time_based", "volume_based", "demand_based", "seasonal"
+        type: {
+          type: String,
+          enum: ["time_based", "volume_based", "demand_based", "seasonal"],
+        },
         condition: Object, // e.g., { startTime: Date, endTime: Date }
         priceModifier: Number, // e.g., 0.9 for 10% off
         priority: Number,

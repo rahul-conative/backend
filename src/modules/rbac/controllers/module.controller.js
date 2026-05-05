@@ -1,4 +1,4 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { RbacService } = require("../services/rbac.service");
 
 class ModuleController {
@@ -8,24 +8,24 @@ class ModuleController {
 
   listModules = async (req, res) => {
     const result = await this.rbacService.listModules(req.query);
-    res.json(successResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { total: result.total }));
   };
 
   permissionManagement = async (req, res) => {
     const result = await this.rbacService.getPermissionManagementMatrix(
       req.query,
     );
-    res.json(successResponse(result));
+    res.json(okResponse(result));
   };
 
   getModule = async (req, res) => {
     const module = await this.rbacService.getModule(req.params.moduleId);
-    res.json(successResponse(module));
+    res.json(okResponse(module));
   };
 
   createModule = async (req, res) => {
     const module = await this.rbacService.createModule(req.body);
-    res.status(201).json(successResponse(module));
+    res.status(201).json(okResponse(module));
   };
 
   updateModule = async (req, res) => {
@@ -33,7 +33,7 @@ class ModuleController {
       req.params.moduleId,
       req.body,
     );
-    res.json(successResponse(module));
+    res.json(okResponse(module));
   };
 
   deleteModule = async (req, res) => {

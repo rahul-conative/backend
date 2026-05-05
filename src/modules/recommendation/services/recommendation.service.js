@@ -74,7 +74,7 @@ class RecommendationService {
     recs.lastUpdated = new Date();
 
     await recs.save();
-    await this.invalidateCache(userId);
+    await this.clearCache(userId);
 
     return recs;
   }
@@ -110,7 +110,7 @@ class RecommendationService {
     }
 
     await recs.save();
-    await this.invalidateCache(userId);
+    await this.clearCache(userId);
   }
 
   // ==============================
@@ -133,7 +133,7 @@ class RecommendationService {
   // ==============================
   // Cache Invalidation
   // ==============================
-  async invalidateCache(userId) {
+  async clearCache(userId) {
     await deleteCached(cacheKeys.recommendations(userId));
   }
 }

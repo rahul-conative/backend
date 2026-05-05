@@ -75,7 +75,7 @@ src/
   pages/
   components/
   hooks/
-  utils/
+  tools/
 ```
 
 Global API behavior:
@@ -197,7 +197,7 @@ Use the seller action endpoints only in generated endpoint constants and slices 
 | Method | Path | Slice | UI |
 | --- | --- | --- | --- |
 | GET | `/health` | `metaSlice` | diagnostics only |
-| GET | `/api/v1/meta/routes` | `metaSlice` | diagnostics/API capability discovery |
+| GET | `/api/v1/meta/routes` | `metaSlice` | diagnostics/API action discovery |
 
 ### Auth APIs
 
@@ -785,7 +785,7 @@ Dynamic pricing payload:
 
 | Method | Path | Slice | Body or Query Ref |
 | --- | --- | --- | --- |
-| GET | `/api/v1/wallets/me` | `walletSlice` | auth and `wallet:self` capability |
+| GET | `/api/v1/wallets/me` | `walletSlice` | auth and `wallet:self` action |
 
 Customer UI:
 
@@ -902,8 +902,8 @@ Notification payloads:
 
 | Method | Path | Slice | Body or Query Ref |
 | --- | --- | --- | --- |
-| GET | `/api/v1/analytics` | `analyticsSlice` | admin/capability only |
-| POST | `/api/v1/analytics/events` | `analyticsSlice` | `TrackEventPayload`, capability protected |
+| GET | `/api/v1/analytics` | `analyticsSlice` | admin/action only |
+| POST | `/api/v1/analytics/events` | `analyticsSlice` | `TrackEventPayload`, action protected |
 
 Analytics payload:
 
@@ -920,7 +920,7 @@ Analytics payload:
 }
 ```
 
-Track these customer events when capability allows it: `product_view`, `search`, `add_to_cart`, `remove_from_cart`, `wishlist_add`, `checkout_started`, `payment_success`, `payment_failed`, `order_placed`, `recommendation_click`, `return_requested`.
+Track these customer events when action allows it: `product_view`, `search`, `add_to_cart`, `remove_from_cart`, `wishlist_add`, `checkout_started`, `payment_success`, `payment_failed`, `order_placed`, `recommendation_click`, `return_requested`.
 
 ### Warranty APIs
 
@@ -1719,7 +1719,7 @@ Also generate admin/seller/RBAC thunks for every admin, seller, pricing, tax, fr
 - Every mounted API from `src/api/register-routes.js` is represented in endpoint constants.
 - Every endpoint is assigned to a slice.
 - Customer app uses only customer-safe APIs in visible navigation.
-- Admin/seller-only APIs are hidden behind role/capability guards.
+- Admin/seller-only APIs are hidden behind role/action guards.
 - Auth refresh and retry works.
 - No component hardcodes `/api/v1`.
 - No fake data is used where APIs exist.

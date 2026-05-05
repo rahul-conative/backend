@@ -1,9 +1,9 @@
 const express = require("express");
 const { SubscriptionController } = require("../controllers/subscription.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorize } = require("../../../shared/middleware/authorize");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowRoles } = require("../../../shared/middleware/access");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   listPlansSchema,
@@ -24,116 +24,116 @@ const {
 const subscriptionRoutes = express.Router();
 const subscriptionController = new SubscriptionController();
 
-subscriptionRoutes.get("/plans", validateRequest(listPlansSchema), asyncHandler(subscriptionController.listPlans));
+subscriptionRoutes.get("/plans", checkInput(listPlansSchema), catchErrors(subscriptionController.listPlans));
 subscriptionRoutes.post(
   "/purchase",
   authenticate,
-  validateRequest(purchasePlanSchema),
-  asyncHandler(subscriptionController.purchasePlan),
+  checkInput(purchasePlanSchema),
+  catchErrors(subscriptionController.purchasePlan),
 );
-subscriptionRoutes.get("/me", authenticate, asyncHandler(subscriptionController.listMine));
+subscriptionRoutes.get("/me", authenticate, catchErrors(subscriptionController.listMine));
 subscriptionRoutes.put(
   "/:subscriptionId/pause",
   authenticate,
-  validateRequest(subscriptionIdParamSchema),
-  asyncHandler(subscriptionController.pauseMine),
+  checkInput(subscriptionIdParamSchema),
+  catchErrors(subscriptionController.pauseMine),
 );
 subscriptionRoutes.put(
   "/:subscriptionId/resume",
   authenticate,
-  validateRequest(subscriptionIdParamSchema),
-  asyncHandler(subscriptionController.resumeMine),
+  checkInput(subscriptionIdParamSchema),
+  catchErrors(subscriptionController.resumeMine),
 );
 subscriptionRoutes.put(
   "/:subscriptionId/cancel",
   authenticate,
-  validateRequest(subscriptionIdParamSchema),
-  asyncHandler(subscriptionController.cancelMine),
+  checkInput(subscriptionIdParamSchema),
+  catchErrors(subscriptionController.cancelMine),
 );
 
 subscriptionRoutes.post(
   "/admin/plans",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(createPlanSchema),
-  asyncHandler(subscriptionController.createPlan),
+  allowRoles(ROLES.ADMIN),
+  checkInput(createPlanSchema),
+  catchErrors(subscriptionController.createPlan),
 );
 subscriptionRoutes.get(
   "/admin/plans",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(listPlansAdminSchema),
-  asyncHandler(subscriptionController.listPlansAdmin),
+  allowRoles(ROLES.ADMIN),
+  checkInput(listPlansAdminSchema),
+  catchErrors(subscriptionController.listPlansAdmin),
 );
 subscriptionRoutes.get(
   "/admin/plans/:planId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(planIdParamSchema),
-  asyncHandler(subscriptionController.getPlan),
+  allowRoles(ROLES.ADMIN),
+  checkInput(planIdParamSchema),
+  catchErrors(subscriptionController.getPlan),
 );
 subscriptionRoutes.patch(
   "/admin/plans/:planId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(updatePlanSchema),
-  asyncHandler(subscriptionController.updatePlan),
+  allowRoles(ROLES.ADMIN),
+  checkInput(updatePlanSchema),
+  catchErrors(subscriptionController.updatePlan),
 );
 subscriptionRoutes.delete(
   "/admin/plans/:planId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(planIdParamSchema),
-  asyncHandler(subscriptionController.deletePlan),
+  allowRoles(ROLES.ADMIN),
+  checkInput(planIdParamSchema),
+  catchErrors(subscriptionController.deletePlan),
 );
 subscriptionRoutes.get(
   "/admin/subscriptions",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(listSubscriptionsAdminSchema),
-  asyncHandler(subscriptionController.listSubscriptionsAdmin),
+  allowRoles(ROLES.ADMIN),
+  checkInput(listSubscriptionsAdminSchema),
+  catchErrors(subscriptionController.listSubscriptionsAdmin),
 );
 subscriptionRoutes.patch(
   "/admin/subscriptions/:subscriptionId/status",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(updateSubscriptionStatusAdminSchema),
-  asyncHandler(subscriptionController.updateSubscriptionStatusAdmin),
+  allowRoles(ROLES.ADMIN),
+  checkInput(updateSubscriptionStatusAdminSchema),
+  catchErrors(subscriptionController.updateSubscriptionStatusAdmin),
 );
 subscriptionRoutes.post(
   "/admin/platform-fee-config",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(createPlatformFeeConfigSchema),
-  asyncHandler(subscriptionController.createPlatformFeeConfig),
+  allowRoles(ROLES.ADMIN),
+  checkInput(createPlatformFeeConfigSchema),
+  catchErrors(subscriptionController.createPlatformFeeConfig),
 );
 subscriptionRoutes.get(
   "/admin/platform-fee-config",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(listPlatformFeeConfigSchema),
-  asyncHandler(subscriptionController.listPlatformFeeConfigs),
+  allowRoles(ROLES.ADMIN),
+  checkInput(listPlatformFeeConfigSchema),
+  catchErrors(subscriptionController.listPlatformFeeConfigs),
 );
 subscriptionRoutes.get(
   "/admin/platform-fee-config/:configId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(platformFeeConfigIdParamSchema),
-  asyncHandler(subscriptionController.getPlatformFeeConfig),
+  allowRoles(ROLES.ADMIN),
+  checkInput(platformFeeConfigIdParamSchema),
+  catchErrors(subscriptionController.getPlatformFeeConfig),
 );
 subscriptionRoutes.patch(
   "/admin/platform-fee-config/:configId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(updatePlatformFeeConfigSchema),
-  asyncHandler(subscriptionController.updatePlatformFeeConfig),
+  allowRoles(ROLES.ADMIN),
+  checkInput(updatePlatformFeeConfigSchema),
+  catchErrors(subscriptionController.updatePlatformFeeConfig),
 );
 subscriptionRoutes.delete(
   "/admin/platform-fee-config/:configId",
   authenticate,
-  authorize(ROLES.ADMIN),
-  validateRequest(platformFeeConfigIdParamSchema),
-  asyncHandler(subscriptionController.deletePlatformFeeConfig),
+  allowRoles(ROLES.ADMIN),
+  checkInput(platformFeeConfigIdParamSchema),
+  catchErrors(subscriptionController.deletePlatformFeeConfig),
 );
 
 module.exports = { subscriptionRoutes };

@@ -1,4 +1,4 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { PricingService } = require("../services/pricing.service");
 
 class PricingController {
@@ -8,27 +8,27 @@ class PricingController {
 
   createCoupon = async (req, res) => {
     const coupon = await this.pricingService.createCoupon(req.body);
-    res.status(201).json(successResponse(coupon));
+    res.status(201).json(okResponse(coupon));
   };
 
   listCoupons = async (req, res) => {
     const coupons = await this.pricingService.listCoupons();
-    res.json(successResponse(coupons));
+    res.json(okResponse(coupons));
   };
 
   getCoupon = async (req, res) => {
     const coupon = await this.pricingService.getCoupon(req.params.couponId);
-    res.json(successResponse(coupon));
+    res.json(okResponse(coupon));
   };
 
   updateCoupon = async (req, res) => {
     const coupon = await this.pricingService.updateCoupon(req.params.couponId, req.body);
-    res.json(successResponse(coupon));
+    res.json(okResponse(coupon));
   };
 
   deleteCoupon = async (req, res) => {
     const coupon = await this.pricingService.deleteCoupon(req.params.couponId);
-    res.json(successResponse(coupon));
+    res.json(okResponse(coupon));
   };
 }
 

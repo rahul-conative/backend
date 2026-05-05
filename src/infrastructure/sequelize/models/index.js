@@ -159,7 +159,7 @@ const Permission = sequelize.define(
     name: { type: DataTypes.STRING(128), allowNull: false },
     slug: { type: DataTypes.STRING(128), allowNull: false },
     description: { type: DataTypes.TEXT },
-    action: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "read" },
+    action: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "view" },
     active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     metadata: { type: DataTypes.JSONB, defaultValue: {} },
   },
@@ -288,4 +288,3 @@ module.exports = {
   UserRole,
   SuperAdmin,
 };
-

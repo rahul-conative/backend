@@ -92,7 +92,7 @@ class DynamicPricingService {
     });
 
     await pricing.save();
-    await this.invalidateCache(productId);
+    await this.clearCache(productId);
 
     logger.info({ productId, newPrice, reason }, "Price adjusted");
 
@@ -116,7 +116,7 @@ class DynamicPricingService {
     pricing.rules.sort((a, b) => a.priority - b.priority);
 
     await pricing.save();
-    await this.invalidateCache(productId);
+    await this.clearCache(productId);
 
     return pricing;
   }
@@ -153,7 +153,7 @@ class DynamicPricingService {
   // ==============================
   // Cache Invalidation
   // ==============================
-  async invalidateCache(productId) {
+  async clearCache(productId) {
     const cacheKey = cacheKeys.product(productId);
     await deleteCached(cacheKey);
   }

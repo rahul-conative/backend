@@ -3,10 +3,10 @@
 const express = require("express");
 const { DeliveryController } = require("../controllers/delivery.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { allowActions } = require("../../../shared/middleware/access");
+const { ACTIONS } = require("../../../shared/constants/actions");
+const { checkInput } = require("../../../shared/middleware/check-input");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
   serviceabilitySchema,
   orderDeliveryParamSchema,
@@ -19,31 +19,31 @@ const deliveryController = new DeliveryController();
 
 deliveryRoutes.get(
   "/serviceability",
-  validateRequest(serviceabilitySchema),
-  asyncHandler(deliveryController.serviceability),
+  checkInput(serviceabilitySchema),
+  catchErrors(deliveryController.serviceability),
 );
 
 deliveryRoutes.get(
   "/orders/:orderId/eway-bill",
   authenticate,
-  validateRequest(orderDeliveryParamSchema),
-  asyncHandler(deliveryController.getEWayBill),
+  checkInput(orderDeliveryParamSchema),
+  catchErrors(deliveryController.getEWayBill),
 );
 
 deliveryRoutes.post(
   "/orders/:orderId/eway-bill",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(createEWayBillSchema),
-  asyncHandler(deliveryController.createEWayBill),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(createEWayBillSchema),
+  catchErrors(deliveryController.createEWayBill),
 );
 
 deliveryRoutes.patch(
   "/eway-bills/:ewayBillId/status",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(updateEWayBillStatusSchema),
-  asyncHandler(deliveryController.updateEWayBillStatus),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(updateEWayBillStatusSchema),
+  catchErrors(deliveryController.updateEWayBillStatus),
 );
 
 module.exports = { deliveryRoutes };

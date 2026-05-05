@@ -1,4 +1,4 @@
-function successResponse(data, meta = {}) {
+function okResponse(data, meta = {}) {
   return {
     success: true,
     data,
@@ -6,7 +6,7 @@ function successResponse(data, meta = {}) {
   };
 }
 
-function errorResponse(message, details = null) {
+function failResponse(message, details = null) {
   return {
     success: false,
     error: {
@@ -16,4 +16,4 @@ function errorResponse(message, details = null) {
   };
 }
 
-module.exports = { successResponse, errorResponse };
+module.exports = { okResponse, failResponse };

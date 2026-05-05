@@ -180,7 +180,7 @@ class SellerRepository {
     return rows;
   }
 
-  buildTrackingWhere(sellerId, filters = {}, { includeStatusFilters = true } = {}) {
+  getTrackingWhere(sellerId, filters = {}, { includeStatusFilters = true } = {}) {
     const values = [sellerId];
     const clauses = ["oi.seller_id = $1"];
     let index = 2;
@@ -263,7 +263,7 @@ class SellerRepository {
   async fetchSellerTrackingOrders(sellerId, filters = {}) {
     const limit = Number(filters.limit || 20);
     const offset = Number(filters.offset || 0);
-    const { whereSql, values, nextIndex } = this.buildTrackingWhere(sellerId, filters);
+    const { whereSql, values, nextIndex } = this.getTrackingWhere(sellerId, filters);
     values.push(limit, offset);
 
     const { rows } = await postgresPool.query(
@@ -281,7 +281,7 @@ class SellerRepository {
   }
 
   async fetchSellerTrackingSummary(sellerId, filters = {}) {
-    const { whereSql, values } = this.buildTrackingWhere(sellerId, filters, {
+    const { whereSql, values } = this.getTrackingWhere(sellerId, filters, {
       includeStatusFilters: false,
     });
 

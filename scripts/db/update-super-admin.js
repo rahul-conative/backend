@@ -8,7 +8,7 @@ const {
 } = require("../../src/infrastructure/sequelize/sequelize-client");
 const { UserModel } = require("../../src/modules/user/models/user.model");
 const { ROLES } = require("../../src/shared/constants/roles");
-const { hashValue } = require("../../src/shared/utils/hash");
+const { hashText } = require("../../src/shared/tools/hash");
 const readline = require("readline");
 
 const rl = readline.createInterface({
@@ -19,7 +19,7 @@ const rl = readline.createInterface({
 const question = (query) =>
   new Promise((resolve) => rl.question(query, resolve));
 
-function buildProfile(fullName) {
+function makeProfile(fullName) {
   const parts = fullName.trim().split(/\s+/);
   const firstName = parts.shift() || "Super";
   const lastName = parts.join(" ") || "Admin";
@@ -40,7 +40,7 @@ async function createOrUpdateMongoUser({
     role: ROLES.SUPER_ADMIN,
     accountStatus: "active",
     emailVerified: true,
-    profile: buildProfile(fullName),
+    profile: makeProfile(fullName),
     authProviders: [],
   };
 
@@ -88,7 +88,7 @@ async function recreateSuperAdmin() {
       return;
     }
 
-    const passwordHash = await hashValue(password);
+    const passwordHash = await hashText(password);
     const { user, created } = await createOrUpdateMongoUser({
       email,
       phone: phone || undefined,

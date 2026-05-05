@@ -1,9 +1,9 @@
 const express = require("express");
 const { ProductController } = require("../controllers/product.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowActions } = require("../../../shared/middleware/access");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const {
   createProductSchema,
   updateProductSchema,
@@ -12,48 +12,48 @@ const {
   reviewProductSchema,
   productParamSchema,
 } = require("../validation/product.validation");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { ACTIONS } = require("../../../shared/constants/actions");
 
 const productRoutes = express.Router();
 const productController = new ProductController();
 
-productRoutes.get("/", validateRequest(listProductSchema), asyncHandler(productController.list));
-productRoutes.get("/search", validateRequest(searchProductSchema), asyncHandler(productController.search));
+productRoutes.get("/", checkInput(listProductSchema), catchErrors(productController.list));
+productRoutes.get("/search", checkInput(searchProductSchema), catchErrors(productController.search));
 productRoutes.get(
   "/seller/me",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(listProductSchema),
-  asyncHandler(productController.listMine),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(listProductSchema),
+  catchErrors(productController.listMine),
 );
 productRoutes.patch(
   "/:productId/review",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_REVIEW),
-  validateRequest(reviewProductSchema),
-  asyncHandler(productController.review),
+  allowActions(ACTIONS.CATALOG_REVIEW),
+  checkInput(reviewProductSchema),
+  catchErrors(productController.review),
 );
-productRoutes.get("/:productId", asyncHandler(productController.getOne));
+productRoutes.get("/:productId", catchErrors(productController.getOne));
 productRoutes.post(
   "/",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(createProductSchema),
-  asyncHandler(productController.create),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createProductSchema),
+  catchErrors(productController.create),
 );
 productRoutes.patch(
   "/:productId",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(updateProductSchema),
-  asyncHandler(productController.update),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateProductSchema),
+  catchErrors(productController.update),
 );
 productRoutes.delete(
   "/:productId",
   authenticate,
-  authorizeCapability(CAPABILITIES.CATALOG_MANAGE),
-  validateRequest(productParamSchema),
-  asyncHandler(productController.delete),
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(productParamSchema),
+  catchErrors(productController.delete),
 );
 
 module.exports = { productRoutes };

@@ -1,5 +1,5 @@
 const { AppError } = require("../../../shared/errors/app-error");
-const { buildDomainEvent } = require("../../../contracts/events/event-factory");
+const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { WalletRepository } = require("../repositories/wallet.repository");
@@ -32,7 +32,7 @@ class WalletService {
     try {
       await this.walletRepository.holdWalletAmount(userId, amount, referenceId, metadata);
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.WALLET_RESERVED_V1,
           { userId, amount, referenceId },
           { source: "wallet-module", aggregateId: userId },
@@ -47,7 +47,7 @@ class WalletService {
     const transaction = await this.walletRepository.captureHeldAmount(userId, referenceId);
     if (transaction) {
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.WALLET_CAPTURED_V1,
           { userId, amount: Number(transaction.amount), referenceId },
           { source: "wallet-module", aggregateId: userId },
@@ -61,7 +61,7 @@ class WalletService {
     const transaction = await this.walletRepository.releaseHeldAmount(userId, referenceId);
     if (transaction) {
       await eventPublisher.publish(
-        buildDomainEvent(
+        makeEvent(
           DOMAIN_EVENTS.WALLET_RELEASED_V1,
           { userId, amount: Number(transaction.amount), referenceId },
           { source: "wallet-module", aggregateId: userId },

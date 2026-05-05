@@ -18,7 +18,7 @@ async function resetPostgres() {
   await postgresPool.end();
 }
 
-function rebuildSchemaAndSeed() {
+function resetSchemaAndSeed() {
   execSync("node scripts/db/run-sequelize-migrations.js", { stdio: "inherit" });
   execSync("node scripts/db/seed-dev-data.js", { stdio: "inherit" });
 }
@@ -26,7 +26,7 @@ function rebuildSchemaAndSeed() {
 async function main() {
   await resetMongo();
   await resetPostgres();
-  rebuildSchemaAndSeed();
+  resetSchemaAndSeed();
   process.stdout.write("All databases reset and rebuilt successfully\n");
 }
 

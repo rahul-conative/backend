@@ -1,11 +1,11 @@
 const express = require("express");
 const { AnalyticsController } = require("../controllers/analytics.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { trackEventSchema } = require("../validation/analytics.validation");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { allowActions } = require("../../../shared/middleware/access");
+const { ACTIONS } = require("../../../shared/constants/actions");
 
 const analyticsRoutes = express.Router();
 const analyticsController = new AnalyticsController();
@@ -13,15 +13,15 @@ const analyticsController = new AnalyticsController();
 analyticsRoutes.get(
   "/",
   authenticate,
-  authorizeCapability(CAPABILITIES.ANALYTICS_VIEW),
-  asyncHandler(analyticsController.list),
+  allowActions(ACTIONS.ANALYTICS_VIEW),
+  catchErrors(analyticsController.list),
 );
 analyticsRoutes.post(
   "/events",
   authenticate,
-  authorizeCapability(CAPABILITIES.ANALYTICS_VIEW),
-  validateRequest(trackEventSchema),
-  asyncHandler(analyticsController.track),
+  allowActions(ACTIONS.ANALYTICS_VIEW),
+  checkInput(trackEventSchema),
+  catchErrors(analyticsController.track),
 );
 
 module.exports = { analyticsRoutes };

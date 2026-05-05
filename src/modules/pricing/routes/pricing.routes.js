@@ -1,11 +1,11 @@
 const express = require("express");
 const { PricingController } = require("../controllers/pricing.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowActions } = require("../../../shared/middleware/access");
+const { ACTIONS } = require("../../../shared/constants/actions");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const { createCouponSchema, updateCouponSchema, couponParamSchema } = require("../validation/pricing.validation");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 
 const pricingRoutes = express.Router();
 const pricingController = new PricingController();
@@ -13,36 +13,36 @@ const pricingController = new PricingController();
 pricingRoutes.get(
   "/coupons",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  asyncHandler(pricingController.listCoupons),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  catchErrors(pricingController.listCoupons),
 );
 pricingRoutes.post(
   "/coupons",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(createCouponSchema),
-  asyncHandler(pricingController.createCoupon),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(createCouponSchema),
+  catchErrors(pricingController.createCoupon),
 );
 pricingRoutes.get(
   "/coupons/:couponId",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(couponParamSchema),
-  asyncHandler(pricingController.getCoupon),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(couponParamSchema),
+  catchErrors(pricingController.getCoupon),
 );
 pricingRoutes.patch(
   "/coupons/:couponId",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(updateCouponSchema),
-  asyncHandler(pricingController.updateCoupon),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(updateCouponSchema),
+  catchErrors(pricingController.updateCoupon),
 );
 pricingRoutes.delete(
   "/coupons/:couponId",
   authenticate,
-  authorizeCapability(CAPABILITIES.ORDER_MANAGE),
-  validateRequest(couponParamSchema),
-  asyncHandler(pricingController.deleteCoupon),
+  allowActions(ACTIONS.ORDER_MANAGE),
+  checkInput(couponParamSchema),
+  catchErrors(pricingController.deleteCoupon),
 );
 
 module.exports = { pricingRoutes };

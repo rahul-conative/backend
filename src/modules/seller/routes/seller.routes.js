@@ -1,9 +1,9 @@
 const express = require("express");
 const { SellerController } = require("../controllers/seller.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate, authenticatePendingSeller } = require("../../../shared/middleware/authenticate");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
+const { allowActions } = require("../../../shared/middleware/access");
+const { checkInput } = require("../../../shared/middleware/check-input");
 const {
   submitKycSchema,
   reviewSellerKycSchema,
@@ -20,7 +20,7 @@ const {
   listSellerSubAdminsSchema,
   updateSellerSubAdminModulesSchema,
 } = require("../validation/seller.validation");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { ACTIONS } = require("../../../shared/constants/actions");
 
 const sellerRoutes = express.Router();
 const sellerController = new SellerController();
@@ -29,119 +29,119 @@ const sellerController = new SellerController();
 sellerRoutes.post(
   "/onboarding/kyc",
   authenticatePendingSeller,
-  validateRequest(submitKycSchema),
-  asyncHandler(sellerController.submitKyc),
+  checkInput(submitKycSchema),
+  catchErrors(sellerController.submitKyc),
 );
 sellerRoutes.patch(
   "/onboarding/profile",
   authenticatePendingSeller,
-  validateRequest(updateSellerProfileSchema),
-  asyncHandler(sellerController.updateProfile),
+  checkInput(updateSellerProfileSchema),
+  catchErrors(sellerController.updateProfile),
 );
 
 // Admin routes
 sellerRoutes.patch(
   "/:sellerId/kyc/review",
   authenticate,
-  authorizeCapability(CAPABILITIES.KYC_REVIEW),
-  validateRequest(reviewSellerKycSchema),
-  asyncHandler(sellerController.reviewKyc),
+  allowActions(ACTIONS.KYC_REVIEW),
+  checkInput(reviewSellerKycSchema),
+  catchErrors(sellerController.reviewKyc),
 );
 
 // Authenticated seller routes
 sellerRoutes.get(
   "/me/status",
   authenticate,
-  validateRequest(sellerWebStatusSchema),
-  asyncHandler(sellerController.getWebStatus),
+  checkInput(sellerWebStatusSchema),
+  catchErrors(sellerController.getWebStatus),
 );
 sellerRoutes.get(
   "/me/tracking",
   authenticate,
-  validateRequest(sellerTrackingSchema),
-  asyncHandler(sellerController.listWebTracking),
+  checkInput(sellerTrackingSchema),
+  catchErrors(sellerController.listWebTracking),
 );
 sellerRoutes.get(
   "/me/tracking/:orderId",
   authenticate,
-  validateRequest(sellerTrackingOrderSchema),
-  asyncHandler(sellerController.getWebTrackingOrder),
+  checkInput(sellerTrackingOrderSchema),
+  catchErrors(sellerController.getWebTrackingOrder),
 );
 sellerRoutes.get(
   "/me/profile",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  asyncHandler(sellerController.getProfile),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  catchErrors(sellerController.getProfile),
 );
 sellerRoutes.patch(
   "/me/profile",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerProfileSchema),
-  asyncHandler(sellerController.updateProfile),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerProfileSchema),
+  catchErrors(sellerController.updateProfile),
 );
 sellerRoutes.patch(
   "/me/business-address",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerAddressSchema),
-  asyncHandler(sellerController.updateBusinessAddress),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerAddressSchema),
+  catchErrors(sellerController.updateBusinessAddress),
 );
 sellerRoutes.patch(
   "/me/pickup-address",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerAddressSchema),
-  asyncHandler(sellerController.updatePickupAddress),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerAddressSchema),
+  catchErrors(sellerController.updatePickupAddress),
 );
 sellerRoutes.patch(
   "/me/bank-details",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerBankSchema),
-  asyncHandler(sellerController.updateBankDetails),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerBankSchema),
+  catchErrors(sellerController.updateBankDetails),
 );
 sellerRoutes.patch(
   "/me/more-info",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerMoreInfoSchema),
-  asyncHandler(sellerController.updateMoreInfo),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerMoreInfoSchema),
+  catchErrors(sellerController.updateMoreInfo),
 );
 sellerRoutes.patch(
   "/me/settings",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerSettingsSchema),
-  asyncHandler(sellerController.updateSettings),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerSettingsSchema),
+  catchErrors(sellerController.updateSettings),
 );
 sellerRoutes.get(
   "/me/dashboard",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_DASHBOARD_VIEW),
-  validateRequest(sellerDashboardSchema),
-  asyncHandler(sellerController.dashboard),
+  allowActions(ACTIONS.SELLER_DASHBOARD_VIEW),
+  checkInput(sellerDashboardSchema),
+  catchErrors(sellerController.dashboard),
 );
 sellerRoutes.post(
   "/me/sub-admins",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(createSellerSubAdminSchema),
-  asyncHandler(sellerController.createSubAdmin),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(createSellerSubAdminSchema),
+  catchErrors(sellerController.createSubAdmin),
 );
 sellerRoutes.get(
   "/me/sub-admins",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(listSellerSubAdminsSchema),
-  asyncHandler(sellerController.listSubAdmins),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(listSellerSubAdminsSchema),
+  catchErrors(sellerController.listSubAdmins),
 );
 sellerRoutes.patch(
   "/me/sub-admins/:userId/modules",
   authenticate,
-  authorizeCapability(CAPABILITIES.SELLER_PROFILE_MANAGE),
-  validateRequest(updateSellerSubAdminModulesSchema),
-  asyncHandler(sellerController.updateSubAdminModules),
+  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  checkInput(updateSellerSubAdminModulesSchema),
+  catchErrors(sellerController.updateSubAdminModules),
 );
 
 module.exports = { sellerRoutes };

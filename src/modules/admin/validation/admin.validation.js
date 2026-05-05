@@ -100,13 +100,13 @@ const updateVendorStatusSchema = Joi.object({
     status: Joi.string().valid(...accountStatuses),
   })
     .or("accountStatus", "status")
-    .custom((value, helpers) => {
+    .custom((value, joiTools) => {
       if (
         value.accountStatus &&
         value.status &&
         value.accountStatus !== value.status
       ) {
-        return helpers.error("any.invalid");
+        return joiTools.error("any.invalid");
       }
 
       return { accountStatus: value.accountStatus || value.status };
@@ -227,7 +227,7 @@ const taxReportSchema = Joi.object({
   params: Joi.object({}).required(),
 });
 
-const generateInvoiceSchema = Joi.object({
+const createInvoiceSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
@@ -602,7 +602,7 @@ module.exports = {
   createPayoutSchema,
   listPayoutsSchema,
   taxReportSchema,
-  generateInvoiceSchema,
+  createInvoiceSchema,
   createApiKeySchema,
   listApiKeysSchema,
   createWebhookSubscriptionSchema,

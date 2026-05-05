@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  authenticateToken,
-  requireRole,
-} = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../../../shared/middleware/authenticate");
+const { allowRoles } = require("../../../shared/middleware/access");
 
 const { ReturnService } = require("../services/return.service");
 const { returnValidation } = require("../../validation");
@@ -12,7 +10,7 @@ const { returnValidation } = require("../../validation");
 // ==============================
 // Request a return
 // ==============================
-router.post("/", authenticateToken, async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.sub;
 
@@ -55,7 +53,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
 // ==============================
 // Get returns for buyer
 // ==============================
-router.get("/my-returns", authenticateToken, async (req, res, next) => {
+router.get("/my-returns", authenticate, async (req, res, next) => {
   try {
     const userId = req.auth?.sub;
 
@@ -80,7 +78,7 @@ router.get("/my-returns", authenticateToken, async (req, res, next) => {
 // ==============================
 // Get return by order
 // ==============================
-router.get("/order/:orderId", authenticateToken, async (req, res, next) => {
+router.get("/order/:orderId", authenticate, async (req, res, next) => {
   try {
     const { error, value } =
       returnValidation.getReturnByOrder.validate(req.params);
@@ -111,8 +109,8 @@ router.get("/order/:orderId", authenticateToken, async (req, res, next) => {
 // ==============================
 router.post(
   "/:returnId/approve",
-  authenticateToken,
-  requireRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const { error, value } =
@@ -150,8 +148,8 @@ router.post(
 // ==============================
 router.post(
   "/:returnId/refund",
-  authenticateToken,
-  requireRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const { error, value } =

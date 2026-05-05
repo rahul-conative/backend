@@ -53,7 +53,7 @@ class SellerCommission extends Model {
     return {
       seller: {
         relation: Model.BelongsToOneRelation,
-        modelClass: require("../user/models/user.model"),
+        modelClass: require("../../../modules/user/models/user.model"),
         join: {
           from: "seller_commissions.seller_id",
           to: "users.id"
@@ -62,7 +62,7 @@ class SellerCommission extends Model {
 
       order: {
         relation: Model.BelongsToOneRelation,
-        modelClass: require("../order/models/order.model"),
+        modelClass: require("../../../modules/order/models/order.model"),
         join: {
           from: "seller_commissions.order_id",
           to: "orders.id"
@@ -144,7 +144,7 @@ class SellerPayout extends Model {
     return {
       seller: {
         relation: Model.BelongsToOneRelation,
-        modelClass: require("../user/models/user.model"),
+        modelClass: require("../../../modules/user/models/user.model"),
         join: {
           from: "seller_payouts.seller_id",
           to: "users.id"
@@ -218,7 +218,7 @@ class SellerSettlement extends Model {
     return {
       seller: {
         relation: Model.BelongsToOneRelation,
-        modelClass: require("../user/models/user.model"),
+        modelClass: require("../../../modules/user/models/user.model"),
         join: {
           from: "seller_settlements.seller_id",
           to: "users.id"

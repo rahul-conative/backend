@@ -1,6 +1,6 @@
 const Joi = require("joi");
 
-const generateOrderInvoiceSchema = Joi.object({
+const createOrderInvoiceSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
@@ -21,7 +21,7 @@ const taxReportSchema = Joi.object({
 });
 
 module.exports = {
-  generateOrderInvoiceSchema,
+  createOrderInvoiceSchema,
   taxReportSchema,
 };
 

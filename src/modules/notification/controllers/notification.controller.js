@@ -1,6 +1,6 @@
-const { successResponse } = require("../../../shared/http/response");
+const { okResponse } = require("../../../shared/http/reply");
 const { NotificationService } = require("../services/notification.service");
-const { requireActor } = require("../../../shared/auth/actor-context");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 
 class NotificationController {
   constructor({ notificationService = new NotificationService() } = {}) {
@@ -9,13 +9,13 @@ class NotificationController {
 
   create = async (req, res) => {
     const notification = await this.notificationService.createNotification(req.body);
-    res.status(201).json(successResponse(notification));
+    res.status(201).json(okResponse(notification));
   };
 
   listMine = async (req, res) => {
-    const actor = requireActor(req);
+    const actor = getCurrentUser(req);
     const notifications = await this.notificationService.listMyNotifications(actor);
-    res.json(successResponse(notifications));
+    res.json(okResponse(notifications));
   };
 }
 

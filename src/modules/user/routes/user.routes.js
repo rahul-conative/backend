@@ -1,10 +1,10 @@
 const express = require("express");
 const { UserController } = require("../controllers/user.controller");
-const { asyncHandler } = require("../../../shared/middleware/async-handler");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { validateRequest } = require("../../../shared/middleware/validate-request");
-const { authorizeCapability } = require("../../../shared/middleware/authorize");
-const { CAPABILITIES } = require("../../../shared/constants/capabilities");
+const { checkInput } = require("../../../shared/middleware/check-input");
+const { allowActions } = require("../../../shared/middleware/access");
+const { ACTIONS } = require("../../../shared/constants/actions");
 const {
   updateProfileSchema,
   submitUserKycSchema,
@@ -17,44 +17,44 @@ const {
 const userRoutes = express.Router();
 const userController = new UserController();
 
-userRoutes.get("/me", authenticate, asyncHandler(userController.getMe));
+userRoutes.get("/me", authenticate, catchErrors(userController.getMe));
 userRoutes.patch(
   "/me",
   authenticate,
-  validateRequest(updateProfileSchema),
-  asyncHandler(userController.updateMe),
+  checkInput(updateProfileSchema),
+  catchErrors(userController.updateMe),
 );
 userRoutes.post(
   "/me/addresses",
   authenticate,
-  validateRequest(addAddressSchema),
-  asyncHandler(userController.addAddress),
+  checkInput(addAddressSchema),
+  catchErrors(userController.addAddress),
 );
 userRoutes.patch(
   "/me/addresses/:addressId",
   authenticate,
-  validateRequest(updateAddressSchema),
-  asyncHandler(userController.updateAddress),
+  checkInput(updateAddressSchema),
+  catchErrors(userController.updateAddress),
 );
 userRoutes.delete(
   "/me/addresses/:addressId",
   authenticate,
-  validateRequest(addressParamSchema),
-  asyncHandler(userController.deleteAddress),
+  checkInput(addressParamSchema),
+  catchErrors(userController.deleteAddress),
 );
 userRoutes.post(
   "/me/kyc",
   authenticate,
-  authorizeCapability(CAPABILITIES.USER_KYC_SUBMIT),
-  validateRequest(submitUserKycSchema),
-  asyncHandler(userController.submitKyc),
+  allowActions(ACTIONS.USER_KYC_SUBMIT),
+  checkInput(submitUserKycSchema),
+  catchErrors(userController.submitKyc),
 );
 userRoutes.patch(
   "/:userId/kyc/review",
   authenticate,
-  authorizeCapability(CAPABILITIES.KYC_REVIEW),
-  validateRequest(reviewUserKycSchema),
-  asyncHandler(userController.reviewKyc),
+  allowActions(ACTIONS.KYC_REVIEW),
+  checkInput(reviewUserKycSchema),
+  catchErrors(userController.reviewKyc),
 );
 
 module.exports = { userRoutes };

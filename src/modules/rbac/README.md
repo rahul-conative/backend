@@ -6,7 +6,7 @@ This module provides a comprehensive Role-Based Access Control (RBAC) system wit
 
 - **Super Admin System**: One-time creation of super admin with full platform permissions
 - **Module Management**: Organize permissions by modules
-- **Permission Management**: Create, update, and manage permissions with actions (create, read, update, delete, manage)
+- **Permission Management**: Create and assign standard permissions with actions (add, edit, update, delete, view)
 - **Role Management**: Define roles and assign permissions to roles
 - **User-Level Permissions**: Assign permissions directly to users or through roles
 - **Effective Permissions**: Get the combined set of permissions a user has through roles and direct assignments
@@ -40,7 +40,7 @@ Individual permissions that can be assigned to roles or users
 - name (VARCHAR): Permission name
 - slug (VARCHAR): Unique slug within module
 - description (TEXT): Permission description
-- action (VARCHAR): Action type (create, read, update, delete, manage)
+- action (VARCHAR): Action type (add, edit, update, delete, view)
 - active (BOOLEAN): Permission status
 - metadata (JSONB): Additional data
 - created_at, updated_at (TIMESTAMP): Timestamps
@@ -169,7 +169,7 @@ POST   /api/rbac/users/:userId/roles/bulk - Bulk assign roles
 ### 1. Run Migrations
 
 ```bash
-npm run migrate
+npm run db:migrate
 ```
 
 This creates all necessary tables.
@@ -177,14 +177,14 @@ This creates all necessary tables.
 ### 2. Create Super Admin (One-Time)
 
 ```bash
-npm run create-super-admin
+npm run db:create-super-admin
 ```
 
 This script is interactive and:
 - Checks if super admin already exists (fails if it does)
 - Creates the super admin user
 - Creates the super admin role (if it doesn't exist)
-- Assigns all permissions to the super admin role
+- Assigns the super admin role and marker so authorization bypass applies
 - Can only be run once per installation
 
 **Important**: This script can ONLY be run once. Subsequent attempts will fail.
@@ -192,7 +192,7 @@ This script is interactive and:
 ### 3. Seed Initial Modules and Permissions (Optional)
 
 ```bash
-npm run seed-rbac
+npm run db:seed:rbac
 ```
 
 This populates the database with common modules and permissions.
@@ -210,7 +210,7 @@ Returns all permissions the user has through roles and direct assignments.
 ### Check if User Has Permission
 
 ```bash
-GET /api/rbac/users/user123/permissions/check?permissionSlug=product:create
+GET /api/rbac/users/user123/permissions/check?permissionSlug=products:add
 ```
 
 Returns: `{ hasPermission: true/false }`
@@ -315,7 +315,7 @@ updateSuperAdmin(userId, updates)
 
 ## Best Practices
 
-1. **Permission Naming**: Use dot notation for permission slugs (e.g., `product:create`, `user:read`)
+1. **Permission Naming**: Use module/action slugs with the standard action keys (e.g., `products:add`, `users:view`)
 2. **Role Naming**: Use clear, descriptive names (e.g., "Product Manager", "Content Reviewer")
 3. **Module Organization**: Group related permissions into modules
 4. **Super Admin Access**: Only create one super admin and protect the creation script
@@ -348,7 +348,7 @@ const { RbacService } = require("./modules/rbac/services/rbac.service");
 const rbacService = new RbacService();
 
 // Check if user has permission
-const hasPermission = await rbacService.userHasPermission(userId, "product:create");
+const hasPermission = await rbacService.userHasPermission(userId, "products:add");
 
 // Get all user permissions
 const permissions = await rbacService.getUserEffectivePermissions(userId);

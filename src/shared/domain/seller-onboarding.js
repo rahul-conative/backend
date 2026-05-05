@@ -30,16 +30,16 @@ const DEFAULT_SELLER_CHECKLIST = Object.freeze({
   firstProductPublished: false,
 });
 
-function normalizeText(value) {
+function cleanText(value) {
   return String(value || "").trim();
 }
 
 function firstNonEmpty(...values) {
-  return values.find((value) => normalizeText(value).length > 0) || "";
+  return values.find((value) => cleanText(value).length > 0) || "";
 }
 
-function buildNameFromUserProfile(userProfile = {}) {
-  return [userProfile?.firstName, userProfile?.lastName].map(normalizeText).filter(Boolean).join(" ");
+function getNameFromUserProfile(userProfile = {}) {
+  return [userProfile?.firstName, userProfile?.lastName].map(cleanText).filter(Boolean).join(" ");
 }
 
 function getSellerProfileFieldValue(sellerProfile = {}, field, { user = {}, kyc = null } = {}) {
@@ -52,7 +52,7 @@ function getSellerProfileFieldValue(sellerProfile = {}, field, { user = {}, kyc 
       sellerProfile.shopName,
       sellerProfile.businessName,
       sellerProfile.primaryContactName,
-      buildNameFromUserProfile(userProfile),
+      getNameFromUserProfile(userProfile),
     ],
     legalBusinessName: [
       sellerProfile.legalBusinessName,
@@ -111,7 +111,7 @@ function hasStartedOnboarding(checklist = {}) {
   return Object.values(checklist).some((value) => value === true);
 }
 
-function buildSellerOnboardingChecklist({
+function makeSellerOnboardingChecklist({
   sellerProfile = {},
   user = {},
   kyc = null,
@@ -130,7 +130,7 @@ function buildSellerOnboardingChecklist({
   };
 }
 
-function buildSellerOnboardingRequirements({ sellerProfile = {}, user = {}, kyc = null } = {}) {
+function makeSellerOnboardingRequirements({ sellerProfile = {}, user = {}, kyc = null } = {}) {
   const missingProfileFields = getMissingSellerProfileFields(sellerProfile, { user, kyc });
   const missingBankFields = getMissingSellerBankFields(sellerProfile?.bankDetails || {});
 
@@ -156,7 +156,7 @@ function getSellerKycStatus(kyc, checklist = {}) {
   return checklist.kycSubmitted === true ? KYC_STATUS.SUBMITTED : KYC_STATUS.DRAFT;
 }
 
-function resolveSellerOnboardingStatus(
+function getSellerOnboardingStatus(
   checklist = {},
   kycStatus = KYC_STATUS.DRAFT,
   currentStatus = SELLER_ONBOARDING_STATUS.INITIATED,
@@ -185,10 +185,10 @@ function resolveSellerOnboardingStatus(
   return SELLER_ONBOARDING_STATUS.INITIATED;
 }
 
-function buildSellerOnboardingState({ sellerProfile = {}, user = {}, kyc = null } = {}) {
-  const checklist = buildSellerOnboardingChecklist({ sellerProfile, user, kyc });
+function makeSellerOnboardingState({ sellerProfile = {}, user = {}, kyc = null } = {}) {
+  const checklist = makeSellerOnboardingChecklist({ sellerProfile, user, kyc });
   const kycStatus = getSellerKycStatus(kyc, checklist);
-  const onboardingStatus = resolveSellerOnboardingStatus(
+  const onboardingStatus = getSellerOnboardingStatus(
     checklist,
     kycStatus,
     sellerProfile?.onboardingStatus,
@@ -198,18 +198,18 @@ function buildSellerOnboardingState({ sellerProfile = {}, user = {}, kyc = null 
     checklist,
     kycStatus,
     onboardingStatus,
-    requirements: buildSellerOnboardingRequirements({ sellerProfile, user, kyc }),
+    requirements: makeSellerOnboardingRequirements({ sellerProfile, user, kyc }),
   };
 }
 
 module.exports = {
   SELLER_ONBOARDING_STATUS,
   DEFAULT_SELLER_CHECKLIST,
-  buildSellerOnboardingChecklist,
-  buildSellerOnboardingRequirements,
-  buildSellerOnboardingState,
+  makeSellerOnboardingChecklist,
+  makeSellerOnboardingRequirements,
+  makeSellerOnboardingState,
   getSellerKycStatus,
   hasCompleteSellerBankDetails,
   hasCompleteSellerProfile,
-  resolveSellerOnboardingStatus,
+  getSellerOnboardingStatus,
 };

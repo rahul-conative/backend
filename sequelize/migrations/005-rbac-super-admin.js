@@ -30,7 +30,7 @@ module.exports = {
         name: { type: Sequelize.STRING(128), allowNull: false },
         slug: { type: Sequelize.STRING(128), allowNull: false },
         description: { type: Sequelize.TEXT, allowNull: true },
-        action: { type: Sequelize.STRING(32), allowNull: false, defaultValue: "read" }, // create, read, update, delete, etc.
+        action: { type: Sequelize.STRING(32), allowNull: false, defaultValue: "view" }, // add, edit, update, delete, view
         active: { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: true },
         metadata: { type: Sequelize.JSONB, allowNull: false, defaultValue: {} },
         created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: now },

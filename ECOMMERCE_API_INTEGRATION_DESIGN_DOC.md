@@ -103,7 +103,7 @@ Super-admin is seeded by script and should exist in both the authentication stor
 
 ## Role and Permission Design
 
-The system uses RBAC and capability-based authorization.
+The system uses RBAC and action-based authorization.
 
 Role examples:
 
@@ -116,9 +116,9 @@ Role examples:
 
 Permission examples:
 
-- `rbac:module:create`
-- `rbac:role:create`
-- `rbac:user:assign-permission`
+- `rbac:add`
+- `rbac:update`
+- `rbac:view`
 - `catalog:manage`
 - `catalog:review`
 - `order:manage`
@@ -504,15 +504,15 @@ Base path:
 
 ## Admin Panel Integration Design
 
-The admin panel should use one centralized API helper. API URLs should not be hardcoded inside pages.
+The admin panel should use one centralized API tool. API URLs should not be hardcoded inside pages.
 
 Recommended frontend structure:
 
 ```text
-src/_helpers/endpoints.js
-src/_helpers/ApiThunk.js
-src/_helpers/axiosProvider.js
-src/_helpers/adminApi.js
+src/_tools/endpoints.js
+src/_tools/ApiThunk.js
+src/_tools/axiosProvider.js
+src/_tools/adminApi.js
 src/Redux/adminCoreSlice.js
 src/Redux/userManagementSlice.js
 src/Redux/sellerSubAdminsSlice.js
@@ -724,7 +724,7 @@ Developer 1:
 Developer 2:
 
 - Admin login.
-- Admin API helper setup.
+- Admin API tool setup.
 - Admin/sub-admin management screens.
 - Permission management UI.
 - Seller/user list integration.

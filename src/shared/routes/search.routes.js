@@ -1,13 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  authenticateToken,
-  authorizeRole,
-} = require("../../../shared/middleware/auth.middleware");
+const { authenticate } = require("../middleware/authenticate");
+const { allowRoles } = require("../middleware/access");
 
-const { AdvancedSearchService } = require("../../../shared/services/advanced-search.service");
-const { searchValidation } = require("../../validation");
+const { AdvancedSearchService } = require("../services/advanced-search.service");
+const { searchValidation } = require("../../modules/validation");
 
 // ==============================
 // Public: Search products
@@ -97,8 +95,8 @@ router.get("/autocomplete", async (req, res, next) => {
 // ==============================
 router.post(
   "/index-all",
-  authenticateToken,
-  authorizeRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const result = await AdvancedSearchService.indexAllProducts();
@@ -119,8 +117,8 @@ router.post(
 // ==============================
 router.post(
   "/rebuild",
-  authenticateToken,
-  authorizeRole(["admin"]),
+  authenticate,
+  allowRoles(["admin"]),
   async (req, res, next) => {
     try {
       const result = await AdvancedSearchService.rebuildIndexes();

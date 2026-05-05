@@ -1,5 +1,7 @@
 const Joi = require("joi");
 
+const permissionActions = ["add", "edit", "update", "delete", "view"];
+
 const createModuleSchema = {
   body: Joi.object({
     name: Joi.string().min(3).max(128).required(),
@@ -53,8 +55,8 @@ const createPermissionSchema = {
     slug: Joi.string().min(3).max(128).required(),
     description: Joi.string().max(1000),
     action: Joi.string()
-      .valid("create", "read", "update", "delete", "manage")
-      .default("read"),
+      .valid(...permissionActions)
+      .default("view"),
     active: Joi.boolean().default(true),
     metadata: Joi.object().default({}),
   }),
@@ -65,7 +67,7 @@ const updatePermissionSchema = {
     name: Joi.string().min(3).max(128),
     slug: Joi.string().min(3).max(128),
     description: Joi.string().max(1000),
-    action: Joi.string().valid("create", "read", "update", "delete", "manage"),
+    action: Joi.string().valid(...permissionActions),
     active: Joi.boolean(),
     metadata: Joi.object(),
   }).min(1),

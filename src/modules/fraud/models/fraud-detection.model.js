@@ -8,7 +8,18 @@ const fraudDetectionSchema = new mongoose.Schema(
     riskLevel: { type: String, enum: ["low", "medium", "high", "critical"], required: true, index: true },
     indicators: [
       {
-        type: String, // "high_transaction_value", "international_shipping", "new_card", "velocity", "ip_mismatch", "card_mismatch"
+        type: {
+          type: String,
+          enum: [
+            "high_transaction_value",
+            "international_shipping",
+            "new_card",
+            "velocity",
+            "ip_mismatch",
+            "card_mismatch",
+            "address_mismatch",
+          ],
+        },
         severity: String, // "low", "medium", "high"
         description: String,
       },
