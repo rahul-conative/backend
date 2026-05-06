@@ -8,11 +8,13 @@ const {
 } = require("../../src/shared/auth/module-access");
 
 const STANDARD_PERMISSION_ACTIONS = [
+  { key: "view", label: "View" },
   { key: "add", label: "Add" },
   { key: "edit", label: "Edit" },
   { key: "update", label: "Update" },
   { key: "delete", label: "Delete" },
-  { key: "view", label: "View" },
+  { key: "status", label: "Status" },
+  { key: "approval", label: "Approval" },
 ];
 
 const LEGACY_MODULE_SLUGS = ["product", "user", "order", "seller", "settings"];
@@ -386,14 +388,6 @@ async function seedRbac() {
 
     // Create default roles and assign permissions
     const allModuleSlugs = modules.map((module) => module.slug);
-    const subAdminModules = [
-      "products",
-      "users",
-      "orders",
-      "sellers",
-      "admin",
-      "analytics",
-    ];
     const moderatorModules = ["products", "users", "orders", "sellers", "admin"];
 
     const rolesToCreate = [
@@ -419,14 +413,10 @@ async function seedRbac() {
         id: uuidv4(),
         name: "Sub Admin",
         slug: "sub-admin",
-        description: "Scoped platform admin with module-based access",
+        description: "Scoped platform admin; permissions are assigned per user",
         type: "system",
         isSuperAdmin: false,
-        permissionSlugs: permissionSlugsForModules(subAdminModules, [
-          "edit",
-          "update",
-          "view",
-        ]),
+        permissionSlugs: [],
       },
       {
         id: uuidv4(),

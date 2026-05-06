@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
+const { Op } = require("sequelize");
 const {
   Module,
   Permission,
@@ -13,7 +14,15 @@ const {
   sequelize,
 } = require("../../../infrastructure/sequelize/sequelize-client");
 
-const PERMISSION_ACTIONS = ["add", "edit", "update", "delete", "view"];
+const PERMISSION_ACTIONS = [
+  "view",
+  "add",
+  "edit",
+  "update",
+  "delete",
+  "status",
+  "approval",
+];
 const PERMISSION_ACTION_ORDER = PERMISSION_ACTIONS.reduce(
   (lookup, action, index) => {
     lookup[action] = index;
@@ -61,13 +70,27 @@ class RbacRepository {
   }
 
   async listPermissionManagementModules(filters = {}) {
-    const { roleId, roleSlug, active = true } = filters;
+    const { roleId, roleSlug, userId, active = true } = filters;
     const moduleWhere = active !== null ? { active } : {};
     const permissionWhere = active !== null ? { active } : {};
     let role = null;
     let assignedPermissionIds = new Set();
 
-    if (roleId || roleSlug) {
+    if (userId) {
+      const userPermissions = await UserPermission.findAll({
+        where: { userId, revokedAt: null },
+        include: [{ association: "permission" }],
+      });
+
+      assignedPermissionIds = new Set(
+        (userPermissions || [])
+          .map(
+            (userPermission) =>
+              userPermission.permissionId || userPermission.permission?.id,
+          )
+          .filter(Boolean),
+      );
+    } else if (roleId || roleSlug) {
       role = await Role.findOne({
         where: roleId ? { id: roleId } : { slug: roleSlug },
         include: [
@@ -382,6 +405,117 @@ class RbacRepository {
       include: [
         { association: "permission", include: [{ association: "module" }] },
       ],
+    });
+  }
+
+  async syncUserModulePermissions(userId, modulePermissions = [], grantedBy) {
+    const moduleSlugs = Array.from(
+      new Set(
+        modulePermissions
+          .map((item) => String(item.module || item.slug || "").trim())
+          .map((item) => item.toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+
+    if (!moduleSlugs.length) {
+      return { permissionIds: [], assigned: 0, revoked: 0 };
+    }
+
+    return sequelize.transaction(async (transaction) => {
+      const modules = await Module.findAll({
+        where: {
+          slug: { [Op.in]: moduleSlugs },
+          ...(moduleSlugs.length ? { active: true } : {}),
+        },
+        transaction,
+      });
+      const moduleIds = modules.map((module) => module.id);
+      const moduleById = new Map(
+        modules.map((module) => [String(module.id), module.slug]),
+      );
+      const desiredActionsByModule = new Map(
+        modulePermissions.map((item) => [
+          String(item.module || item.slug || "").trim().toLowerCase(),
+          new Set((item.actions || []).map(String)),
+        ]),
+      );
+      const desiredActions = Array.from(
+        new Set(
+          modulePermissions.flatMap((item) =>
+            (item.actions || []).map(String),
+          ),
+        ),
+      );
+
+      const desiredPermissions = desiredActions.length
+        ? await Permission.findAll({
+            where: {
+              moduleId: { [Op.in]: moduleIds },
+              action: { [Op.in]: desiredActions },
+              active: true,
+            },
+            transaction,
+          })
+        : [];
+
+      const desiredPermissionIds = new Set(
+        desiredPermissions
+          .filter((permission) => {
+            const moduleSlug = moduleById.get(String(permission.moduleId));
+            return desiredActionsByModule
+              .get(moduleSlug)
+              ?.has(permission.action);
+          })
+          .map((permission) => permission.id),
+      );
+
+      const currentAssignments = await UserPermission.findAll({
+        where: { userId, revokedAt: null },
+        include: [
+          {
+            association: "permission",
+            required: true,
+            where: { moduleId: { [Op.in]: moduleIds } },
+          },
+        ],
+        transaction,
+      });
+
+      let revoked = 0;
+      const currentPermissionIds = new Set();
+      for (const assignment of currentAssignments) {
+        currentPermissionIds.add(assignment.permissionId);
+        if (!desiredPermissionIds.has(assignment.permissionId)) {
+          await assignment.update({ revokedAt: new Date() }, { transaction });
+          revoked += 1;
+        }
+      }
+
+      let assigned = 0;
+      for (const permissionId of desiredPermissionIds) {
+        if (currentPermissionIds.has(permissionId)) {
+          continue;
+        }
+
+        await UserPermission.create(
+          {
+            id: uuidv4(),
+            userId,
+            permissionId,
+            grantedBy,
+            grantedAt: new Date(),
+          },
+          { transaction },
+        );
+        assigned += 1;
+      }
+
+      return {
+        permissionIds: Array.from(desiredPermissionIds),
+        assigned,
+        revoked,
+      };
     });
   }
 

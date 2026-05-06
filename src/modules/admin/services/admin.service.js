@@ -509,6 +509,14 @@ class AdminService {
     return DEFAULT_PLATFORM_MODULES;
   }
 
+  roleUsesAssignedModules(role) {
+    return [ROLES.SUB_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(role);
+  }
+
+  roleHasFullModuleAccess(role) {
+    return [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role);
+  }
+
   getRbacModuleMap(modules = []) {
     const lookup = new Map();
     const aliases = {
@@ -532,16 +540,115 @@ class AdminService {
     return lookup;
   }
 
+  getPermissionAssignmentData(permissions = [], moduleAllowed, forceAssigned) {
+    const normalizedPermissions = permissions.map((permission) => ({
+      ...permission,
+      assigned: moduleAllowed && (forceAssigned || Boolean(permission.assigned)),
+    }));
+    const actions = ["view", "add", "edit", "update", "delete", "status", "approval"];
+    const permissionsByAction = actions.reduce((lookup, action) => {
+      lookup[action] =
+        normalizedPermissions.find((permission) => permission.action === action) ||
+        null;
+      return lookup;
+    }, {});
+    const permissionKeys = actions.reduce((lookup, action) => {
+      lookup[action] = Boolean(permissionsByAction[action]?.assigned);
+      return lookup;
+    }, {});
+
+    return {
+      permissions: normalizedPermissions,
+      permissionsByAction,
+      permissionKeys,
+      assignedPermissionCount: normalizedPermissions.filter(
+        (permission) => permission.assigned,
+      ).length,
+    };
+  }
+
+  normalizePermissionAction(action) {
+    const aliases = {
+      create: "add",
+      approve: "approval",
+      review: "approval",
+      manage: "status",
+      action: "status",
+    };
+    const normalized = aliases[action] || action;
+    const allowed = new Set([
+      "view",
+      "add",
+      "edit",
+      "update",
+      "delete",
+      "status",
+      "approval",
+    ]);
+    return allowed.has(normalized) ? normalized : null;
+  }
+
+  normalizeModulePermissions(modulePermissions, allowedModules) {
+    const allowedModuleSet = new Set(allowedModules);
+    const source = Array.isArray(modulePermissions) && modulePermissions.length
+      ? modulePermissions
+      : allowedModules.map((module) => ({
+          module,
+          actions: ["view"],
+        }));
+
+    return source
+      .map((item) => {
+        const moduleName = cleanModuleName(item.module || item.slug);
+        const actions = Array.from(
+          new Set(
+            (item.actions || [])
+              .map((action) => this.normalizePermissionAction(action))
+              .filter(Boolean),
+          ),
+        );
+
+        if (!moduleName || !allowedModuleSet.has(moduleName)) {
+          return null;
+        }
+
+        const normalizedActions = actions.length
+          ? Array.from(new Set(["view", ...actions]))
+          : ["view"];
+
+        return {
+          module: moduleName,
+          actions: normalizedActions,
+        };
+      })
+      .filter(Boolean);
+  }
+
   async listAccessModules(query = {}) {
-    const targetRole = query.role || ROLES.SUB_ADMIN;
+    const accessUser = query.userId
+      ? this.toPlainObject(await this.adminRepository.getUserById(query.userId))
+      : null;
+    if (query.userId && !accessUser?._id && !accessUser?.id) {
+      throw new AppError("User not found", 404);
+    }
+
+    const targetRole =
+      accessUser?.role || query.roleSlug || query.role || ROLES.SUB_ADMIN;
     const assignableModuleSlugs = this.getAssignableModuleSlugs(targetRole);
     const roleSlug = query.roleSlug || targetRole;
+    const assignedModuleSet = new Set(
+      (accessUser?.allowedModules || []).map(cleanModuleName).filter(Boolean),
+    );
+    const shouldUseAssignedModules =
+      Boolean(accessUser) && this.roleUsesAssignedModules(targetRole);
     let permissionMatrix = null;
 
     try {
       permissionMatrix = await this.rbacService.getPermissionManagementMatrix({
         roleId: query.roleId,
-        roleSlug,
+        ...(shouldUseAssignedModules && accessUser
+          ? { userId: this.getRecordId(accessUser) }
+          : { roleSlug }),
         active: query.active,
       });
     } catch (error) {
@@ -559,29 +666,52 @@ class AdminService {
     const includePermissions = query.includePermissions !== false;
     const modules = assignableModuleSlugs.map((moduleSlug) => {
       const rbacModule = rbacModulesBySlug.get(moduleSlug) || null;
+      const moduleAllowed =
+        !shouldUseAssignedModules ||
+        assignedModuleSet.has(cleanModuleName(moduleSlug));
+      const forceAssigned =
+        moduleAllowed &&
+        this.roleHasFullModuleAccess(targetRole) &&
+        !permissionMatrix.role;
+      const assignmentData = includePermissions
+        ? this.getPermissionAssignmentData(
+            rbacModule?.permissions || [],
+            moduleAllowed,
+            forceAssigned,
+          )
+        : {};
+
       return {
         slug: moduleSlug,
         name: rbacModule?.name || this.formatModuleName(moduleSlug),
         icon: rbacModule?.icon || null,
         description: rbacModule?.description || null,
         assignable: true,
+        assigned: moduleAllowed,
         source: rbacModule ? "rbac" : "platform",
         permissions: includePermissions
-          ? rbacModule?.permissions || []
+          ? assignmentData.permissions
           : undefined,
         permissionsByAction: includePermissions
-          ? rbacModule?.permissionsByAction || {}
+          ? assignmentData.permissionsByAction
           : undefined,
         permissionKeys: includePermissions
-          ? rbacModule?.permissionKeys || {}
+          ? assignmentData.permissionKeys
           : undefined,
-        assignedPermissionCount: rbacModule?.assignedPermissionCount || 0,
+        assignedPermissionCount: assignmentData.assignedPermissionCount || 0,
       };
     });
 
     return {
       role: targetRole,
       rbacRole: permissionMatrix.role,
+      user: accessUser
+        ? {
+            id: this.getRecordId(accessUser),
+            role: accessUser.role,
+            allowedModules: accessUser.allowedModules || [],
+          }
+        : null,
       modules,
       totals: {
         modules: modules.length,
@@ -655,6 +785,10 @@ class AdminService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
+    const modulePermissions = this.normalizeModulePermissions(
+      payload.modulePermissions,
+      allowedModules,
+    );
     const passwordHash = await hashText(payload.password);
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
@@ -680,6 +814,12 @@ class AdminService {
       },
     );
 
+    await this.rbacService.syncUserModulePermissions(
+      String(user.id),
+      modulePermissions,
+      actor.userId,
+    );
+
     return user;
   }
 
@@ -693,6 +833,10 @@ class AdminService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
+    const modulePermissions = this.normalizeModulePermissions(
+      payload.modulePermissions,
+      allowedModules,
+    );
     const updated = await this.adminRepository.updateSubAdminModules(
       userId,
       actor.userId,
@@ -701,6 +845,11 @@ class AdminService {
     if (!updated) {
       throw new AppError("Sub-admin not found", 404);
     }
+    await this.rbacService.syncUserModulePermissions(
+      String(userId),
+      modulePermissions,
+      actor.userId,
+    );
     return updated;
   }
 }

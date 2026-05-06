@@ -1,6 +1,14 @@
 const Joi = require("joi");
 
-const permissionActions = ["add", "edit", "update", "delete", "view"];
+const permissionActions = [
+  "view",
+  "add",
+  "edit",
+  "update",
+  "delete",
+  "status",
+  "approval",
+];
 
 const createModuleSchema = {
   body: Joi.object({
@@ -38,8 +46,9 @@ const permissionManagementSchema = {
   query: Joi.object({
     roleId: Joi.string().uuid(),
     roleSlug: Joi.string().trim().min(2).max(128),
+    userId: Joi.string().trim(),
     active: Joi.boolean().default(true),
-  }).oxor("roleId", "roleSlug"),
+  }).oxor("roleId", "roleSlug", "userId"),
 };
 
 const moduleParamSchema = {

@@ -87,7 +87,7 @@ const adminRoutes = express.Router();
 const adminController = new AdminController();
 const platformController = new PlatformController();
 
-adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN));
+adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
 
 adminRoutes.get(
   "/access/modules",
@@ -108,16 +108,19 @@ adminRoutes.get(
 );
 adminRoutes.post(
   "/access/sub-admins",
+  allowRoles(ROLES.ADMIN),
   checkInput(createPlatformSubAdminSchema),
   catchErrors(adminController.createPlatformSubAdmin),
 );
 adminRoutes.get(
   "/access/sub-admins",
+  allowRoles(ROLES.ADMIN),
   checkInput(listPlatformSubAdminsSchema),
   catchErrors(adminController.listPlatformSubAdmins),
 );
 adminRoutes.patch(
   "/access/sub-admins/:userId/modules",
+  allowRoles(ROLES.ADMIN),
   checkInput(updatePlatformSubAdminModulesSchema),
   catchErrors(adminController.updatePlatformSubAdminModules),
 );

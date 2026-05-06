@@ -52,6 +52,37 @@ function getRequestModule(req) {
   }
   const first = parts[apiIndex + 2];
   const second = parts[apiIndex + 3];
+  const third = parts[apiIndex + 4];
+
+  if (first === "admin") {
+    if (second === "access" && third === "modules") {
+      return null;
+    }
+
+    const adminModuleMap = {
+      access: "rbac",
+      dashboard: "admin",
+      users: "users",
+      vendors: "sellers",
+      products: "products",
+      orders: "orders",
+      payments: "payments",
+      payouts: "payments",
+      tax: "tax",
+      platform: "platform",
+      analytics: "analytics",
+      returns: "returns",
+      chargebacks: "fraud",
+      system: "admin",
+    };
+
+    if (second === "platform" && third === "feature-flags") {
+      return "admin";
+    }
+
+    return adminModuleMap[second] || "admin";
+  }
+
   if (first === "sellers" && second === "commissions") {
     return "sellers/commissions";
   }

@@ -51,7 +51,7 @@ class RbacService {
         permissions: permissionCount,
         assignedPermissions: assignedPermissionCount,
       },
-      actions: ["add", "edit", "update", "delete", "view"],
+      actions: ["view", "add", "edit", "update", "delete", "status", "approval"],
       assignedPermissionIds: matrix.assignedPermissionIds,
     };
   }
@@ -231,6 +231,14 @@ class RbacService {
 
   async getUserPermissions(userId) {
     return this.rbacRepository.getUserPermissions(userId);
+  }
+
+  async syncUserModulePermissions(userId, modulePermissions, grantedBy) {
+    return this.rbacRepository.syncUserModulePermissions(
+      userId,
+      modulePermissions,
+      grantedBy,
+    );
   }
 
   // USER ROLE ASSIGNMENT

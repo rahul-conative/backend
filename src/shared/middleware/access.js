@@ -21,6 +21,10 @@ function isSuperAdmin(req) {
   return getUserRoles(req).includes(ROLES.SUPER_ADMIN);
 }
 
+function isPlatformAdminRole(role) {
+  return [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role);
+}
+
 function enforceModuleScope(req) {
   if (!usesModuleAccess(req.auth)) {
     return null;
@@ -131,6 +135,7 @@ function allowPermissions(...permissionSlugs) {
     const grantedPermissions = Array.isArray(req.auth.permissions)
       ? req.auth.permissions
       : [];
+    const userRoles = getUserRoles(req);
     const allowed = permissionSlugs.every((permission) => {
       if (grantedPermissions.includes(permission)) {
         return true;
@@ -138,9 +143,15 @@ function allowPermissions(...permissionSlugs) {
       const legacyRbacPermission = permission.startsWith("rbac:")
         ? permission.replace(/^rbac:/, "")
         : null;
-      return legacyRbacPermission
-        ? grantedPermissions.includes(legacyRbacPermission)
-        : false;
+      if (
+        legacyRbacPermission &&
+        grantedPermissions.includes(legacyRbacPermission)
+      ) {
+        return true;
+      }
+      return userRoles.some(
+        (role) => isPlatformAdminRole(role) && canDo(role, permission),
+      );
     });
 
     if (!allowed) {

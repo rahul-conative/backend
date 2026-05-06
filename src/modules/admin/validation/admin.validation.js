@@ -6,6 +6,15 @@ const {
 } = require("../../../shared/domain/commerce-constants");
 
 const accountStatuses = ["active", "suspended", "pending_approval"];
+const permissionActions = [
+  "view",
+  "add",
+  "edit",
+  "update",
+  "delete",
+  "status",
+  "approval",
+];
 const sellerOnboardingStatuses = [
   "initiated",
   "in_progress",
@@ -521,6 +530,7 @@ const listAccessModulesSchema = Joi.object({
       .default("sub-admin"),
     roleId: Joi.string().guid({ version: "uuidv4" }),
     roleSlug: Joi.string().trim().min(2).max(128),
+    userId: Joi.string().trim(),
     active: Joi.boolean().default(true),
     includePermissions: Joi.boolean().default(true),
   })
@@ -564,6 +574,15 @@ const createPlatformSubAdminSchema = Joi.object({
       lastName: Joi.string().allow("", null),
     }).required(),
     allowedModules: Joi.array().items(Joi.string()).min(1).required(),
+    modulePermissions: Joi.array().items(
+      Joi.object({
+        module: Joi.string().required(),
+        actions: Joi.array()
+          .items(Joi.string().valid(...permissionActions))
+          .min(1)
+          .required(),
+      }),
+    ),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -580,6 +599,15 @@ const listPlatformSubAdminsSchema = Joi.object({
 const updatePlatformSubAdminModulesSchema = Joi.object({
   body: Joi.object({
     allowedModules: Joi.array().items(Joi.string()).min(1).required(),
+    modulePermissions: Joi.array().items(
+      Joi.object({
+        module: Joi.string().required(),
+        actions: Joi.array()
+          .items(Joi.string().valid(...permissionActions))
+          .min(1)
+          .required(),
+      }),
+    ),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({

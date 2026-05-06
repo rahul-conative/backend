@@ -6,6 +6,7 @@ const { UserModel } = require("../../src/modules/user/models/user.model");
 const { ProductModel } = require("../../src/modules/product/models/product.model");
 const { CartModel } = require("../../src/modules/cart/models/cart.model");
 const { CategoryTreeModel } = require("../../src/modules/platform/models/category-tree.model");
+const { ContentPageModel } = require("../../src/modules/platform/models/content-page.model");
 const { ProductFamilyModel } = require("../../src/modules/platform/models/product-family.model");
 const { ProductVariantModel } = require("../../src/modules/platform/models/product-variant.model");
 const { ProductReviewModel } = require("../../src/modules/platform/models/product-review.model");
@@ -95,24 +96,8 @@ async function seedMongo() {
     { upsert: true, new: true },
   );
 
-  await CategoryTreeModel.findOneAndUpdate(
-    { categoryKey: "electronics" },
-    {
-      $set: {
-        title: "Electronics",
-        parentKey: null,
-        level: 0,
-        attributesSchema: {
-          brand: "string",
-          color: "string",
-          warrantyMonths: "number",
-        },
-        active: true,
-        sortOrder: 1,
-      },
-    },
-    { upsert: true, new: true },
-  );
+  await seedCategories();
+  await seedCmsContent();
 
   await ProductFamilyModel.findOneAndUpdate(
     { familyCode: "FAM-DEMO-SMARTPHONE" },
@@ -272,6 +257,354 @@ async function findOrCreateUser(email, payload) {
     return existing;
   }
   return UserModel.create(payload);
+}
+
+async function seedCategories() {
+  const categories = [
+    {
+      categoryKey: "electronics",
+      title: "Electronics",
+      parentKey: null,
+      level: 0,
+      sortOrder: 1,
+      attributesSchema: {
+        brand: "string",
+        color: "string",
+        warrantyMonths: "number",
+      },
+    },
+    {
+      categoryKey: "mobiles",
+      title: "Mobiles",
+      parentKey: "electronics",
+      level: 1,
+      sortOrder: 2,
+      attributesSchema: {
+        brand: "string",
+        ram: "string",
+        storage: "string",
+        batteryMah: "number",
+        network: "string",
+      },
+    },
+    {
+      categoryKey: "laptops",
+      title: "Laptops",
+      parentKey: "electronics",
+      level: 1,
+      sortOrder: 3,
+      attributesSchema: {
+        brand: "string",
+        processor: "string",
+        ram: "string",
+        storage: "string",
+        screenSize: "string",
+      },
+    },
+    {
+      categoryKey: "fashion",
+      title: "Fashion",
+      parentKey: null,
+      level: 0,
+      sortOrder: 4,
+      attributesSchema: {
+        brand: "string",
+        size: "string",
+        color: "string",
+        material: "string",
+      },
+    },
+    {
+      categoryKey: "men-fashion",
+      title: "Men Fashion",
+      parentKey: "fashion",
+      level: 1,
+      sortOrder: 5,
+      attributesSchema: {
+        size: "string",
+        fit: "string",
+        color: "string",
+        material: "string",
+      },
+    },
+    {
+      categoryKey: "women-fashion",
+      title: "Women Fashion",
+      parentKey: "fashion",
+      level: 1,
+      sortOrder: 6,
+      attributesSchema: {
+        size: "string",
+        fit: "string",
+        color: "string",
+        material: "string",
+      },
+    },
+    {
+      categoryKey: "home-kitchen",
+      title: "Home and Kitchen",
+      parentKey: null,
+      level: 0,
+      sortOrder: 7,
+      attributesSchema: {
+        brand: "string",
+        material: "string",
+        capacity: "string",
+        warrantyMonths: "number",
+      },
+    },
+    {
+      categoryKey: "beauty-personal-care",
+      title: "Beauty and Personal Care",
+      parentKey: null,
+      level: 0,
+      sortOrder: 8,
+      attributesSchema: {
+        brand: "string",
+        skinType: "string",
+        hairType: "string",
+        expiryMonths: "number",
+      },
+    },
+    {
+      categoryKey: "grocery",
+      title: "Grocery",
+      parentKey: null,
+      level: 0,
+      sortOrder: 9,
+      attributesSchema: {
+        brand: "string",
+        weight: "string",
+        packSize: "string",
+        expiryDate: "date",
+      },
+    },
+    {
+      categoryKey: "sports-fitness",
+      title: "Sports and Fitness",
+      parentKey: null,
+      level: 0,
+      sortOrder: 10,
+      attributesSchema: {
+        brand: "string",
+        sportType: "string",
+        size: "string",
+        material: "string",
+      },
+    },
+  ];
+
+  await Promise.all(
+    categories.map((category) =>
+      CategoryTreeModel.findOneAndUpdate(
+        { categoryKey: category.categoryKey },
+        {
+          $set: {
+            ...category,
+            active: true,
+          },
+        },
+        { upsert: true, new: true },
+      ),
+    ),
+  );
+}
+
+async function seedCmsContent() {
+  const publishedAt = new Date("2026-01-01T00:00:00.000Z");
+  const cmsPages = [
+    {
+      slug: "privacy-policy",
+      title: "Privacy Policy",
+      pageType: "legal",
+      body: [
+        "# Privacy Policy",
+        "",
+        "We collect the information needed to create accounts, process orders, prevent fraud, provide support, and improve the shopping experience.",
+        "",
+        "Customer profile, address, payment status, device, and order data are used only for platform operations, compliance, safety, and service communication.",
+        "",
+        "Users can request access, correction, or deletion of eligible personal data by contacting support.",
+      ].join("\n"),
+      metadata: {
+        footerGroup: "legal",
+        seoTitle: "Privacy Policy",
+        seoDescription: "How customer, seller, and platform data is handled.",
+        version: "1.0",
+      },
+    },
+    {
+      slug: "terms-and-conditions",
+      title: "Terms and Conditions",
+      pageType: "legal",
+      body: [
+        "# Terms and Conditions",
+        "",
+        "By using the platform, buyers and sellers agree to follow marketplace policies, provide accurate information, and use the service lawfully.",
+        "",
+        "Orders, cancellations, returns, seller payouts, and account actions are governed by the published platform rules.",
+      ].join("\n"),
+      metadata: {
+        footerGroup: "legal",
+        seoTitle: "Terms and Conditions",
+        seoDescription: "Marketplace rules for buyers, sellers, and platform users.",
+        version: "1.0",
+      },
+    },
+    {
+      slug: "shipping-policy",
+      title: "Shipping Policy",
+      pageType: "legal",
+      body: [
+        "# Shipping Policy",
+        "",
+        "Delivery availability, shipping fees, COD availability, and estimated delivery dates depend on seller location, buyer pincode, item weight, and carrier coverage.",
+        "",
+        "Customers can track shipment status from their order page after dispatch.",
+      ].join("\n"),
+      metadata: {
+        footerGroup: "help",
+        seoTitle: "Shipping Policy",
+        seoDescription: "Shipping, delivery, tracking, and serviceability information.",
+        version: "1.0",
+      },
+    },
+    {
+      slug: "return-refund-policy",
+      title: "Return and Refund Policy",
+      pageType: "legal",
+      body: [
+        "# Return and Refund Policy",
+        "",
+        "Eligible products can be returned within the listed return window when the item is damaged, defective, incorrect, or allowed by the seller policy.",
+        "",
+        "Refunds are processed to the original payment method or wallet after review and approval.",
+      ].join("\n"),
+      metadata: {
+        footerGroup: "help",
+        seoTitle: "Return and Refund Policy",
+        seoDescription: "Return windows, refund modes, and approval rules.",
+        version: "1.0",
+      },
+    },
+    {
+      slug: "about-us",
+      title: "About Us",
+      pageType: "company",
+      body: "A modern ecommerce marketplace connecting trusted sellers with customers through secure payments, clear order tracking, and reliable support.",
+      metadata: {
+        footerGroup: "company",
+        seoTitle: "About Us",
+        seoDescription: "Learn about the ecommerce marketplace.",
+      },
+    },
+    {
+      slug: "contact-us",
+      title: "Contact Us",
+      pageType: "company",
+      body: "For support, orders, seller onboarding, or account help, contact the support team from the help section in your account.",
+      metadata: {
+        footerGroup: "company",
+        email: "support@example.com",
+        phone: "+91-9999999999",
+        supportHours: "10:00 AM to 7:00 PM IST",
+      },
+    },
+    {
+      slug: "home-hero-banner",
+      title: "Home Hero Banner",
+      pageType: "banner",
+      body: "Featured marketplace hero banner for the home page.",
+      metadata: {
+        placement: "home.hero",
+        headline: "Big savings on everyday essentials",
+        subtitle: "Shop electronics, fashion, home, beauty, grocery, and more.",
+        imageUrl: "/assets/banners/home-hero.jpg",
+        mobileImageUrl: "/assets/banners/home-hero-mobile.jpg",
+        ctaLabel: "Shop Now",
+        ctaUrl: "/products",
+        backgroundColor: "#0f766e",
+        textColor: "#ffffff",
+        active: true,
+        sortOrder: 1,
+      },
+    },
+    {
+      slug: "seller-growth-banner",
+      title: "Seller Growth Banner",
+      pageType: "banner",
+      body: "Seller onboarding and growth banner.",
+      metadata: {
+        placement: "home.seller",
+        headline: "Start selling with confidence",
+        subtitle: "Manage catalog, orders, delivery, and payouts from the seller panel.",
+        imageUrl: "/assets/banners/seller-growth.jpg",
+        ctaLabel: "Become a Seller",
+        ctaUrl: "/seller/register",
+        backgroundColor: "#1d4ed8",
+        textColor: "#ffffff",
+        active: true,
+        sortOrder: 2,
+      },
+    },
+    {
+      slug: "footer-links",
+      title: "Footer Links",
+      pageType: "footer",
+      body: "Footer navigation groups for customer web and seller web apps.",
+      metadata: {
+        groups: [
+          {
+            title: "Shop",
+            links: [
+              { label: "Electronics", url: "/categories/electronics" },
+              { label: "Mobiles", url: "/categories/mobiles" },
+              { label: "Fashion", url: "/categories/fashion" },
+              { label: "Home and Kitchen", url: "/categories/home-kitchen" },
+            ],
+          },
+          {
+            title: "Help",
+            links: [
+              { label: "Shipping Policy", url: "/cms/shipping-policy" },
+              { label: "Return and Refund Policy", url: "/cms/return-refund-policy" },
+              { label: "Contact Us", url: "/cms/contact-us" },
+            ],
+          },
+          {
+            title: "Company",
+            links: [
+              { label: "About Us", url: "/cms/about-us" },
+              { label: "Privacy Policy", url: "/cms/privacy-policy" },
+              { label: "Terms and Conditions", url: "/cms/terms-and-conditions" },
+            ],
+          },
+        ],
+        socialLinks: [
+          { label: "Instagram", url: "https://instagram.com/example" },
+          { label: "Facebook", url: "https://facebook.com/example" },
+          { label: "X", url: "https://x.com/example" },
+        ],
+      },
+    },
+  ];
+
+  await Promise.all(
+    cmsPages.map((page) =>
+      ContentPageModel.findOneAndUpdate(
+        { slug: page.slug },
+        {
+          $set: {
+            ...page,
+            language: "en",
+            published: true,
+            publishedAt,
+          },
+        },
+        { upsert: true, new: true },
+      ),
+    ),
+  );
 }
 
 async function seedPostgres(context) {

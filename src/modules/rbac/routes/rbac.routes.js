@@ -40,6 +40,7 @@ const {
   checkPermissionSchema,
   checkRoleSchema,
 } = require("../validation/rbac.validation");
+const { ROLES } = require("../../../shared/constants/roles");
 
 const rbacRoutes = express.Router();
 
@@ -48,8 +49,8 @@ const permissionController = new PermissionController();
 const roleController = new RoleController();
 const permissionAssignmentController = new PermissionAssignmentController();
 
-// Apply authentication to all RBAC routes
-rbacRoutes.use(authenticate);
+// Apply authentication and keep RBAC management limited to platform admins.
+rbacRoutes.use(authenticate, allowRoles(ROLES.ADMIN));
 
 // MODULES ROUTES
 rbacRoutes.get(
