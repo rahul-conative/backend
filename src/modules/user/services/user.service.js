@@ -34,9 +34,17 @@ class UserService {
   }
 
   async updateProfile(userId, payload) {
+    const existingUser = await this.userRepository.findById(userId);
+    if (!existingUser) {
+      throw new AppError("User not found", 404);
+    }
+
     const updatedUser = await this.userRepository.updateById(userId, {
       $set: {
-        profile: payload.profile,
+        profile: {
+          ...(existingUser.profile?.toObject?.() || existingUser.profile || {}),
+          ...payload.profile,
+        },
       },
     });
 
