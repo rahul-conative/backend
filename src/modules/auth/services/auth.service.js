@@ -165,6 +165,26 @@ class AuthService {
     return payload;
   }
 
+  async assignDefaultRbacRole(user, assignedBy = null) {
+    if (!user?.role) {
+      return null;
+    }
+
+    try {
+      return await this.rbacService.assignRoleToUserBySlug(
+        String(user.id),
+        user.role,
+        assignedBy || String(user.id),
+        {
+          ignoreMissing: true,
+          ignoreExisting: true,
+        },
+      );
+    } catch (error) {
+      return null;
+    }
+  }
+
   async register(payload, requestContext = {}) {
     this.validateSelfSignupRole(payload.role);
     await this.referralService.getReferrerByCode(payload.referralCode);
@@ -196,6 +216,7 @@ class AuthService {
     });
 
     await this.walletService.ensureWallet(user.id);
+    await this.assignDefaultRbacRole(user);
     await this.referralService.rewardReferral(payload.referralCode, user);
 
     if (isSeller) {
@@ -262,6 +283,7 @@ class AuthService {
     });
 
     await this.walletService.ensureWallet(user.id);
+    await this.assignDefaultRbacRole(user);
     await this.referralService.rewardReferral(registrationData.referralCode, user);
 
     if (isSeller) {
@@ -413,6 +435,7 @@ class AuthService {
           refreshSessions: [],
         });
         await this.walletService.ensureWallet(user.id);
+        await this.assignDefaultRbacRole(user);
         await this.referralService.rewardReferral(payload.referralCode, user);
       } else {
         user = await this.authRepository.linkSocialProvider(user.id, providerProfile);

@@ -1,41 +1,9 @@
+const {
+  DEFAULT_PLATFORM_MODULES,
+  DEFAULT_SELLER_MODULES,
+} = require("./module-catalog");
+
 const ROLES_WITH_MODULE_ACCESS = new Set(["sub-admin", "seller-sub-admin"]);
-
-const DEFAULT_PLATFORM_MODULES = [
-  "users",
-  "products",
-  "carts",
-  "orders",
-  "payments",
-  "platform",
-  "sellers",
-  "notifications",
-  "analytics",
-  "pricing",
-  "wallets",
-  "tax",
-  "subscriptions",
-  "rbac",
-  "warranty",
-  "loyalty",
-  "recommendations",
-  "returns",
-  "fraud",
-  "dynamic-pricing",
-  "delivery",
-  "admin",
-];
-
-const DEFAULT_SELLER_MODULES = [
-  "products",
-  "orders",
-  "pricing",
-  "notifications",
-  "analytics",
-  "sellers",
-  "sellers/commissions",
-  "returns",
-  "delivery",
-];
 
 function cleanModuleName(value) {
   return String(value || "")
@@ -57,6 +25,10 @@ function getRequestModule(req) {
   if (first === "admin") {
     if (second === "access" && third === "modules") {
       return null;
+    }
+
+    if (second === "platform" && third === "content-pages") {
+      return "cms";
     }
 
     const adminModuleMap = {
@@ -85,6 +57,21 @@ function getRequestModule(req) {
 
   if (first === "sellers" && second === "commissions") {
     return "sellers/commissions";
+  }
+  if (first === "sellers" && second === "me" && third === "dashboard") {
+    return "analytics";
+  }
+  if (first === "sellers" && second === "me" && third === "tracking") {
+    return "orders";
+  }
+  if (first === "sellers" && second === "me" && third === "access") {
+    return "sellers";
+  }
+  if (first === "platform" && second === "cms") {
+    return "cms";
+  }
+  if (first === "pricing" && second === "promotion-banners") {
+    return "cms";
   }
   return first;
 }

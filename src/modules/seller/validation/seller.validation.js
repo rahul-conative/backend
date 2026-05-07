@@ -177,6 +177,41 @@ const sellerTrackingOrderSchema = Joi.object({
   }).required(),
 });
 
+const permissionActions = [
+  "view",
+  "add",
+  "edit",
+  "update",
+  "delete",
+  "status",
+  "approval",
+];
+
+const modulePermissionSchema = Joi.array().items(
+  Joi.object({
+    module: Joi.string().required(),
+    actions: Joi.array()
+      .items(Joi.string().valid(...permissionActions))
+      .min(1)
+      .required(),
+  }),
+);
+
+const listSellerAccessModulesSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({
+    role: Joi.string().valid("seller", "seller-sub-admin").default("seller-sub-admin"),
+    roleId: Joi.string().guid({ version: "uuidv4" }),
+    roleSlug: Joi.string().trim().min(2).max(128),
+    userId: Joi.string().trim(),
+    active: Joi.boolean().default(true),
+    includePermissions: Joi.boolean().default(true),
+  })
+    .oxor("roleId", "roleSlug")
+    .required(),
+  params: Joi.object({}).required(),
+});
+
 const createSellerSubAdminSchema = Joi.object({
   body: Joi.object({
     email: Joi.string().email().required(),
@@ -187,6 +222,7 @@ const createSellerSubAdminSchema = Joi.object({
       lastName: Joi.string().allow("", null),
     }).required(),
     allowedModules: Joi.array().items(Joi.string()).min(1).required(),
+    modulePermissions: modulePermissionSchema,
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -201,6 +237,7 @@ const listSellerSubAdminsSchema = Joi.object({
 const updateSellerSubAdminModulesSchema = Joi.object({
   body: Joi.object({
     allowedModules: Joi.array().items(Joi.string()).min(1).required(),
+    modulePermissions: modulePermissionSchema,
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
@@ -220,6 +257,7 @@ module.exports = {
   sellerWebStatusSchema,
   sellerTrackingSchema,
   sellerTrackingOrderSchema,
+  listSellerAccessModulesSchema,
   createSellerSubAdminSchema,
   listSellerSubAdminsSchema,
   updateSellerSubAdminModulesSchema,

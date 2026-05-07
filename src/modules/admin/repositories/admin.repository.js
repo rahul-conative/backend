@@ -441,8 +441,13 @@ class AdminRepository {
   }
 
   async updateSubAdminModules(userId, ownerAdminId, allowedModules) {
+    const filter = { _id: userId, role: "sub-admin" };
+    if (ownerAdminId) {
+      filter.ownerAdminId = ownerAdminId;
+    }
+
     return UserModel.findOneAndUpdate(
-      { _id: userId, role: "sub-admin", ownerAdminId },
+      filter,
       { $set: { allowedModules } },
       { new: true },
     ).select("email phone role profile accountStatus allowedModules ownerAdminId createdAt updatedAt");

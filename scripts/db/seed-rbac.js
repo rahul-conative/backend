@@ -3,9 +3,8 @@ const {
   sequelize,
 } = require("../../src/infrastructure/sequelize/sequelize-client");
 const {
-  DEFAULT_PLATFORM_MODULES,
-  DEFAULT_SELLER_MODULES,
-} = require("../../src/shared/auth/module-access");
+  MODULE_CATALOG,
+} = require("../../src/shared/auth/module-catalog");
 
 const STANDARD_PERMISSION_ACTIONS = [
   { key: "view", label: "View" },
@@ -19,177 +18,36 @@ const STANDARD_PERMISSION_ACTIONS = [
 
 const LEGACY_MODULE_SLUGS = ["product", "user", "order", "seller", "settings"];
 
-const MODULE_DETAILS = {
-  rbac: {
-    name: "RBAC Management",
-    description: "Role-Based Access Control management",
-    icon: "shield",
-    order: 1,
-  },
-  users: {
-    name: "User Management",
-    description: "User accounts and profiles",
-    icon: "user",
-    order: 2,
-  },
-  products: {
-    name: "Product Management",
-    description: "Product catalog and management",
-    icon: "box",
-    order: 3,
-  },
-  carts: {
-    name: "Cart Management",
-    description: "Shopping carts and checkout baskets",
-    icon: "shopping-bag",
-    order: 4,
-  },
-  orders: {
-    name: "Order Management",
-    description: "Orders and transactions",
-    icon: "shopping-cart",
-    order: 5,
-  },
-  payments: {
-    name: "Payment Management",
-    description: "Payments, refunds, and payment operations",
-    icon: "credit-card",
-    order: 6,
-  },
-  platform: {
-    name: "Platform Management",
-    description: "Platform catalog, geography, and content configuration",
-    icon: "settings",
-    order: 7,
-  },
-  sellers: {
-    name: "Seller Management",
-    description: "Seller accounts and administration",
-    icon: "store",
-    order: 8,
-  },
-  notifications: {
-    name: "Notification Management",
-    description: "Notifications and communication preferences",
-    icon: "bell",
-    order: 9,
-  },
-  analytics: {
-    name: "Analytics",
-    description: "Analytics and reporting",
-    icon: "chart",
-    order: 10,
-  },
-  pricing: {
-    name: "Pricing Management",
-    description: "Coupons, pricing rules, and promotions",
-    icon: "tag",
-    order: 11,
-  },
-  wallets: {
-    name: "Wallet Management",
-    description: "Wallet balances and wallet transactions",
-    icon: "wallet",
-    order: 12,
-  },
-  tax: {
-    name: "Tax Management",
-    description: "Tax invoices, reports, and filings",
-    icon: "receipt",
-    order: 13,
-  },
-  subscriptions: {
-    name: "Subscription Management",
-    description: "Plans, subscriptions, and platform fees",
-    icon: "repeat",
-    order: 14,
-  },
-  warranty: {
-    name: "Warranty Management",
-    description: "Warranty registration and claims",
-    icon: "badge-check",
-    order: 15,
-  },
-  loyalty: {
-    name: "Loyalty Management",
-    description: "Loyalty points and customer rewards",
-    icon: "gift",
-    order: 16,
-  },
-  recommendations: {
-    name: "Recommendation Management",
-    description: "Product recommendations and personalization",
-    icon: "sparkles",
-    order: 17,
-  },
-  returns: {
-    name: "Return Management",
-    description: "Returns, refunds, and reverse logistics",
-    icon: "undo",
-    order: 18,
-  },
-  fraud: {
-    name: "Fraud Management",
-    description: "Fraud detection and risk review",
-    icon: "alert-triangle",
-    order: 19,
-  },
-  "dynamic-pricing": {
-    name: "Dynamic Pricing",
-    description: "Dynamic pricing rules and simulations",
-    icon: "activity",
-    order: 20,
-  },
-  delivery: {
-    name: "Delivery Management",
-    description: "Delivery, tracking, and logistics",
-    icon: "truck",
-    order: 21,
-  },
-  admin: {
-    name: "Admin Dashboard",
-    description: "Admin panel and operations dashboard",
-    icon: "dashboard",
-    order: 22,
-  },
-  "sellers/commissions": {
-    name: "Seller Commission Management",
-    description: "Seller commissions, settlements, and payouts",
-    icon: "percent",
-    order: 23,
-  },
-};
-
-function titleize(value) {
-  return String(value)
-    .replace(/[/-]+/g, " ")
-    .replace(/\b\w/g, (match) => match.toUpperCase());
-}
-
 function makeModuleList() {
-  const moduleSlugs = Array.from(
-    new Set(["rbac", ...DEFAULT_PLATFORM_MODULES, ...DEFAULT_SELLER_MODULES]),
-  );
-
-  return moduleSlugs
-    .map((slug, index) => {
-      const details = MODULE_DETAILS[slug] || {};
-      const name = details.name || `${titleize(slug)} Management`;
-
-      return {
-        id: uuidv4(),
-        name,
-        slug,
-        description:
-          details.description || `${name} permissions and access controls`,
-        icon: details.icon || "grid",
-        order: details.order || index + 1,
-      };
-    })
+  return MODULE_CATALOG.map((module, index) => ({
+    id: uuidv4(),
+    name: module.name,
+    slug: module.slug,
+    description: module.description,
+    icon: module.icon || "grid",
+    order: module.order || index + 1,
+    metadata: {
+      ...(module.metadata || {}),
+      tab: module.tab,
+      forPlatform: module.forPlatform !== false,
+      forSeller: module.forSeller === true,
+      apiPath: module.apiPath,
+      apiAliases: module.apiAliases || [],
+      contentTypes: module.contentTypes || [],
+      examples: module.examples || [],
+    },
+  }))
     .sort(
       (left, right) =>
         left.order - right.order || left.name.localeCompare(right.name),
     );
+}
+
+function moduleDbReplacements(module) {
+  return {
+    ...module,
+    metadata: JSON.stringify(module.metadata || {}),
+  };
 }
 
 function makePermissionList(modules) {
@@ -249,20 +107,21 @@ async function seedRbac() {
                description = :description,
                icon = :icon,
                "order" = :order,
+               metadata = CAST(:metadata AS jsonb),
                active = true,
                updated_at = NOW()
            WHERE id = :id`,
           {
-            replacements: module,
+            replacements: moduleDbReplacements(module),
             transaction,
           },
         );
       } else {
         await sequelize.query(
-          `INSERT INTO modules (id, name, slug, description, icon, "order", active, created_at, updated_at)
-           VALUES (:id, :name, :slug, :description, :icon, :order, true, NOW(), NOW())`,
+          `INSERT INTO modules (id, name, slug, description, icon, "order", metadata, active, created_at, updated_at)
+           VALUES (:id, :name, :slug, :description, :icon, :order, CAST(:metadata AS jsonb), true, NOW(), NOW())`,
           {
-            replacements: module,
+            replacements: moduleDbReplacements(module),
             transaction,
           },
         );
@@ -389,6 +248,9 @@ async function seedRbac() {
     // Create default roles and assign permissions
     const allModuleSlugs = modules.map((module) => module.slug);
     const moderatorModules = ["products", "users", "orders", "sellers", "admin"];
+    const sellerModuleSlugs = MODULE_CATALOG.filter(
+      (module) => module.forSeller === true,
+    ).map((module) => module.slug);
 
     const rolesToCreate = [
       {
@@ -414,6 +276,24 @@ async function seedRbac() {
         name: "Sub Admin",
         slug: "sub-admin",
         description: "Scoped platform admin; permissions are assigned per user",
+        type: "system",
+        isSuperAdmin: false,
+        permissionSlugs: [],
+      },
+      {
+        id: uuidv4(),
+        name: "Seller",
+        slug: "seller",
+        description: "Seller owner with full seller-panel access",
+        type: "system",
+        isSuperAdmin: false,
+        permissionSlugs: permissionSlugsForModules(sellerModuleSlugs),
+      },
+      {
+        id: uuidv4(),
+        name: "Seller Sub Admin",
+        slug: "seller-sub-admin",
+        description: "Scoped seller-panel admin; permissions are assigned per user",
         type: "system",
         isSuperAdmin: false,
         permissionSlugs: [],
@@ -609,7 +489,7 @@ async function seedRbac() {
     console.log("Modules created:");
     modules.forEach((m) => console.log(`  - ${m.name} (${m.slug})`));
     console.log(
-      `\nRoles created:\n  - Super Admin\n  - Admin\n  - Sub Admin\n  - Moderator\n  - Product Manager\n`,
+      `\nRoles created:\n  - Super Admin\n  - Admin\n  - Sub Admin\n  - Seller\n  - Seller Sub Admin\n  - Moderator\n  - Product Manager\n`,
     );
 
     process.exit(0);

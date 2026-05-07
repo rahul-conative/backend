@@ -666,6 +666,7 @@ class AdminService {
     const includePermissions = query.includePermissions !== false;
     const modules = assignableModuleSlugs.map((moduleSlug) => {
       const rbacModule = rbacModulesBySlug.get(moduleSlug) || null;
+      const metadata = rbacModule?.metadata || {};
       const moduleAllowed =
         !shouldUseAssignedModules ||
         assignedModuleSet.has(cleanModuleName(moduleSlug));
@@ -686,6 +687,12 @@ class AdminService {
         name: rbacModule?.name || this.formatModuleName(moduleSlug),
         icon: rbacModule?.icon || null,
         description: rbacModule?.description || null,
+        tab: metadata.tab || null,
+        forPlatform: metadata.forPlatform !== false,
+        forSeller: metadata.forSeller === true,
+        apiPath: metadata.apiPath || null,
+        apiAliases: metadata.apiAliases || [],
+        metadata,
         assignable: true,
         assigned: moduleAllowed,
         source: rbacModule ? "rbac" : "platform",
@@ -824,7 +831,9 @@ class AdminService {
   }
 
   async listPlatformSubAdmins(query, actor) {
-    const ownerAdminId = query.ownerAdminId || actor.userId;
+    const ownerAdminId = actor.isSuperAdmin
+      ? query.ownerAdminId || null
+      : actor.userId;
     return this.adminRepository.listSubAdmins({ ownerAdminId });
   }
 
@@ -839,7 +848,7 @@ class AdminService {
     );
     const updated = await this.adminRepository.updateSubAdminModules(
       userId,
-      actor.userId,
+      actor.isSuperAdmin ? null : actor.userId,
       allowedModules,
     );
     if (!updated) {

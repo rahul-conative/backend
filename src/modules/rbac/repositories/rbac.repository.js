@@ -167,6 +167,7 @@ class RbacRepository {
         icon: plainModule.icon,
         order: plainModule.order,
         active: plainModule.active,
+        metadata: plainModule.metadata || {},
         permissions,
         permissionsByAction,
         permissionKeys,

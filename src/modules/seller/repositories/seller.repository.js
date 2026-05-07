@@ -112,6 +112,15 @@ class SellerRepository {
       .sort({ createdAt: -1 });
   }
 
+  async findSellerSubAdminById(sellerId, userId) {
+    const { UserModel } = require("../../user/models/user.model");
+    return UserModel.findOne({
+      _id: userId,
+      role: "seller-sub-admin",
+      ownerSellerId: sellerId,
+    }).select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt");
+  }
+
   async updateSellerSubAdminModules(sellerId, userId, allowedModules) {
     const { UserModel } = require("../../user/models/user.model");
     return UserModel.findOneAndUpdate(

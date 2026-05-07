@@ -2,7 +2,7 @@ const express = require("express");
 const { SellerController } = require("../controllers/seller.controller");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate, authenticatePendingSeller } = require("../../../shared/middleware/authenticate");
-const { allowActions } = require("../../../shared/middleware/access");
+const { allowActions, allowRoles } = require("../../../shared/middleware/access");
 const { checkInput } = require("../../../shared/middleware/check-input");
 const {
   submitKycSchema,
@@ -16,11 +16,13 @@ const {
   sellerWebStatusSchema,
   sellerTrackingSchema,
   sellerTrackingOrderSchema,
+  listSellerAccessModulesSchema,
   createSellerSubAdminSchema,
   listSellerSubAdminsSchema,
   updateSellerSubAdminModulesSchema,
 } = require("../validation/seller.validation");
 const { ACTIONS } = require("../../../shared/constants/actions");
+const { ROLES } = require("../../../shared/constants/roles");
 
 const sellerRoutes = express.Router();
 const sellerController = new SellerController();
@@ -49,6 +51,13 @@ sellerRoutes.patch(
 );
 
 // Authenticated seller routes
+sellerRoutes.get(
+  "/me/access/modules",
+  authenticate,
+  allowRoles(ROLES.SELLER),
+  checkInput(listSellerAccessModulesSchema),
+  catchErrors(sellerController.listAccessModules),
+);
 sellerRoutes.get(
   "/me/status",
   authenticate,
@@ -125,21 +134,21 @@ sellerRoutes.get(
 sellerRoutes.post(
   "/me/sub-admins",
   authenticate,
-  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  allowRoles(ROLES.SELLER),
   checkInput(createSellerSubAdminSchema),
   catchErrors(sellerController.createSubAdmin),
 );
 sellerRoutes.get(
   "/me/sub-admins",
   authenticate,
-  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  allowRoles(ROLES.SELLER),
   checkInput(listSellerSubAdminsSchema),
   catchErrors(sellerController.listSubAdmins),
 );
 sellerRoutes.patch(
   "/me/sub-admins/:userId/modules",
   authenticate,
-  allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
+  allowRoles(ROLES.SELLER),
   checkInput(updateSellerSubAdminModulesSchema),
   catchErrors(sellerController.updateSubAdminModules),
 );

@@ -7,6 +7,7 @@ const { AppError } = require("../../../shared/errors/app-error");
 const { hashText } = require("../../../shared/tools/hash");
 const { ROLES } = require("../../../shared/constants/roles");
 const { DEFAULT_SELLER_MODULES, cleanModuleName } = require("../../../shared/auth/module-access");
+const { RbacService } = require("../../rbac/services/rbac.service");
 const {
   SELLER_ONBOARDING_STATUS,
   makeSellerOnboardingState,
@@ -17,8 +18,12 @@ const {
 } = require("../../../shared/domain/seller-onboarding");
 
 class SellerService {
-  constructor({ sellerRepository = new SellerRepository() } = {}) {
+  constructor({
+    sellerRepository = new SellerRepository(),
+    rbacService = new RbacService(),
+  } = {}) {
     this.sellerRepository = sellerRepository;
+    this.rbacService = rbacService;
   }
 
   getSellerId(actor) {
@@ -200,6 +205,19 @@ class SellerService {
       if (!canViewSellerWeb) {
         throw new AppError("Seller web status is not assigned to this sub-admin", 403);
       }
+    }
+
+    const sellerId = this.getSellerId(actor);
+    if (!sellerId) {
+      throw new AppError("Seller account could not be found", 403);
+    }
+
+    return sellerId;
+  }
+
+  assertSellerOwnerActor(actor) {
+    if (actor.role !== ROLES.SELLER) {
+      throw new AppError("Only seller owners can manage seller sub-admin access", 403);
     }
 
     const sellerId = this.getSellerId(actor);
@@ -542,13 +560,240 @@ class SellerService {
     return record;
   }
 
+  formatModuleName(moduleName) {
+    return String(moduleName || "")
+      .split("/")
+      .pop()
+      .split("-")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  getRbacModuleMap(modules = []) {
+    const lookup = new Map();
+    const aliases = {
+      product: "products",
+      products: "product",
+      order: "orders",
+      orders: "order",
+      seller: "sellers",
+      sellers: "seller",
+    };
+
+    modules.forEach((module) => {
+      lookup.set(module.slug, module);
+      if (aliases[module.slug]) {
+        lookup.set(aliases[module.slug], module);
+      }
+    });
+
+    return lookup;
+  }
+
+  normalizePermissionAction(action) {
+    const aliases = {
+      create: "add",
+      approve: "approval",
+      review: "approval",
+      manage: "status",
+      action: "status",
+    };
+    const normalized = aliases[action] || action;
+    const allowed = new Set([
+      "view",
+      "add",
+      "edit",
+      "update",
+      "delete",
+      "status",
+      "approval",
+    ]);
+    return allowed.has(normalized) ? normalized : null;
+  }
+
+  normalizeModulePermissions(modulePermissions, allowedModules) {
+    const allowedModuleSet = new Set(allowedModules);
+    const source = Array.isArray(modulePermissions) && modulePermissions.length
+      ? modulePermissions
+      : allowedModules.map((module) => ({
+          module,
+          actions: ["view"],
+        }));
+
+    return source
+      .map((item) => {
+        const moduleName = cleanModuleName(item.module || item.slug);
+        const actions = Array.from(
+          new Set(
+            (item.actions || [])
+              .map((action) => this.normalizePermissionAction(action))
+              .filter(Boolean),
+          ),
+        );
+
+        if (!moduleName || !allowedModuleSet.has(moduleName)) {
+          return null;
+        }
+
+        return {
+          module: moduleName,
+          actions: actions.length
+            ? Array.from(new Set(["view", ...actions]))
+            : ["view"],
+        };
+      })
+      .filter(Boolean);
+  }
+
+  getPermissionAssignmentData(permissions = [], moduleAllowed, forceAssigned) {
+    const normalizedPermissions = permissions.map((permission) => ({
+      ...permission,
+      assigned: moduleAllowed && (forceAssigned || Boolean(permission.assigned)),
+    }));
+    const actions = ["view", "add", "edit", "update", "delete", "status", "approval"];
+    const permissionsByAction = actions.reduce((lookup, action) => {
+      lookup[action] =
+        normalizedPermissions.find((permission) => permission.action === action) ||
+        null;
+      return lookup;
+    }, {});
+    const permissionKeys = actions.reduce((lookup, action) => {
+      lookup[action] = Boolean(permissionsByAction[action]?.assigned);
+      return lookup;
+    }, {});
+
+    return {
+      permissions: normalizedPermissions,
+      permissionsByAction,
+      permissionKeys,
+      assignedPermissionCount: normalizedPermissions.filter(
+        (permission) => permission.assigned,
+      ).length,
+    };
+  }
+
+  async getSellerAccessUser(query = {}, actor = {}) {
+    if (!query.userId) {
+      return null;
+    }
+
+    const sellerId = this.assertSellerOwnerActor(actor);
+    const accessUser = await this.sellerRepository.findSellerSubAdminById(
+      sellerId,
+      query.userId,
+    );
+    if (!accessUser) {
+      throw new AppError("Seller sub-admin not found", 404);
+    }
+    return this.toPlainObject(accessUser);
+  }
+
+  async listAccessModules(query = {}, actor = {}) {
+    this.assertSellerOwnerActor(actor);
+    const accessUser = await this.getSellerAccessUser(query, actor);
+    const targetRole =
+      accessUser?.role || query.roleSlug || query.role || ROLES.SELLER_SUB_ADMIN;
+    const roleSlug = query.roleSlug || targetRole;
+    const assignedModuleSet = new Set(
+      (accessUser?.allowedModules || []).map(cleanModuleName).filter(Boolean),
+    );
+    const shouldUseAssignedModules =
+      Boolean(accessUser) && targetRole === ROLES.SELLER_SUB_ADMIN;
+    let permissionMatrix = null;
+
+    try {
+      permissionMatrix = await this.rbacService.getPermissionManagementMatrix({
+        roleId: query.roleId,
+        ...(shouldUseAssignedModules && accessUser
+          ? { userId: String(accessUser._id || accessUser.id) }
+          : { roleSlug }),
+        active: query.active,
+      });
+    } catch (error) {
+      if (!(error instanceof AppError) || error.statusCode !== 404) {
+        throw error;
+      }
+      permissionMatrix = await this.rbacService.getPermissionManagementMatrix({
+        active: query.active,
+      });
+    }
+
+    const rbacModulesBySlug = this.getRbacModuleMap(permissionMatrix.modules);
+    const includePermissions = query.includePermissions !== false;
+    const modules = DEFAULT_SELLER_MODULES.map((moduleSlug) => {
+      const rbacModule = rbacModulesBySlug.get(moduleSlug) || null;
+      const metadata = rbacModule?.metadata || {};
+      const moduleAllowed =
+        !shouldUseAssignedModules ||
+        assignedModuleSet.has(cleanModuleName(moduleSlug));
+      const forceAssigned =
+        moduleAllowed && targetRole === ROLES.SELLER && !permissionMatrix.role;
+      const assignmentData = includePermissions
+        ? this.getPermissionAssignmentData(
+            rbacModule?.permissions || [],
+            moduleAllowed,
+            forceAssigned,
+          )
+        : {};
+
+      return {
+        slug: moduleSlug,
+        name: rbacModule?.name || this.formatModuleName(moduleSlug),
+        icon: rbacModule?.icon || null,
+        description: rbacModule?.description || null,
+        tab: metadata.tab || null,
+        forPlatform: false,
+        forSeller: true,
+        apiPath: metadata.apiPath || null,
+        apiAliases: metadata.apiAliases || [],
+        metadata,
+        assignable: true,
+        assigned: moduleAllowed,
+        source: rbacModule ? "rbac" : "seller",
+        permissions: includePermissions ? assignmentData.permissions : undefined,
+        permissionsByAction: includePermissions
+          ? assignmentData.permissionsByAction
+          : undefined,
+        permissionKeys: includePermissions
+          ? assignmentData.permissionKeys
+          : undefined,
+        assignedPermissionCount: assignmentData.assignedPermissionCount || 0,
+      };
+    });
+
+    return {
+      role: targetRole,
+      rbacRole: permissionMatrix.role,
+      user: accessUser
+        ? {
+            id: String(accessUser._id || accessUser.id),
+            role: accessUser.role,
+            allowedModules: accessUser.allowedModules || [],
+          }
+        : null,
+      modules,
+      totals: {
+        modules: modules.length,
+        permissions: modules.reduce(
+          (total, module) => total + (module.permissions?.length || 0),
+          0,
+        ),
+        assignedPermissions: modules.reduce(
+          (total, module) => total + (module.assignedPermissionCount || 0),
+          0,
+        ),
+      },
+      actions: permissionMatrix.actions,
+    };
+  }
+
   sanitizeModules(modules) {
     const normalized = Array.from(new Set((modules || []).map(cleanModuleName).filter(Boolean)));
     return normalized.filter((moduleName) => DEFAULT_SELLER_MODULES.includes(moduleName));
   }
 
   async createSellerSubAdmin(payload, actor) {
-    const sellerId = this.getSellerId(actor);
+    const sellerId = this.assertSellerOwnerActor(actor);
     const existing = await this.sellerRepository.findUserByEmail(payload.email);
     if (existing) {
       throw new AppError("User already exists", 409);
@@ -557,8 +802,12 @@ class SellerService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid seller module is required", 400);
     }
+    const modulePermissions = this.normalizeModulePermissions(
+      payload.modulePermissions,
+      allowedModules,
+    );
     const passwordHash = await hashText(payload.password);
-    return this.sellerRepository.createManagedUser({
+    const user = await this.sellerRepository.createManagedUser({
       email: payload.email,
       phone: payload.phone,
       passwordHash,
@@ -571,23 +820,50 @@ class SellerService {
       authProviders: [],
       refreshSessions: [],
     });
+
+    await this.rbacService.assignRoleToUserBySlug(
+      String(user.id),
+      ROLES.SELLER_SUB_ADMIN,
+      actor.userId,
+      {
+        ignoreMissing: true,
+        ignoreExisting: true,
+      },
+    );
+
+    await this.rbacService.syncUserModulePermissions(
+      String(user.id),
+      modulePermissions,
+      actor.userId,
+    );
+
+    return user;
   }
 
   async listSellerSubAdmins(actor) {
-    const sellerId = this.getSellerId(actor);
+    const sellerId = this.assertSellerOwnerActor(actor);
     return this.sellerRepository.listSellerSubAdmins(sellerId);
   }
 
   async updateSellerSubAdminModules(userId, payload, actor) {
-    const sellerId = this.getSellerId(actor);
+    const sellerId = this.assertSellerOwnerActor(actor);
     const allowedModules = this.sanitizeModules(payload.allowedModules);
     if (!allowedModules.length) {
       throw new AppError("At least one valid seller module is required", 400);
     }
+    const modulePermissions = this.normalizeModulePermissions(
+      payload.modulePermissions,
+      allowedModules,
+    );
     const updated = await this.sellerRepository.updateSellerSubAdminModules(sellerId, userId, allowedModules);
     if (!updated) {
       throw new AppError("Seller sub-admin not found", 404);
     }
+    await this.rbacService.syncUserModulePermissions(
+      String(userId),
+      modulePermissions,
+      actor.userId,
+    );
     return updated;
   }
 }

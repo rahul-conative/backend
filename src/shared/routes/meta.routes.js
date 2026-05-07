@@ -1,5 +1,6 @@
 const express = require("express");
 const { env } = require("../../config/env");
+const { API_MODULES } = require("../auth/module-catalog");
 
 const metaRoutes = express.Router();
 
@@ -10,30 +11,7 @@ metaRoutes.get("/routes", (req, res) => {
       appName: env.appName,
       version: "1.0.0",
       apiPrefix: env.apiPrefix,
-      modules: [
-        "auth",
-        "users",
-        "products",
-        "carts",
-        "orders",
-        "payments",
-        "platform",
-        "sellers",
-        "notifications",
-        "analytics",
-        "pricing",
-        "wallets",
-        "admin",
-        "tax",
-        "subscriptions",
-        "rbac",
-        "warranty",
-        "loyalty",
-        "recommendations",
-        "returns",
-        "fraud",
-        "dynamic-pricing",
-      ],
+      modules: API_MODULES,
       docs: {
         readme: "README.md",
         apiReference: "docs/API_REFERENCE.md",

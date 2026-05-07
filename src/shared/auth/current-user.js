@@ -5,6 +5,8 @@ function getActor(auth = {}) {
     userId: auth.sub || null,
     email: auth.email || null,
     role: auth.role || "guest",
+    roles: Array.isArray(auth.roles) ? auth.roles : [],
+    isSuperAdmin: auth.isSuperAdmin === true || auth.role === "super-admin",
     ownerAdminId: auth.ownerAdminId || null,
     ownerSellerId: auth.ownerSellerId || null,
     allowedModules: Array.isArray(auth.allowedModules) ? auth.allowedModules : [],
