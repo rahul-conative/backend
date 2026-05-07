@@ -1,6 +1,17 @@
 const Joi = require("joi");
 const { panPattern, aadhaarPattern } = require("../../../shared/validation/kyc");
 const { KYC_STATUS } = require("../../../shared/domain/commerce-constants");
+const {
+  makeKycDocumentsSchema,
+} = require("../../../shared/validation/document-upload");
+
+const userKycDocumentKeys = [
+  "panDocumentUrl",
+  "aadhaarFrontUrl",
+  "aadhaarBackUrl",
+  "selfieUrl",
+  "addressProofUrl",
+];
 
 const updateProfileSchema = Joi.object({
   body: Joi.object({
@@ -19,12 +30,15 @@ const submitUserKycSchema = Joi.object({
     legalName: Joi.string().min(2).max(120).required(),
     panNumber: Joi.string().pattern(panPattern).allow("", null),
     aadhaarNumber: Joi.string().pattern(aadhaarPattern).allow("", null),
-    documents: Joi.object({
-      panDocumentUrl: Joi.string().uri().allow("", null),
-      aadhaarFrontUrl: Joi.string().uri().allow("", null),
-      aadhaarBackUrl: Joi.string().uri().allow("", null),
-      selfieUrl: Joi.string().uri().allow("", null),
-    }).default({}),
+    documents: makeKycDocumentsSchema(userKycDocumentKeys),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
+const uploadUserKycDocumentsSchema = Joi.object({
+  body: Joi.object({
+    documents: makeKycDocumentsSchema(userKycDocumentKeys).min(1).required(),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -84,6 +98,7 @@ const addressParamSchema = Joi.object({
 module.exports = {
   updateProfileSchema,
   submitUserKycSchema,
+  uploadUserKycDocumentsSchema,
   reviewUserKycSchema,
   addAddressSchema,
   updateAddressSchema,

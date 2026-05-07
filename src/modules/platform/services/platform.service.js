@@ -31,7 +31,7 @@ class PlatformService {
     const pagination = getPage(query);
     const filter = {};
     if (query.parentKey) filter.parentKey = query.parentKey;
-    if (query.active !== undefined) filter.active = query.active === "true";
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     if (query.categoryKey) filter.categoryKey = query.categoryKey;
     return this.platformRepository.listCategories(filter, pagination);
   }
@@ -107,7 +107,15 @@ class PlatformService {
     if (query.productId) filter.productId = query.productId;
     if (query.familyCode) filter.familyCode = query.familyCode;
     if (query.sellerId) filter.sellerId = query.sellerId;
+    if (query.sku) filter.sku = { $regex: query.sku, $options: "i" };
     if (query.status) filter.status = query.status;
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { sku: { $regex: q, $options: "i" } },
+        { familyCode: { $regex: q, $options: "i" } },
+      ];
+    }
     return this.platformRepository.listProductVariants(filter, pagination);
   }
 
@@ -142,8 +150,16 @@ class PlatformService {
   async listHsnCodes(query) {
     const pagination = getPage(query);
     const filter = {};
-    if (query.active !== undefined) filter.active = query.active === "true";
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     if (query.category) filter.category = query.category;
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { code: { $regex: q, $options: "i" } },
+        { description: { $regex: q, $options: "i" } },
+        { category: { $regex: q, $options: "i" } },
+      ];
+    }
     return this.platformRepository.listHsnCodes(filter, pagination);
   }
 
@@ -178,7 +194,7 @@ class PlatformService {
   async listGeographies(query) {
     const pagination = getPage(query);
     const filter = {};
-    if (query.active !== undefined) filter.active = query.active === "true";
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     return this.platformRepository.listGeographies(filter, pagination);
   }
 
@@ -221,7 +237,15 @@ class PlatformService {
     const filter = {};
     if (query.pageType) filter.pageType = query.pageType;
     if (query.language) filter.language = query.language;
-    if (query.published !== undefined) filter.published = query.published === "true";
+    if (query.published !== undefined) filter.published = query.published === true || query.published === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { slug: { $regex: q, $options: "i" } },
+        { body: { $regex: q, $options: "i" } },
+      ];
+    }
     return this.platformRepository.listContentPages(filter, pagination);
   }
 

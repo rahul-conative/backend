@@ -2,6 +2,18 @@ const Joi = require("joi");
 const { panPattern, gstPattern, aadhaarPattern } = require("../../../shared/validation/kyc");
 const { KYC_STATUS, ORDER_STATUS } = require("../../../shared/domain/commerce-constants");
 const { DELIVERY_STATUS } = require("../../delivery/models/delivery.model");
+const {
+  makeKycDocumentsSchema,
+} = require("../../../shared/validation/document-upload");
+
+const sellerKycDocumentKeys = [
+  "panDocumentUrl",
+  "gstCertificateUrl",
+  "aadhaarFrontUrl",
+  "aadhaarBackUrl",
+  "bankProofUrl",
+  "addressProofUrl",
+];
 
 const submitKycSchema = Joi.object({
   body: Joi.object({
@@ -11,13 +23,7 @@ const submitKycSchema = Joi.object({
     legalName: Joi.string().min(2).max(120).required(),
     businessType: Joi.string().valid("individual", "proprietorship", "partnership", "private_limited"),
     dateOfBirth: Joi.date().iso().allow("", null),
-    documents: Joi.object({
-      panDocumentUrl: Joi.string().uri().allow("", null),
-      gstCertificateUrl: Joi.string().uri().allow("", null),
-      aadhaarFrontUrl: Joi.string().uri().allow("", null),
-      aadhaarBackUrl: Joi.string().uri().allow("", null),
-      bankProofUrl: Joi.string().uri().allow("", null),
-    }).default({}),
+    documents: makeKycDocumentsSchema(sellerKycDocumentKeys),
     bankDetails: Joi.object({
       accountHolderName: Joi.string().allow("", null),
       accountNumber: Joi.string().allow("", null),
@@ -25,6 +31,14 @@ const submitKycSchema = Joi.object({
       bankName: Joi.string().allow("", null),
       branchName: Joi.string().allow("", null),
     }).default({}),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
+const uploadSellerKycDocumentsSchema = Joi.object({
+  body: Joi.object({
+    documents: makeKycDocumentsSchema(sellerKycDocumentKeys).min(1).required(),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -247,6 +261,7 @@ const updateSellerSubAdminModulesSchema = Joi.object({
 
 module.exports = {
   submitKycSchema,
+  uploadSellerKycDocumentsSchema,
   reviewSellerKycSchema,
   updateSellerProfileSchema,
   updateSellerSettingsSchema,

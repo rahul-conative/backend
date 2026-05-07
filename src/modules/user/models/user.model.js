@@ -73,6 +73,31 @@ const userAddressSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+const influencerProfileSnapshotSchema = new mongoose.Schema(
+  {
+    influencerId: String,
+    influencerType: {
+      type: String,
+      enum: ["parent", "child"],
+    },
+    parentInfluencerId: String,
+    rootInfluencerId: String,
+    originalParentInfluencerId: String,
+    level: Number,
+    path: [String],
+    status: {
+      type: String,
+      enum: ["pending", "active", "suspended", "rejected"],
+    },
+    canCreateChildren: Boolean,
+    promotedAt: Date,
+    onboardingStatus: String,
+    kycStatus: String,
+    payoutProfileStatus: String,
+  },
+  { _id: false },
+);
+
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, index: true },
@@ -91,6 +116,7 @@ const userSchema = new mongoose.Schema(
     },
     addresses: [userAddressSchema],
     sellerProfile: sellerProfileSchema,
+    influencerProfile: influencerProfileSnapshotSchema,
     sellerSettings: {
       autoAcceptOrders: { type: Boolean, default: false },
       handlingTimeHours: { type: Number, default: 24 },

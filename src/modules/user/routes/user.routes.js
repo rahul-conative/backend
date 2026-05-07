@@ -8,6 +8,7 @@ const { ACTIONS } = require("../../../shared/constants/actions");
 const {
   updateProfileSchema,
   submitUserKycSchema,
+  uploadUserKycDocumentsSchema,
   reviewUserKycSchema,
   addAddressSchema,
   updateAddressSchema,
@@ -41,6 +42,13 @@ userRoutes.delete(
   authenticate,
   checkInput(addressParamSchema),
   catchErrors(userController.deleteAddress),
+);
+userRoutes.post(
+  "/me/kyc/documents",
+  authenticate,
+  allowActions(ACTIONS.USER_KYC_SUBMIT),
+  checkInput(uploadUserKycDocumentsSchema),
+  catchErrors(userController.uploadKycDocuments),
 );
 userRoutes.post(
   "/me/kyc",

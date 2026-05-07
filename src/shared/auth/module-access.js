@@ -41,10 +41,12 @@ function getRequestModule(req) {
       payments: "payments",
       payouts: "payments",
       tax: "tax",
+      common: "platform",
       platform: "platform",
       analytics: "analytics",
       returns: "returns",
       chargebacks: "fraud",
+      referral: "referral",
       system: "admin",
     };
 

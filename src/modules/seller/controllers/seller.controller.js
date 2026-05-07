@@ -13,6 +13,12 @@ class SellerController {
     res.status(201).json(okResponse(kyc));
   };
 
+  uploadKycDocuments = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const documents = await this.sellerService.uploadKycDocuments(req.body.documents, actor);
+    res.status(201).json(okResponse({ documents }));
+  };
+
   reviewKyc = async (req, res) => {
     const actor = getCurrentUser(req);
     const kyc = await this.sellerService.reviewKyc(req.params.sellerId, req.body, actor);

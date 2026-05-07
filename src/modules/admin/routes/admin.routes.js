@@ -9,11 +9,18 @@ const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
   checkInput,
 } = require("../../../shared/middleware/check-input");
+const {
+  referralAdminRoutes,
+} = require("../../referral/routes/referral-admin.routes");
+const {
+  commonManagementRoutes,
+} = require("./common-management.routes");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   adminOverviewSchema,
   listVendorsSchema,
   listUsersSchema,
+  createManagedUserSchema,
   userParamSchema,
   updateUserSchema,
   deactivateUserSchema,
@@ -88,6 +95,8 @@ const adminController = new AdminController();
 const platformController = new PlatformController();
 
 adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
+adminRoutes.use("/referral", referralAdminRoutes);
+adminRoutes.use("/common", commonManagementRoutes);
 
 adminRoutes.get(
   "/access/modules",
@@ -134,6 +143,11 @@ adminRoutes.get(
   "/users",
   checkInput(listUsersSchema),
   catchErrors(adminController.listUsers),
+);
+adminRoutes.post(
+  "/users",
+  checkInput(createManagedUserSchema),
+  catchErrors(adminController.createUser),
 );
 adminRoutes.get(
   "/users/:userId",

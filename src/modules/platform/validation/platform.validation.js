@@ -138,9 +138,13 @@ const listProductVariantsSchema = Joi.object({
   body: Joi.object({}).required(),
   query: paginationQuery.concat(
     Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
       productId: Joi.string(),
       familyCode: Joi.string(),
       sellerId: Joi.string(),
+      sku: Joi.string(),
       status: Joi.string(),
     }),
   ),
@@ -190,6 +194,9 @@ const listHsnCodesSchema = Joi.object({
   body: Joi.object({}).required(),
   query: paginationQuery.concat(
     Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
       category: Joi.string(),
       active: Joi.boolean(),
     }),
@@ -273,6 +280,7 @@ const createContentPageSchema = Joi.object({
 
 const updateContentPageSchema = Joi.object({
   body: Joi.object({
+    slug: Joi.string().trim(),
     title: Joi.string().trim(),
     pageType: Joi.string().trim(),
     body: Joi.string(),
@@ -291,6 +299,9 @@ const listContentPagesSchema = Joi.object({
   body: Joi.object({}).required(),
   query: paginationQuery.concat(
     Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
       pageType: Joi.string(),
       language: Joi.string(),
       published: Joi.boolean(),

@@ -6,6 +6,7 @@ const { allowActions, allowRoles } = require("../../../shared/middleware/access"
 const { checkInput } = require("../../../shared/middleware/check-input");
 const {
   submitKycSchema,
+  uploadSellerKycDocumentsSchema,
   reviewSellerKycSchema,
   updateSellerProfileSchema,
   updateSellerSettingsSchema,
@@ -28,6 +29,12 @@ const sellerRoutes = express.Router();
 const sellerController = new SellerController();
 
 // Onboarding routes - accessible with onboarding token
+sellerRoutes.post(
+  "/onboarding/kyc/documents",
+  authenticatePendingSeller,
+  checkInput(uploadSellerKycDocumentsSchema),
+  catchErrors(sellerController.uploadKycDocuments),
+);
 sellerRoutes.post(
   "/onboarding/kyc",
   authenticatePendingSeller,
@@ -123,6 +130,13 @@ sellerRoutes.patch(
   allowActions(ACTIONS.SELLER_PROFILE_MANAGE),
   checkInput(updateSellerSettingsSchema),
   catchErrors(sellerController.updateSettings),
+);
+sellerRoutes.post(
+  "/me/kyc/documents",
+  authenticate,
+  allowActions(ACTIONS.SELLER_KYC_SUBMIT),
+  checkInput(uploadSellerKycDocumentsSchema),
+  catchErrors(sellerController.uploadKycDocuments),
 );
 sellerRoutes.get(
   "/me/dashboard",

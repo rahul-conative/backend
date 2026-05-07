@@ -38,13 +38,13 @@ async function createApp() {
   );
   app.use(
     express.json({
-      limit: "1mb",
+      limit: env.upload.jsonBodyLimit,
       verify: (req, res, buffer) => {
         req.rawBody = buffer;
       },
     }),
   );
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: env.upload.jsonBodyLimit }));
   app.use(auditLog);
   app.use(createMetricsMiddleware()); // Track performance metrics
 

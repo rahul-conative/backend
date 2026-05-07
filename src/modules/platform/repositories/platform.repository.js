@@ -4,6 +4,14 @@ const { ProductVariantModel } = require("../models/product-variant.model");
 const { HsnCodeModel } = require("../models/hsn-code.model");
 const { GeographyModel } = require("../models/geography.model");
 const { ContentPageModel } = require("../models/content-page.model");
+const { mongoose } = require("../../../infrastructure/mongo/mongo-client");
+
+function makeCodeOrIdFilter(value, codeField = "code") {
+  if (mongoose.Types.ObjectId.isValid(String(value))) {
+    return { $or: [{ _id: value }, { [codeField]: value }] };
+  }
+  return { [codeField]: value };
+}
 
 class PlatformRepository {
   async createCategory(payload) {
@@ -83,11 +91,11 @@ class PlatformRepository {
   }
 
   async updateHsnCode(code, payload) {
-    return HsnCodeModel.findOneAndUpdate({ code }, payload, { new: true });
+    return HsnCodeModel.findOneAndUpdate(makeCodeOrIdFilter(code), payload, { new: true });
   }
 
   async getHsnCode(code) {
-    return HsnCodeModel.findOne({ code });
+    return HsnCodeModel.findOne(makeCodeOrIdFilter(code));
   }
 
   async listHsnCodes(filter = {}, pagination = {}) {
@@ -99,7 +107,7 @@ class PlatformRepository {
   }
 
   async deleteHsnCode(code) {
-    return HsnCodeModel.findOneAndDelete({ code });
+    return HsnCodeModel.findOneAndDelete(makeCodeOrIdFilter(code));
   }
 
   async createGeography(payload) {
@@ -131,11 +139,11 @@ class PlatformRepository {
   }
 
   async updateContentPage(slug, payload) {
-    return ContentPageModel.findOneAndUpdate({ slug }, payload, { new: true });
+    return ContentPageModel.findOneAndUpdate(makeCodeOrIdFilter(slug, "slug"), payload, { new: true });
   }
 
   async getContentPage(slug) {
-    return ContentPageModel.findOne({ slug });
+    return ContentPageModel.findOne(makeCodeOrIdFilter(slug, "slug"));
   }
 
   async listContentPages(filter = {}, pagination = {}) {
@@ -147,7 +155,7 @@ class PlatformRepository {
   }
 
   async deleteContentPage(slug) {
-    return ContentPageModel.findOneAndDelete({ slug });
+    return ContentPageModel.findOneAndDelete(makeCodeOrIdFilter(slug, "slug"));
   }
 }
 

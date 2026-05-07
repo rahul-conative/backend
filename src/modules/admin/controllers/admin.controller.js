@@ -22,6 +22,12 @@ class AdminController {
     res.json(okResponse(result.items, { total: result.total }));
   };
 
+  createUser = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const user = await this.adminService.createUser(req.body, actor);
+    res.status(201).json(okResponse(user));
+  };
+
   getUser = async (req, res) => {
     const user = await this.adminService.getUser(req.params.userId);
     res.json(okResponse(user));

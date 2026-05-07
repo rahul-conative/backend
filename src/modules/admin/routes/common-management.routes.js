@@ -1,0 +1,220 @@
+const express = require("express");
+const {
+  CommonManagementController,
+} = require("../controllers/common-management.controller");
+const { catchErrors } = require("../../../shared/middleware/catch-errors");
+const { checkInput } = require("../../../shared/middleware/check-input");
+const {
+  listSchema,
+  statusSchema,
+  deleteSchema,
+  countryParamSchema,
+  createCountrySchema,
+  updateCountrySchema,
+  stateParamSchema,
+  createStateSchema,
+  updateStateSchema,
+  cityParamSchema,
+  createCitySchema,
+  updateCitySchema,
+  taxParamSchema,
+  createTaxSchema,
+  updateTaxSchema,
+  subTaxParamSchema,
+  createSubTaxSchema,
+  updateSubTaxSchema,
+  taxRuleParamSchema,
+  createTaxRuleSchema,
+  updateTaxRuleSchema,
+} = require("../validation/common-management.validation");
+
+const commonManagementRoutes = express.Router();
+const commonManagementController = new CommonManagementController();
+
+commonManagementRoutes.get(
+  "/countries",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listCountries),
+);
+commonManagementRoutes.post(
+  "/countries",
+  checkInput(createCountrySchema),
+  catchErrors(commonManagementController.createCountry),
+);
+commonManagementRoutes.patch(
+  "/countries/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setCountryStatus),
+);
+commonManagementRoutes.delete(
+  "/countries",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteCountries),
+);
+commonManagementRoutes.patch(
+  "/countries/:countryId",
+  checkInput(updateCountrySchema),
+  catchErrors(commonManagementController.updateCountry),
+);
+commonManagementRoutes.delete(
+  "/countries/:countryId",
+  checkInput(countryParamSchema),
+  catchErrors(commonManagementController.deleteCountries),
+);
+
+commonManagementRoutes.get(
+  "/states",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listStates),
+);
+commonManagementRoutes.post(
+  "/states",
+  checkInput(createStateSchema),
+  catchErrors(commonManagementController.createState),
+);
+commonManagementRoutes.patch(
+  "/states/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setStateStatus),
+);
+commonManagementRoutes.delete(
+  "/states",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteStates),
+);
+commonManagementRoutes.patch(
+  "/states/:stateId",
+  checkInput(updateStateSchema),
+  catchErrors(commonManagementController.updateState),
+);
+commonManagementRoutes.delete(
+  "/states/:stateId",
+  checkInput(stateParamSchema),
+  catchErrors(commonManagementController.deleteStates),
+);
+
+commonManagementRoutes.get(
+  "/cities",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listCities),
+);
+commonManagementRoutes.post(
+  "/cities",
+  checkInput(createCitySchema),
+  catchErrors(commonManagementController.createCity),
+);
+commonManagementRoutes.patch(
+  "/cities/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setCityStatus),
+);
+commonManagementRoutes.delete(
+  "/cities",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteCities),
+);
+commonManagementRoutes.patch(
+  "/cities/:cityId",
+  checkInput(updateCitySchema),
+  catchErrors(commonManagementController.updateCity),
+);
+commonManagementRoutes.delete(
+  "/cities/:cityId",
+  checkInput(cityParamSchema),
+  catchErrors(commonManagementController.deleteCities),
+);
+
+commonManagementRoutes.get(
+  "/taxes",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listTaxes),
+);
+commonManagementRoutes.post(
+  "/taxes",
+  checkInput(createTaxSchema),
+  catchErrors(commonManagementController.createTax),
+);
+commonManagementRoutes.patch(
+  "/taxes/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setTaxStatus),
+);
+commonManagementRoutes.delete(
+  "/taxes",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteTaxes),
+);
+commonManagementRoutes.patch(
+  "/taxes/:taxId",
+  checkInput(updateTaxSchema),
+  catchErrors(commonManagementController.updateTax),
+);
+commonManagementRoutes.delete(
+  "/taxes/:taxId",
+  checkInput(taxParamSchema),
+  catchErrors(commonManagementController.deleteTaxes),
+);
+
+commonManagementRoutes.get(
+  "/sub-taxes",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listSubTaxes),
+);
+commonManagementRoutes.post(
+  "/sub-taxes",
+  checkInput(createSubTaxSchema),
+  catchErrors(commonManagementController.createSubTax),
+);
+commonManagementRoutes.patch(
+  "/sub-taxes/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setSubTaxStatus),
+);
+commonManagementRoutes.delete(
+  "/sub-taxes",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteSubTaxes),
+);
+commonManagementRoutes.patch(
+  "/sub-taxes/:subTaxId",
+  checkInput(updateSubTaxSchema),
+  catchErrors(commonManagementController.updateSubTax),
+);
+commonManagementRoutes.delete(
+  "/sub-taxes/:subTaxId",
+  checkInput(subTaxParamSchema),
+  catchErrors(commonManagementController.deleteSubTaxes),
+);
+
+commonManagementRoutes.get(
+  "/tax-rules",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listTaxRules),
+);
+commonManagementRoutes.post(
+  "/tax-rules",
+  checkInput(createTaxRuleSchema),
+  catchErrors(commonManagementController.createTaxRule),
+);
+commonManagementRoutes.patch(
+  "/tax-rules/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setTaxRuleStatus),
+);
+commonManagementRoutes.delete(
+  "/tax-rules",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteTaxRules),
+);
+commonManagementRoutes.patch(
+  "/tax-rules/:taxRuleId",
+  checkInput(updateTaxRuleSchema),
+  catchErrors(commonManagementController.updateTaxRule),
+);
+commonManagementRoutes.delete(
+  "/tax-rules/:taxRuleId",
+  checkInput(taxRuleParamSchema),
+  catchErrors(commonManagementController.deleteTaxRules),
+);
+
+module.exports = { commonManagementRoutes };

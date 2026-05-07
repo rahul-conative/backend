@@ -117,7 +117,7 @@ GET    /tax/reports
 - Express middleware for security, rate limiting, validation, auth, and errors
 - Auth-specific rate limiting and security event logging for sign-in/refresh flows
 - Redis-backed BullMQ queue factory
-- Cloudinary-based abstract storage layer
+- Cloudinary-based abstract storage layer with KYC document upload support
 - Nodemailer mailer abstraction
 - In-memory event bus abstraction for easy migration to Kafka later
 - Versioned domain event contracts in `src/contracts/events`
@@ -203,8 +203,11 @@ Route discovery endpoint (advanced reusable integration support):
 - `GET /api/v1/pricing/coupons`
 - `POST /api/v1/pricing/coupons`
 - `GET /api/v1/wallets/me`
-- `POST /api/v1/sellers/kyc`
+- `POST /api/v1/sellers/onboarding/kyc/documents`
+- `POST /api/v1/sellers/onboarding/kyc`
+- `POST /api/v1/sellers/me/kyc/documents`
 - `PATCH /api/v1/sellers/:sellerId/kyc/review`
+- `POST /api/v1/users/me/kyc/documents`
 - `POST /api/v1/users/me/kyc`
 - `PATCH /api/v1/users/:userId/kyc/review`
 - `GET /api/v1/notifications/me`
@@ -280,8 +283,9 @@ Route discovery endpoint (advanced reusable integration support):
 
 ## KYC Notes
 
-- Seller KYC supports PAN, GST, Aadhaar, and document URLs with review states.
-- User KYC supports PAN and Aadhaar for regulated payment/identity flows when needed.
+- Seller KYC supports PAN, GST, Aadhaar, document URLs, and base64/data-URI uploads with review states.
+- User KYC supports PAN, Aadhaar, document URLs, and base64/data-URI uploads for regulated payment/identity flows when needed.
+- KYC document uploads accept `application/pdf`, `image/jpeg`, `image/png`, and `image/webp` up to `MAX_DOCUMENT_UPLOAD_BYTES` bytes; the JSON body limit defaults to `10mb`.
 - Admin review routes allow moving KYC records through `under_review`, `verified`, or `rejected`.
 - This project stores KYC workflows and documents metadata; it does not yet call external government verification APIs.
 

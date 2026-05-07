@@ -43,6 +43,12 @@ class UserController {
     res.status(201).json(okResponse(kyc));
   };
 
+  uploadKycDocuments = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const documents = await this.userService.uploadKycDocuments(actor.userId, req.body.documents);
+    res.status(201).json(okResponse({ documents }));
+  };
+
   reviewKyc = async (req, res) => {
     const actor = getCurrentUser(req);
     const kyc = await this.userService.reviewKyc(req.params.userId, req.body, actor);

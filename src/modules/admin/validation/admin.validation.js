@@ -60,6 +60,35 @@ const listUsersSchema = Joi.object({
   params: Joi.object({}).required(),
 });
 
+const createManagedUserSchema = Joi.object({
+  body: Joi.object({
+    email: Joi.string().email().required(),
+    phone: Joi.string().allow("", null),
+    password: Joi.string().min(8).required(),
+    role: Joi.string().valid("buyer", "seller").default("buyer"),
+    accountStatus: Joi.string()
+      .valid("active", "suspended", "pending_approval"),
+    profile: Joi.object({
+      firstName: Joi.string().required(),
+      lastName: Joi.string().allow("", null),
+      avatarUrl: Joi.string().uri().allow("", null),
+    }).required(),
+    sellerProfile: Joi.object({
+      displayName: Joi.string().allow("", null),
+      legalBusinessName: Joi.string().allow("", null),
+      description: Joi.string().allow("", null),
+      supportEmail: Joi.string().email().allow("", null),
+      supportPhone: Joi.string().allow("", null),
+      businessType: Joi.string().allow("", null),
+      registrationNumber: Joi.string().allow("", null),
+      gstNumber: Joi.string().allow("", null),
+      panNumber: Joi.string().allow("", null),
+    }).default({}),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
 const userParamSchema = Joi.object({
   body: Joi.object({}).default({}),
   query: Joi.object({}).required(),
@@ -619,6 +648,7 @@ module.exports = {
   adminOverviewSchema,
   listVendorsSchema,
   listUsersSchema,
+  createManagedUserSchema,
   userParamSchema,
   updateUserSchema,
   deactivateUserSchema,

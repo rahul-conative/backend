@@ -60,6 +60,19 @@ class AdminService {
     return String(record._id || record.id || "");
   }
 
+  sanitizeUserForAdmin(user = {}) {
+    const plainUser = this.toPlainObject(user);
+    delete plainUser.passwordHash;
+    if (Array.isArray(plainUser.refreshSessions)) {
+      plainUser.refreshSessions = plainUser.refreshSessions.map((session) => {
+        const cleanSession = { ...session };
+        delete cleanSession.tokenHash;
+        return cleanSession;
+      });
+    }
+    return plainUser;
+  }
+
   async getSellerKycByIdMap(sellerIds = []) {
     const rows = await this.adminRepository.findSellerKycBySellerIds(sellerIds);
     return new Map(rows.map((row) => [String(row.seller_id), row]));
@@ -126,6 +139,65 @@ class AdminService {
       ...result,
       items: await this.enrichSellersForAdmin(result.items),
     };
+  }
+
+  async createUser(payload, actor = {}) {
+    const existing = await this.adminRepository.findUserByEmail(payload.email);
+    if (existing) {
+      throw new AppError("User already exists", 409);
+    }
+
+    const role = payload.role || ROLES.BUYER;
+    const isSeller = role === ROLES.SELLER;
+    const passwordHash = await hashText(payload.password);
+    const user = await this.adminRepository.createManagedUser({
+      email: payload.email,
+      phone: payload.phone,
+      passwordHash,
+      role,
+      profile: payload.profile,
+      accountStatus:
+        payload.accountStatus || (isSeller ? "pending_approval" : "active"),
+      ...(isSeller
+        ? {
+            sellerProfile: {
+              displayName:
+                payload.sellerProfile?.displayName ||
+                payload.profile?.firstName ||
+                "",
+              legalBusinessName:
+                payload.sellerProfile?.legalBusinessName ||
+                payload.sellerProfile?.displayName ||
+                "",
+              description: payload.sellerProfile?.description || "",
+              supportEmail: payload.sellerProfile?.supportEmail || payload.email,
+              supportPhone: payload.sellerProfile?.supportPhone || payload.phone,
+              businessType: payload.sellerProfile?.businessType || "",
+              registrationNumber:
+                payload.sellerProfile?.registrationNumber || "",
+              gstNumber: payload.sellerProfile?.gstNumber || "",
+              panNumber: payload.sellerProfile?.panNumber || "",
+              onboardingStatus: "initiated",
+            },
+          }
+        : {}),
+      emailVerified: true,
+      authProviders: [],
+      refreshSessions: [],
+      allowedModules: [],
+    });
+
+    await this.rbacService.assignRoleToUserBySlug(
+      String(user.id),
+      role,
+      actor.userId,
+      {
+        ignoreMissing: true,
+        ignoreExisting: true,
+      },
+    );
+
+    return this.sanitizeUserForAdmin(user);
   }
 
   async getUser(userId) {

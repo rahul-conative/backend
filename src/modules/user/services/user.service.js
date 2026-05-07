@@ -5,14 +5,19 @@ const { KYC_STATUS } = require("../../../shared/domain/commerce-constants");
 const { makeEvent } = require("../../../contracts/events/event");
 const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
+const {
+  storageService: defaultStorageService,
+} = require("../../../shared/storage/storage-service");
 
 class UserService {
   constructor({
     userRepository = new UserRepository(),
     userKycRepository = new UserKycRepository(),
+    storageService = defaultStorageService,
   } = {}) {
     this.userRepository = userRepository;
     this.userKycRepository = userKycRepository;
+    this.storageService = storageService;
   }
 
   async createUser(payload) {
@@ -99,8 +104,10 @@ class UserService {
   }
 
   async submitKyc(userId, payload) {
+    const documents = await this.uploadKycDocuments(userId, payload.documents || {});
     const kyc = await this.userKycRepository.upsert({
       ...payload,
+      documents,
       userId,
       verificationStatus: KYC_STATUS.SUBMITTED,
     });
@@ -121,6 +128,13 @@ class UserService {
     );
 
     return kyc;
+  }
+
+  async uploadKycDocuments(userId, documents = {}) {
+    return this.storageService.uploadKycDocuments(documents, {
+      ownerType: "users",
+      ownerId: userId,
+    });
   }
 
   async reviewKyc(userId, payload, actor) {

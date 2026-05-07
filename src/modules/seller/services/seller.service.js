@@ -9,6 +9,9 @@ const { ROLES } = require("../../../shared/constants/roles");
 const { DEFAULT_SELLER_MODULES, cleanModuleName } = require("../../../shared/auth/module-access");
 const { RbacService } = require("../../rbac/services/rbac.service");
 const {
+  storageService: defaultStorageService,
+} = require("../../../shared/storage/storage-service");
+const {
   SELLER_ONBOARDING_STATUS,
   makeSellerOnboardingState,
   getSellerKycStatus,
@@ -21,9 +24,11 @@ class SellerService {
   constructor({
     sellerRepository = new SellerRepository(),
     rbacService = new RbacService(),
+    storageService = defaultStorageService,
   } = {}) {
     this.sellerRepository = sellerRepository;
     this.rbacService = rbacService;
+    this.storageService = storageService;
   }
 
   getSellerId(actor) {
@@ -112,8 +117,10 @@ class SellerService {
 
   async submitKyc(payload, actor) {
     const sellerId = this.getSellerId(actor);
+    const documents = await this.uploadKycDocuments(payload.documents || {}, actor);
     const record = await this.sellerRepository.upsertKyc({
       ...payload,
+      documents,
       sellerId,
       verificationStatus: KYC_STATUS.SUBMITTED,
     });
@@ -145,6 +152,14 @@ class SellerService {
       ),
     );
     return record;
+  }
+
+  async uploadKycDocuments(documents = {}, actor) {
+    const sellerId = this.getSellerId(actor);
+    return this.storageService.uploadKycDocuments(documents, {
+      ownerType: "sellers",
+      ownerId: sellerId,
+    });
   }
 
   async updateProfile(payload, actor) {

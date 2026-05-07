@@ -2,6 +2,9 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+const defaultMaxDocumentBytes = 5 * 1024 * 1024;
+const maxDocumentBytes = Number(process.env.MAX_DOCUMENT_UPLOAD_BYTES);
+
 const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT || 4000),
@@ -55,6 +58,13 @@ const env = {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
     apiKey: process.env.CLOUDINARY_API_KEY || "",
     apiSecret: process.env.CLOUDINARY_API_SECRET || "",
+  },
+  upload: {
+    jsonBodyLimit: process.env.JSON_BODY_LIMIT || "10mb",
+    maxDocumentBytes:
+      Number.isFinite(maxDocumentBytes) && maxDocumentBytes > 0
+        ? maxDocumentBytes
+        : defaultMaxDocumentBytes,
   },
   enableCron: String(process.env.ENABLE_CRON || "true") === "true",
   production: String(process.env.PRODUCTION || "false") === "true",
