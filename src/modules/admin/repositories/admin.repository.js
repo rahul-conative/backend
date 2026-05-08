@@ -146,6 +146,7 @@ class AdminRepository {
         ...(payload.accountStatus ? { accountStatus: payload.accountStatus } : {}),
         ...(payload.role ? { role: payload.role } : {}),
         ...(payload.profile ? { profile: payload.profile } : {}),
+        ...(payload.sellerProfile ? { sellerProfile: payload.sellerProfile } : {}),
       },
     };
     return UserModel.findByIdAndUpdate(userId, update, {

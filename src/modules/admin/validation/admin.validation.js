@@ -107,11 +107,26 @@ const updateUserSchema = Joi.object({
       "buyer",
       "super-admin",
     ),
-    accountStatus: Joi.string().valid("active", "suspended"),
+    accountStatus: Joi.string().valid(...accountStatuses),
     profile: Joi.object({
       firstName: Joi.string().allow("", null),
       lastName: Joi.string().allow("", null),
       avatarUrl: Joi.string().uri().allow("", null),
+    }),
+    sellerProfile: Joi.object({
+      displayName: Joi.string().allow("", null),
+      legalBusinessName: Joi.string().allow("", null),
+      description: Joi.string().allow("", null),
+      supportEmail: Joi.string().email().allow("", null),
+      supportPhone: Joi.string().allow("", null),
+      businessType: Joi.string().allow("", null),
+      registrationNumber: Joi.string().allow("", null),
+      gstNumber: Joi.string().allow("", null),
+      panNumber: Joi.string().allow("", null),
+      aadhaarNumber: Joi.string().allow("", null),
+      businessWebsite: Joi.string().uri().allow("", null),
+      primaryContactName: Joi.string().allow("", null),
+      onboardingStatus: Joi.string().valid(...sellerOnboardingStatuses).allow("", null),
     }),
   })
     .min(1)

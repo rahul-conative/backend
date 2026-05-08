@@ -220,6 +220,13 @@ class AdminService {
     if (!user) {
       throw new AppError("User not found", 404);
     }
+    if (user.role === ROLES.SELLER) {
+      const kycBySellerId = await this.getSellerKycByIdMap([userId]);
+      return this.enrichSellerForAdmin(
+        user,
+        kycBySellerId.get(String(userId)) || null,
+      );
+    }
     return user;
   }
 
@@ -816,6 +823,93 @@ class AdminService {
     );
   }
 
+  async getActorAssignablePermissionMap(actor = {}) {
+    if (actor.isSuperAdmin || actor.role === ROLES.ADMIN) {
+      return null;
+    }
+    if (actor.role !== ROLES.SUB_ADMIN) {
+      throw new AppError("Forbidden", 403);
+    }
+
+    const matrix = await this.rbacService.getPermissionManagementMatrix({
+      userId: actor.userId,
+      active: true,
+    });
+    const grants = new Map();
+    (matrix.modules || []).forEach((module) => {
+      const slug = cleanModuleName(module.slug);
+      if (!slug) return;
+      const actions = new Set(
+        (module.permissions || [])
+          .filter((permission) => permission.assigned)
+          .map((permission) => this.normalizePermissionAction(permission.action))
+          .filter(Boolean),
+      );
+      if (!actions.has("view")) {
+        return;
+      }
+      grants.set(slug, actions);
+    });
+    return grants;
+  }
+
+  assertRbacAssignmentCapability(actorPermissionMap) {
+    if (!actorPermissionMap) return;
+    const rbacActions = actorPermissionMap.get("rbac") || new Set();
+    const userActions = actorPermissionMap.get("users") || new Set();
+    const canAssign = ["add", "edit", "update", "approval", "status"].some(
+      (action) => rbacActions.has(action) || userActions.has(action),
+    );
+    if (!canAssign) {
+      throw new AppError("Forbidden: missing permission to manage access", 403);
+    }
+  }
+
+  constrainModuleAssignmentByActor(
+    actor = {},
+    actorPermissionMap,
+    allowedModules = [],
+    modulePermissions = [],
+  ) {
+    if (!actorPermissionMap) {
+      return { allowedModules, modulePermissions };
+    }
+
+    const actorModuleScope = new Set((actor.allowedModules || []).map(cleanModuleName));
+    const scopedAllowed = allowedModules.filter(
+      (module) =>
+        actorModuleScope.has(module) &&
+        actorPermissionMap.has(module),
+    );
+    if (!scopedAllowed.length) {
+      throw new AppError("Forbidden: no assignable modules in request", 403);
+    }
+
+    const scopedPermissions = modulePermissions
+      .map((entry) => {
+        const moduleName = cleanModuleName(entry.module);
+        if (!moduleName || !scopedAllowed.includes(moduleName)) return null;
+        const grantActions = actorPermissionMap.get(moduleName) || new Set();
+        const actions = Array.from(
+          new Set(
+            (entry.actions || []).filter(
+              (action) => action === "view" || grantActions.has(action),
+            ),
+          ),
+        );
+        if (!actions.includes("view")) actions.unshift("view");
+        return { module: moduleName, actions };
+      })
+      .filter(Boolean);
+
+    return {
+      allowedModules: scopedAllowed,
+      modulePermissions: scopedPermissions.length
+        ? scopedPermissions
+        : scopedAllowed.map((module) => ({ module, actions: ["view"] })),
+    };
+  }
+
   async createAdmin(payload, actor = {}) {
     const existing = await this.adminRepository.findUserByEmail(payload.email);
     if (existing) {
@@ -864,10 +958,20 @@ class AdminService {
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
-    const modulePermissions = this.normalizeModulePermissions(
+    let modulePermissions = this.normalizeModulePermissions(
       payload.modulePermissions,
       allowedModules,
     );
+    const actorPermissionMap = await this.getActorAssignablePermissionMap(actor);
+    this.assertRbacAssignmentCapability(actorPermissionMap);
+    const constrained = this.constrainModuleAssignmentByActor(
+      actor,
+      actorPermissionMap,
+      allowedModules,
+      modulePermissions,
+    );
+    const finalAllowedModules = constrained.allowedModules;
+    modulePermissions = constrained.modulePermissions;
     const passwordHash = await hashText(payload.password);
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
@@ -875,8 +979,8 @@ class AdminService {
       passwordHash,
       role: ROLES.SUB_ADMIN,
       profile: payload.profile,
-      ownerAdminId: actor.userId,
-      allowedModules,
+      ownerAdminId: actor.ownerAdminId || actor.userId,
+      allowedModules: finalAllowedModules,
       accountStatus: "active",
       emailVerified: true,
       authProviders: [],
@@ -905,22 +1009,32 @@ class AdminService {
   async listPlatformSubAdmins(query, actor) {
     const ownerAdminId = actor.isSuperAdmin
       ? query.ownerAdminId || null
-      : actor.userId;
+      : actor.ownerAdminId || actor.userId;
     return this.adminRepository.listSubAdmins({ ownerAdminId });
   }
 
   async updatePlatformSubAdminModules(userId, payload, actor) {
-    const allowedModules = this.sanitizeModules(payload.allowedModules);
+    let allowedModules = this.sanitizeModules(payload.allowedModules);
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
-    const modulePermissions = this.normalizeModulePermissions(
+    let modulePermissions = this.normalizeModulePermissions(
       payload.modulePermissions,
       allowedModules,
     );
+    const actorPermissionMap = await this.getActorAssignablePermissionMap(actor);
+    this.assertRbacAssignmentCapability(actorPermissionMap);
+    const constrained = this.constrainModuleAssignmentByActor(
+      actor,
+      actorPermissionMap,
+      allowedModules,
+      modulePermissions,
+    );
+    allowedModules = constrained.allowedModules;
+    modulePermissions = constrained.modulePermissions;
     const updated = await this.adminRepository.updateSubAdminModules(
       userId,
-      actor.isSuperAdmin ? null : actor.userId,
+      actor.isSuperAdmin ? null : actor.ownerAdminId || actor.userId,
       allowedModules,
     );
     if (!updated) {

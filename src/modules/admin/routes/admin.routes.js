@@ -4,7 +4,7 @@ const {
   PlatformController,
 } = require("../../platform/controllers/platform.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { allowRoles } = require("../../../shared/middleware/access");
+const { allowRoles, allowPermissions } = require("../../../shared/middleware/access");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
   checkInput,
@@ -117,19 +117,22 @@ adminRoutes.get(
 );
 adminRoutes.post(
   "/access/sub-admins",
-  allowRoles(ROLES.ADMIN),
+  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
+  allowPermissions("rbac:add"),
   checkInput(createPlatformSubAdminSchema),
   catchErrors(adminController.createPlatformSubAdmin),
 );
 adminRoutes.get(
   "/access/sub-admins",
-  allowRoles(ROLES.ADMIN),
+  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
+  allowPermissions("rbac:view"),
   checkInput(listPlatformSubAdminsSchema),
   catchErrors(adminController.listPlatformSubAdmins),
 );
 adminRoutes.patch(
   "/access/sub-admins/:userId/modules",
-  allowRoles(ROLES.ADMIN),
+  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
+  allowPermissions("rbac:update"),
   checkInput(updatePlatformSubAdminModulesSchema),
   catchErrors(adminController.updatePlatformSubAdminModules),
 );
