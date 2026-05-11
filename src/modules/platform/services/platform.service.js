@@ -27,6 +27,32 @@ class PlatformService {
     return category;
   }
 
+  normalizeCategoryAttributes(category = {}) {
+    if (Array.isArray(category.attributeSchema) && category.attributeSchema.length) {
+      return category.attributeSchema;
+    }
+    const legacy = category.attributesSchema || {};
+    return Object.keys(legacy).map((key) => ({
+      key,
+      label: key,
+      type: Array.isArray(legacy[key]) ? "multi_select" : "text",
+      required: false,
+      options: Array.isArray(legacy[key]) ? legacy[key] : [],
+      isVariantAttribute: false,
+      isFilterable: false,
+      isSearchable: false,
+    }));
+  }
+
+  async getCategoryAttributes(categoryKey) {
+    const category = await this.getCategory(categoryKey);
+    return {
+      categoryKey: category.categoryKey,
+      title: category.title,
+      attributeSchema: this.normalizeCategoryAttributes(category),
+    };
+  }
+
   async listCategories(query) {
     const pagination = getPage(query);
     const filter = {};

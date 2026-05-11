@@ -6,19 +6,96 @@ const { remember } = require("../../../shared/tools/cache");
 const { AppError } = require("../../../shared/errors/app-error");
 const { PRODUCT_STATUS } = require("../../../shared/domain/commerce-constants");
 const { logger } = require("../../../shared/logger/logger");
+const { PlatformRepository } = require("../../platform/repositories/platform.repository");
 
 class ProductService {
-  constructor({ productRepository = new ProductRepository() } = {}) {
+  constructor({
+    productRepository = new ProductRepository(),
+    platformRepository = new PlatformRepository(),
+  } = {}) {
     this.productRepository = productRepository;
+    this.platformRepository = platformRepository;
+  }
+
+  normalizeCategoryAttributes(category = {}) {
+    if (Array.isArray(category.attributeSchema) && category.attributeSchema.length) {
+      return category.attributeSchema;
+    }
+    const legacy = category.attributesSchema || {};
+    return Object.keys(legacy).map((key) => ({
+      key,
+      type: Array.isArray(legacy[key]) ? "multi_select" : "text",
+      required: false,
+      options: Array.isArray(legacy[key]) ? legacy[key] : [],
+    }));
+  }
+
+  validateDynamicAttributes(attributeSchema = [], attributes = {}) {
+    const normalizedAttributes =
+      attributes instanceof Map ? Object.fromEntries(attributes) : attributes;
+    for (const field of attributeSchema) {
+      const value = normalizedAttributes?.[field.key];
+      if (field.required && (value === undefined || value === null || value === "")) {
+        throw new AppError(`Attribute '${field.key}' is required`, 400);
+      }
+      if (value === undefined || value === null) continue;
+      if (field.type === "number" && Number.isNaN(Number(value))) {
+        throw new AppError(`Attribute '${field.key}' must be a number`, 400);
+      }
+      if (field.type === "boolean" && typeof value !== "boolean") {
+        throw new AppError(`Attribute '${field.key}' must be boolean`, 400);
+      }
+      if (field.type === "select" && Array.isArray(field.options) && field.options.length && !field.options.includes(String(value))) {
+        throw new AppError(`Attribute '${field.key}' has invalid option`, 400);
+      }
+      if (field.type === "multi_select") {
+        if (!Array.isArray(value)) {
+          throw new AppError(`Attribute '${field.key}' must be an array`, 400);
+        }
+        if (Array.isArray(field.options) && field.options.length) {
+          const badValue = value.find((item) => !field.options.includes(String(item)));
+          if (badValue !== undefined) {
+            throw new AppError(`Attribute '${field.key}' has invalid option`, 400);
+          }
+        }
+      }
+    }
+  }
+
+  validateVariants(variants = []) {
+    const skus = new Set();
+    for (const variant of variants) {
+      if (!variant?.sku) continue;
+      if (skus.has(variant.sku)) {
+        throw new AppError("Variant SKU must be unique", 400);
+      }
+      skus.add(variant.sku);
+      if (variant.stock !== undefined && Number(variant.stock) < 0) {
+        throw new AppError("Variant stock must be non-negative", 400);
+      }
+    }
   }
 
   async createProduct(payload, actor) {
+    const categoryKey = payload.categoryId || payload.category;
+    const category = await this.platformRepository.getCategory(categoryKey);
+    if (!category) {
+      throw new AppError("Category not found", 400);
+    }
+    this.validateDynamicAttributes(
+      this.normalizeCategoryAttributes(category),
+      payload.attributes || {},
+    );
+    this.validateVariants(payload.variants || []);
+
     const isSeller = actor.role === "seller";
     const status = isSeller ? PRODUCT_STATUS.PENDING_APPROVAL : payload.status || PRODUCT_STATUS.DRAFT;
+    const sellerId = isSeller ? actor.userId : payload.sellerId || actor.userId;
     const product = await this.productRepository.create({
       ...payload,
+      categoryId: payload.categoryId || payload.category,
       status,
-      sellerId: actor.userId,
+      sellerId,
       slug: slugify(`${payload.title}-${Date.now()}`, { lower: true, strict: true }),
       moderation: {
         submittedAt: new Date(),
@@ -67,7 +144,22 @@ class ProductService {
       throw new AppError("Permission denied", 403);
     }
 
-    const updatedProduct = await this.productRepository.update(productId, payload);
+    const categoryKey = payload.categoryId || payload.category || existingProduct.categoryId || existingProduct.category;
+    const category = await this.platformRepository.getCategory(categoryKey);
+    if (!category) {
+      throw new AppError("Category not found", 400);
+    }
+    const nextAttributes = payload.attributes || existingProduct.attributes || {};
+    this.validateDynamicAttributes(this.normalizeCategoryAttributes(category), nextAttributes);
+    this.validateVariants(payload.variants || existingProduct.variants || []);
+
+    const updatePayload = {
+      ...payload,
+      ...(payload.categoryId || payload.category
+        ? { categoryId: payload.categoryId || payload.category }
+        : {}),
+    };
+    const updatedProduct = await this.productRepository.update(productId, updatePayload);
 
     if (updatedProduct.status === PRODUCT_STATUS.ACTIVE) {
       try {
@@ -115,6 +207,17 @@ class ProductService {
     if (query.sku) {
       filter.sku = query.sku;
     }
+    if (query.sellerId) {
+      filter.sellerId = query.sellerId;
+    }
+    if (query.q || query.keyWord || query.search) {
+      const q = query.q || query.keyWord || query.search;
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { description: { $regex: q, $options: "i" } },
+        { sku: { $regex: q, $options: "i" } },
+      ];
+    }
     if (query.country) {
       filter["origin.country"] = query.country;
     }
@@ -125,7 +228,13 @@ class ProductService {
       filter["origin.city"] = query.city;
     }
 
-    filter.status = query.status || PRODUCT_STATUS.ACTIVE;
+    if (query.includeAllStatuses === true || query.includeAllStatuses === "true") {
+      if (query.status) {
+        filter.status = query.status;
+      }
+    } else {
+      filter.status = query.status || PRODUCT_STATUS.ACTIVE;
+    }
 
     return remember(`products:${JSON.stringify({ filter, pagination })}`, 60, () =>
       this.productRepository.paginate(filter, pagination),
@@ -190,6 +299,9 @@ class ProductService {
     const nextStatus = payload.status;
     const updatedProduct = await this.productRepository.reviewProduct(productId, {
       status: nextStatus,
+      approvedBy: nextStatus === PRODUCT_STATUS.ACTIVE ? actor.userId : null,
+      approvedAt: nextStatus === PRODUCT_STATUS.ACTIVE ? new Date() : null,
+      rejectionReason: nextStatus === PRODUCT_STATUS.REJECTED ? payload.rejectionReason || null : null,
       moderation: {
         ...(existingProduct.moderation || {}),
         reviewedAt: new Date(),

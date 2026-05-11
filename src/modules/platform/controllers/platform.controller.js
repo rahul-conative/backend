@@ -21,6 +21,11 @@ class PlatformController {
     res.json(okResponse(category));
   };
 
+  getCategoryAttributes = async (req, res) => {
+    const category = await this.platformService.getCategoryAttributes(req.params.categoryKey);
+    res.json(okResponse(category));
+  };
+
   listCategories = async (req, res) => {
     const result = await this.platformService.listCategories(req.query);
     res.json(okResponse(result.items, { total: result.total }));

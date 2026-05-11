@@ -19,10 +19,22 @@ class PlatformRepository {
   }
 
   async updateCategory(categoryKey, payload) {
+    if (mongoose.Types.ObjectId.isValid(String(categoryKey))) {
+      return CategoryTreeModel.findOneAndUpdate(
+        { $or: [{ _id: categoryKey }, { categoryKey }] },
+        payload,
+        { new: true },
+      );
+    }
     return CategoryTreeModel.findOneAndUpdate({ categoryKey }, payload, { new: true });
   }
 
   async getCategory(categoryKey) {
+    if (mongoose.Types.ObjectId.isValid(String(categoryKey))) {
+      return CategoryTreeModel.findOne({
+        $or: [{ _id: categoryKey }, { categoryKey }],
+      });
+    }
     return CategoryTreeModel.findOne({ categoryKey });
   }
 
@@ -35,6 +47,11 @@ class PlatformRepository {
   }
 
   async deleteCategory(categoryKey) {
+    if (mongoose.Types.ObjectId.isValid(String(categoryKey))) {
+      return CategoryTreeModel.findOneAndDelete({
+        $or: [{ _id: categoryKey }, { categoryKey }],
+      });
+    }
     return CategoryTreeModel.findOneAndDelete({ categoryKey });
   }
 

@@ -7,6 +7,23 @@ const categoryTreeSchema = new mongoose.Schema(
     parentKey: { type: String, default: null, index: true },
     level: { type: Number, default: 0, min: 0 },
     attributesSchema: { type: Object, default: {} },
+    attributeSchema: [
+      {
+        key: { type: String, required: true },
+        label: { type: String, required: true },
+        type: {
+          type: String,
+          enum: ["text", "number", "select", "multi_select", "boolean", "date"],
+          default: "text",
+        },
+        required: { type: Boolean, default: false },
+        options: [{ type: String }],
+        unit: { type: String, default: null },
+        isVariantAttribute: { type: Boolean, default: false },
+        isFilterable: { type: Boolean, default: false },
+        isSearchable: { type: Boolean, default: false },
+      },
+    ],
     active: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
   },

@@ -1,5 +1,6 @@
 const express = require("express");
 const { AdminController } = require("../controllers/admin.controller");
+const { ProductController } = require("../../product/controllers/product.controller");
 const {
   PlatformController,
 } = require("../../platform/controllers/platform.controller");
@@ -25,6 +26,11 @@ const {
   updateUserSchema,
   deactivateUserSchema,
   updateVendorStatusSchema,
+  sellerParamSchema,
+  updateSellerKycStatusSchema,
+  updateSellerBankStatusSchema,
+  updateSellerOnboardingStatusSchema,
+  updateSellerGoLiveSchema,
   moderationQueueSchema,
   moderateProductSchema,
   listOrdersSchema,
@@ -89,10 +95,19 @@ const {
   listContentPagesSchema,
   contentPageSlugSchema,
 } = require("../../platform/validation/platform.validation");
+const {
+  createProductSchema,
+  updateProductSchema,
+  listProductSchema,
+  reviewProductSchema,
+  rejectProductSchema,
+  productParamSchema,
+} = require("../../product/validation/product.validation");
 
 const adminRoutes = express.Router();
 const adminController = new AdminController();
 const platformController = new PlatformController();
+const productController = new ProductController();
 
 adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
 adminRoutes.use("/referral", referralAdminRoutes);
@@ -172,15 +187,110 @@ adminRoutes.get(
   checkInput(listVendorsSchema),
   catchErrors(adminController.listVendors),
 );
+adminRoutes.get(
+  "/sellers",
+  checkInput(listVendorsSchema),
+  catchErrors(adminController.listVendors),
+);
+adminRoutes.get(
+  "/sellers/:sellerId",
+  checkInput(sellerParamSchema),
+  catchErrors(adminController.getSeller),
+);
 adminRoutes.patch(
   "/vendors/:sellerId/status",
   checkInput(updateVendorStatusSchema),
   catchErrors(adminController.updateVendorStatus),
 );
+adminRoutes.patch(
+  "/sellers/:sellerId/status",
+  checkInput(updateVendorStatusSchema),
+  catchErrors(adminController.updateVendorStatus),
+);
+adminRoutes.patch(
+  "/sellers/:sellerId/kyc/status",
+  checkInput(updateSellerKycStatusSchema),
+  catchErrors(adminController.updateSellerKycStatus),
+);
+adminRoutes.patch(
+  "/sellers/:sellerId/bank/status",
+  checkInput(updateSellerBankStatusSchema),
+  catchErrors(adminController.updateSellerBankStatus),
+);
+adminRoutes.patch(
+  "/sellers/:sellerId/onboarding/status",
+  checkInput(updateSellerOnboardingStatusSchema),
+  catchErrors(adminController.updateSellerOnboardingStatus),
+);
+adminRoutes.patch(
+  "/sellers/:sellerId/go-live",
+  checkInput(updateSellerGoLiveSchema),
+  catchErrors(adminController.updateSellerGoLiveStatus),
+);
 adminRoutes.get(
   "/products/moderation-queue",
   checkInput(moderationQueueSchema),
   catchErrors(adminController.moderationQueue),
+);
+adminRoutes.get(
+  "/products",
+  checkInput(listProductSchema),
+  catchErrors((req, res) => {
+    req.query = { ...req.query, includeAllStatuses: "true" };
+    return productController.list(req, res);
+  }),
+);
+adminRoutes.post(
+  "/products",
+  checkInput(createProductSchema),
+  catchErrors(productController.create),
+);
+adminRoutes.get(
+  "/products/:productId",
+  checkInput(productParamSchema),
+  catchErrors(productController.getOne),
+);
+adminRoutes.patch(
+  "/products/:productId",
+  checkInput(updateProductSchema),
+  catchErrors(productController.update),
+);
+adminRoutes.delete(
+  "/products/:productId",
+  checkInput(productParamSchema),
+  catchErrors(productController.delete),
+);
+adminRoutes.patch(
+  "/products/:productId/status",
+  checkInput(reviewProductSchema),
+  catchErrors(productController.review),
+);
+adminRoutes.patch(
+  "/products/:productId/approve",
+  checkInput(productParamSchema),
+  catchErrors((req, res) => {
+    req.body = {
+      status: "active",
+      checklist: {
+        titleVerified: true,
+        categoryVerified: true,
+        complianceVerified: true,
+        mediaVerified: true,
+      },
+    };
+    return productController.review(req, res);
+  }),
+);
+adminRoutes.patch(
+  "/products/:productId/reject",
+  checkInput(rejectProductSchema),
+  catchErrors((req, res) => {
+    req.body = {
+      ...req.body,
+      status: "rejected",
+    };
+    return productController.review(req, res);
+  }),
 );
 adminRoutes.patch(
   "/products/:productId/moderate",
@@ -373,6 +483,11 @@ adminRoutes.get(
   "/platform/categories/:categoryKey",
   checkInput(categoryKeySchema),
   catchErrors(platformController.getCategory),
+);
+adminRoutes.get(
+  "/categories/:categoryKey/attributes",
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.getCategoryAttributes),
 );
 adminRoutes.patch(
   "/platform/categories/:categoryKey",

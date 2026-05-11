@@ -57,6 +57,49 @@ class AdminController {
     res.json(okResponse(seller));
   };
 
+  getSeller = async (req, res) => {
+    const seller = await this.adminService.getSeller(req.params.sellerId);
+    res.json(okResponse(seller));
+  };
+
+  updateSellerKycStatus = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const seller = await this.adminService.updateSellerKycStatus(
+      req.params.sellerId,
+      req.body,
+      actor,
+    );
+    res.json(okResponse(seller));
+  };
+
+  updateSellerBankStatus = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const seller = await this.adminService.updateSellerBankStatus(
+      req.params.sellerId,
+      req.body,
+      actor,
+    );
+    res.json(okResponse(seller));
+  };
+
+  updateSellerOnboardingStatus = async (req, res) => {
+    const seller = await this.adminService.updateSellerOnboardingStatus(
+      req.params.sellerId,
+      req.body,
+    );
+    res.json(okResponse(seller));
+  };
+
+  updateSellerGoLiveStatus = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const seller = await this.adminService.updateSellerGoLiveStatus(
+      req.params.sellerId,
+      req.body,
+      actor,
+    );
+    res.json(okResponse(seller));
+  };
+
   moderationQueue = async (req, res) => {
     const result = await this.adminService.listProductModerationQueue(
       req.query,

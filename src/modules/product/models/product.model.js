@@ -6,15 +6,27 @@ const productSchema = new mongoose.Schema(
     title: { type: String, required: true, index: true },
     slug: { type: String, required: true, unique: true },
     description: { type: String, required: true },
+    categoryId: { type: String, index: true },
     price: { type: Number, required: true, index: true },
     mrp: { type: Number, required: true },
     gstRate: { type: Number, required: true, default: 18 },
     currency: { type: String, default: "INR" },
     category: { type: String, required: true, index: true },
+    brand: { type: String, index: true },
     productFamilyCode: { type: String, index: true },
     sku: { type: String, index: true },
     color: { type: String, index: true },
-    attributes: { type: Object, default: {} },
+    attributes: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
+    variants: [
+      {
+        sku: { type: String, trim: true },
+        price: { type: Number },
+        mrp: { type: Number },
+        stock: { type: Number, min: 0, default: 0 },
+        attributes: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
+        images: [{ type: String }],
+      },
+    ],
     options: [
       {
         name: { type: String, required: true },
@@ -69,6 +81,9 @@ const productSchema = new mongoose.Schema(
         mediaVerified: { type: Boolean, default: false },
       },
     },
+    approvedBy: { type: String },
+    approvedAt: { type: Date },
+    rejectionReason: { type: String },
   },
   { timestamps: true },
 );

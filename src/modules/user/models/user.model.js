@@ -26,6 +26,7 @@ const sellerBankDetailsSchema = new mongoose.Schema(
 
 const sellerProfileSchema = new mongoose.Schema(
   {
+    businessName: String,
     displayName: String,
     legalBusinessName: String,
     description: String,
@@ -35,6 +36,7 @@ const sellerProfileSchema = new mongoose.Schema(
     registrationNumber: String,
     gstNumber: String,
     panNumber: String,
+    profileCompleted: { type: Boolean, default: false },
     aadhaarNumber: String,
     dateOfBirth: Date,
     businessWebsite: String,
@@ -42,6 +44,27 @@ const sellerProfileSchema = new mongoose.Schema(
     bankDetails: sellerBankDetailsSchema,
     businessAddress: sellerAddressSchema,
     pickupAddress: sellerAddressSchema,
+    kycStatus: {
+      type: String,
+      enum: ["not_submitted", "submitted", "under_review", "verified", "rejected"],
+      default: "not_submitted",
+    },
+    bankVerificationStatus: {
+      type: String,
+      enum: ["not_submitted", "submitted", "verified", "rejected"],
+      default: "not_submitted",
+    },
+    goLiveStatus: {
+      type: String,
+      enum: ["pending", "ready", "live", "blocked"],
+      default: "pending",
+    },
+    rejectionReason: String,
+    bankRejectionReason: String,
+    verifiedBy: String,
+    verifiedAt: Date,
+    goLiveApprovedBy: String,
+    goLiveApprovedAt: Date,
     onboardingStatus: {
       type: String,
       default: "initiated",

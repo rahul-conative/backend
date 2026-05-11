@@ -81,13 +81,16 @@ class AdminRepository {
     return { items, total };
   }
 
-  async listUsers({ q = "", role = null, accountStatus = null, page = 1, limit = 50 } = {}) {
+  async listUsers({ q = "", role = null, accountStatus = null, emailVerified = null, page = 1, limit = 50 } = {}) {
     const filter = {};
     if (role) {
       filter.role = role;
     }
     if (accountStatus) {
       filter.accountStatus = accountStatus;
+    }
+    if (emailVerified !== null && emailVerified !== undefined) {
+      filter.emailVerified = emailVerified === true || emailVerified === "true";
     }
     if (q) {
       filter.$or = [
@@ -101,7 +104,7 @@ class AdminRepository {
     const skip = (Number(page) - 1) * Number(limit);
     const [items, total] = await Promise.all([
       UserModel.find(filter)
-        .select("email phone role accountStatus profile sellerProfile createdAt updatedAt lastLoginAt")
+        .select("email phone role accountStatus emailVerified profile sellerProfile createdAt updatedAt lastLoginAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -181,6 +184,20 @@ class AdminRepository {
       },
       { new: true },
     ).select("-passwordHash -refreshSessions.tokenHash");
+  }
+
+  async reviewSellerKycByAdmin(sellerId, payload) {
+    const { rows } = await postgresPool.query(
+      `UPDATE seller_kyc
+       SET verification_status = $2,
+           rejection_reason = $3,
+           reviewed_by = $4,
+           reviewed_at = NOW()
+       WHERE seller_id = $1
+       RETURNING *`,
+      [sellerId, payload.kycStatus, payload.rejectionReason || null, payload.reviewedBy || null],
+    );
+    return rows[0] || null;
   }
 
   async listProductsForModeration({ status = "pending_approval", category = null, limit = 50, page = 1 } = {}) {

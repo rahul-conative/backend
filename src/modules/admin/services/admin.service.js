@@ -20,7 +20,6 @@ const {
   cleanModuleName,
 } = require("../../../shared/auth/module-access");
 const {
-  SELLER_ONBOARDING_STATUS,
   makeSellerOnboardingState,
 } = require("../../../shared/domain/seller-onboarding");
 
@@ -256,18 +255,6 @@ class AdminService {
       kyc,
     });
 
-    if (
-      requestedAccountStatus === "active" &&
-      onboardingState.onboardingStatus !==
-        SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
-    ) {
-      throw new AppError("Seller onboarding is not ready for go-live", 400, {
-        onboardingStatus: onboardingState.onboardingStatus,
-        checklist: onboardingState.checklist,
-        kycStatus: onboardingState.kycStatus,
-      });
-    }
-
     const seller = await this.adminRepository.updateVendorStatus(sellerId, {
       accountStatus: requestedAccountStatus,
       onboardingStatus: onboardingState.onboardingStatus,
@@ -276,6 +263,107 @@ class AdminService {
       throw new AppError("Seller not found", 404);
     }
     return this.enrichSellerForAdmin(seller, kyc);
+  }
+
+  async getSeller(sellerId) {
+    const user = await this.adminRepository.getUserById(sellerId);
+    if (!user || user.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+    const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
+    return this.enrichSellerForAdmin(user, kycBySellerId.get(String(sellerId)) || null);
+  }
+
+  async updateSellerKycStatus(sellerId, payload, actor = {}) {
+    if (payload.kycStatus === "rejected" && !payload.rejectionReason) {
+      throw new AppError("Rejection reason is required when KYC is rejected", 400);
+    }
+    const seller = await this.adminRepository.getUserById(sellerId);
+    if (!seller || seller.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+
+    await this.adminRepository.reviewSellerKycByAdmin(sellerId, {
+      ...payload,
+      reviewedBy: actor.userId || null,
+    });
+
+    const nextSellerProfile = {
+      ...(seller.sellerProfile || {}),
+      kycStatus: payload.kycStatus,
+      rejectionReason: payload.kycStatus === "rejected" ? payload.rejectionReason || null : null,
+      verifiedBy: payload.kycStatus === "verified" ? actor.userId || null : null,
+      verifiedAt: payload.kycStatus === "verified" ? new Date() : null,
+    };
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    return this.getSeller(sellerId);
+  }
+
+  async updateSellerBankStatus(sellerId, payload, actor = {}) {
+    if (payload.bankVerificationStatus === "rejected" && !payload.bankRejectionReason) {
+      throw new AppError("Bank rejection reason is required when bank verification is rejected", 400);
+    }
+    const seller = await this.adminRepository.getUserById(sellerId);
+    if (!seller || seller.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+    const nextSellerProfile = {
+      ...(seller.sellerProfile || {}),
+      bankVerificationStatus: payload.bankVerificationStatus,
+      bankRejectionReason:
+        payload.bankVerificationStatus === "rejected" ? payload.bankRejectionReason || null : null,
+      verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : seller?.sellerProfile?.verifiedBy || null,
+      verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : seller?.sellerProfile?.verifiedAt || null,
+    };
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    return this.getSeller(sellerId);
+  }
+
+  async updateSellerOnboardingStatus(sellerId, payload) {
+    const seller = await this.adminRepository.getUserById(sellerId);
+    if (!seller || seller.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+    const nextSellerProfile = {
+      ...(seller.sellerProfile || {}),
+      onboardingStatus: payload.onboardingStatus,
+    };
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    return this.getSeller(sellerId);
+  }
+
+  async updateSellerGoLiveStatus(sellerId, payload, actor = {}) {
+    const seller = await this.adminRepository.getUserById(sellerId);
+    if (!seller || seller.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+    const profile = seller.sellerProfile || {};
+    const accountStatus = seller.accountStatus;
+    const profileCompleted =
+      profile.profileCompleted === true ||
+      profile.onboardingChecklist?.profileCompleted === true ||
+      Boolean(profile.displayName && profile.legalBusinessName && profile.supportEmail && profile.supportPhone);
+    const canGoLive =
+      (profile.kycStatus === "verified" || profile.kycStatus === "approved") &&
+      profile.bankVerificationStatus === "verified" &&
+      profileCompleted &&
+      accountStatus === "active";
+
+    if (payload.goLiveStatus === "live" && !canGoLive) {
+      throw new AppError(
+        "Seller can go live only when KYC and bank are verified, profile is completed, and account is active",
+        400,
+      );
+    }
+
+    const nextSellerProfile = {
+      ...profile,
+      goLiveStatus: payload.goLiveStatus,
+      goLiveApprovedBy: payload.goLiveStatus === "live" ? actor.userId || null : null,
+      goLiveApprovedAt: payload.goLiveStatus === "live" ? new Date() : null,
+    };
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    return this.getSeller(sellerId);
   }
 
   async listProductModerationQueue(query) {

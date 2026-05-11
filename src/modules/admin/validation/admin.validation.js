@@ -22,6 +22,9 @@ const sellerOnboardingStatuses = [
   "ready_for_go_live",
   "rejected",
 ];
+const sellerKycStatuses = ["not_submitted", "submitted", "under_review", "verified", "rejected"];
+const sellerBankStatuses = ["not_submitted", "submitted", "verified", "rejected"];
+const sellerGoLiveStatuses = ["pending", "ready", "live", "blocked"];
 
 const adminOverviewSchema = Joi.object({
   body: Joi.object({}).required(),
@@ -54,6 +57,7 @@ const listUsersSchema = Joi.object({
       "super-admin",
     ),
     accountStatus: Joi.string().valid(...accountStatuses),
+    emailVerified: Joi.boolean(),
     page: Joi.number().integer().min(1),
     limit: Joi.number().integer().min(1).max(100),
   }).required(),
@@ -169,6 +173,48 @@ const updateVendorStatusSchema = Joi.object({
   params: Joi.object({
     sellerId: Joi.string().required(),
   }).required(),
+});
+
+const sellerParamSchema = Joi.object({
+  body: Joi.object({}).default({}),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    sellerId: Joi.string().required(),
+  }).required(),
+});
+
+const updateSellerKycStatusSchema = Joi.object({
+  body: Joi.object({
+    kycStatus: Joi.string().valid(...sellerKycStatuses).required(),
+    rejectionReason: Joi.string().allow("", null),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ sellerId: Joi.string().required() }).required(),
+});
+
+const updateSellerBankStatusSchema = Joi.object({
+  body: Joi.object({
+    bankVerificationStatus: Joi.string().valid(...sellerBankStatuses).required(),
+    bankRejectionReason: Joi.string().allow("", null),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ sellerId: Joi.string().required() }).required(),
+});
+
+const updateSellerOnboardingStatusSchema = Joi.object({
+  body: Joi.object({
+    onboardingStatus: Joi.string().required(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ sellerId: Joi.string().required() }).required(),
+});
+
+const updateSellerGoLiveSchema = Joi.object({
+  body: Joi.object({
+    goLiveStatus: Joi.string().valid(...sellerGoLiveStatuses).required(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ sellerId: Joi.string().required() }).required(),
 });
 
 const moderationQueueSchema = Joi.object({
@@ -668,6 +714,11 @@ module.exports = {
   updateUserSchema,
   deactivateUserSchema,
   updateVendorStatusSchema,
+  sellerParamSchema,
+  updateSellerKycStatusSchema,
+  updateSellerBankStatusSchema,
+  updateSellerOnboardingStatusSchema,
+  updateSellerGoLiveSchema,
   moderationQueueSchema,
   moderateProductSchema,
   listOrdersSchema,

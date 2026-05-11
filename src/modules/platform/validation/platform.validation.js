@@ -12,6 +12,23 @@ const createCategorySchema = Joi.object({
     parentKey: Joi.string().allow(null, ""),
     level: Joi.number().integer().min(0).default(0),
     attributesSchema: Joi.object().default({}),
+    attributeSchema: Joi.array()
+      .items(
+        Joi.object({
+          key: Joi.string().trim().required(),
+          label: Joi.string().trim().required(),
+          type: Joi.string()
+            .valid("text", "number", "select", "multi_select", "boolean", "date")
+            .default("text"),
+          required: Joi.boolean().default(false),
+          options: Joi.array().items(Joi.string().trim()).default([]),
+          unit: Joi.string().allow("", null),
+          isVariantAttribute: Joi.boolean().default(false),
+          isFilterable: Joi.boolean().default(false),
+          isSearchable: Joi.boolean().default(false),
+        }),
+      )
+      .default([]),
     active: Joi.boolean().default(true),
     sortOrder: Joi.number().integer().default(0),
   }).required(),
@@ -25,6 +42,19 @@ const updateCategorySchema = Joi.object({
     parentKey: Joi.string().allow(null, ""),
     level: Joi.number().integer().min(0),
     attributesSchema: Joi.object(),
+    attributeSchema: Joi.array().items(
+      Joi.object({
+        key: Joi.string().trim().required(),
+        label: Joi.string().trim().required(),
+        type: Joi.string().valid("text", "number", "select", "multi_select", "boolean", "date"),
+        required: Joi.boolean(),
+        options: Joi.array().items(Joi.string().trim()),
+        unit: Joi.string().allow("", null),
+        isVariantAttribute: Joi.boolean(),
+        isFilterable: Joi.boolean(),
+        isSearchable: Joi.boolean(),
+      }),
+    ),
     active: Joi.boolean(),
     sortOrder: Joi.number().integer(),
   }).required(),

@@ -37,6 +37,11 @@ const platformController = new PlatformController();
 
 platformRoutes.get("/categories", checkInput(listCategoriesSchema), catchErrors(platformController.listCategories));
 platformRoutes.get("/categories/:categoryKey", checkInput(categoryKeySchema), catchErrors(platformController.getCategory));
+platformRoutes.get(
+  "/categories/:categoryKey/attributes",
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.getCategoryAttributes),
+);
 platformRoutes.post(
   "/categories",
   authenticate,
