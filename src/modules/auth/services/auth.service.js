@@ -90,6 +90,14 @@ class AuthService {
     return user?.sellerProfile?.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE;
   }
 
+  async getSellerLoginFlowState(user) {
+    if (!user || user.role !== ROLES.SELLER) {
+      return null;
+    }
+
+    return this.getAuthStatus(user.id);
+  }
+
   hasCompleteSellerProfile(sellerProfile = {}) {
     return hasCompleteSellerProfileForOnboarding(sellerProfile);
   }
@@ -115,6 +123,7 @@ class AuthService {
   }
 
   async makeOnboardingResponse(user) {
+    const flowState = await this.getAuthStatus(user.id);
     const onboardingToken = makeOnboardingToken({
       sub: user.id,
       email: user.email,
@@ -124,9 +133,9 @@ class AuthService {
 
     return {
       user: { id: user.id, email: user.email, role: user.role },
-      requiresOnboarding: true,
+      requiresOnboarding: Boolean(flowState.requiresOnboarding),
       onboardingToken,
-      flowState: await this.getAuthStatus(user.id),
+      flowState,
     };
   }
 
@@ -368,8 +377,8 @@ class AuthService {
       throw new AppError("Invalid credentials", 401);
     }
 
-    // Sellers must complete onboarding before full app access.
-    if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
+    const sellerFlowState = await this.getSellerLoginFlowState(user);
+    if (sellerFlowState?.requiresOnboarding) {
       return this.makeOnboardingResponse(user);
     }
 
@@ -441,7 +450,8 @@ class AuthService {
         user = await this.authRepository.linkSocialProvider(user.id, providerProfile);
       }
 
-      if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
+      const sellerFlowState = await this.getSellerLoginFlowState(user);
+      if (sellerFlowState?.requiresOnboarding) {
         return this.makeOnboardingResponse(user);
       }
 
@@ -543,7 +553,8 @@ class AuthService {
       if (user.accountStatus === "suspended") {
         throw new AppError("Account is suspended. Please contact support.", 403);
       }
-      if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
+      const sellerFlowState = await this.getSellerLoginFlowState(user);
+      if (sellerFlowState?.requiresOnboarding) {
         return this.makeOnboardingResponse(user);
       }
       if (user.accountStatus !== "active") {
@@ -649,7 +660,8 @@ class AuthService {
       throw new AppError("Invalid refresh token", 401);
     }
 
-    if (user.role === ROLES.SELLER && !this.isSellerOnboardingComplete(user)) {
+    const sellerFlowState = await this.getSellerLoginFlowState(user);
+    if (sellerFlowState?.requiresOnboarding) {
       return this.makeOnboardingResponse(user);
     }
 

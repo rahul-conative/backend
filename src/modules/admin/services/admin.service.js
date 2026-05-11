@@ -283,17 +283,30 @@ class AdminService {
       throw new AppError("Seller not found", 404);
     }
 
-    await this.adminRepository.reviewSellerKycByAdmin(sellerId, {
+    const reviewedKyc = await this.adminRepository.reviewSellerKycByAdmin(sellerId, {
       ...payload,
       reviewedBy: actor.userId || null,
     });
 
-    const nextSellerProfile = {
+    const nextSellerProfileBase = {
       ...(seller.sellerProfile || {}),
       kycStatus: payload.kycStatus,
       rejectionReason: payload.kycStatus === "rejected" ? payload.rejectionReason || null : null,
       verifiedBy: payload.kycStatus === "verified" ? actor.userId || null : null,
       verifiedAt: payload.kycStatus === "verified" ? new Date() : null,
+    };
+    const onboardingState = makeSellerOnboardingState({
+      sellerProfile: nextSellerProfileBase,
+      user: seller,
+      kyc: reviewedKyc || {
+        verification_status: payload.kycStatus,
+        rejection_reason: payload.rejectionReason || null,
+      },
+    });
+    const nextSellerProfile = {
+      ...nextSellerProfileBase,
+      onboardingChecklist: onboardingState.checklist,
+      onboardingStatus: onboardingState.onboardingStatus,
     };
     await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
     return this.getSeller(sellerId);
@@ -307,13 +320,24 @@ class AdminService {
     if (!seller || seller.role !== ROLES.SELLER) {
       throw new AppError("Seller not found", 404);
     }
-    const nextSellerProfile = {
+    const nextSellerProfileBase = {
       ...(seller.sellerProfile || {}),
       bankVerificationStatus: payload.bankVerificationStatus,
       bankRejectionReason:
         payload.bankVerificationStatus === "rejected" ? payload.bankRejectionReason || null : null,
       verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : seller?.sellerProfile?.verifiedBy || null,
       verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : seller?.sellerProfile?.verifiedAt || null,
+    };
+    const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
+    const onboardingState = makeSellerOnboardingState({
+      sellerProfile: nextSellerProfileBase,
+      user: seller,
+      kyc: kycBySellerId.get(String(sellerId)) || null,
+    });
+    const nextSellerProfile = {
+      ...nextSellerProfileBase,
+      onboardingChecklist: onboardingState.checklist,
+      onboardingStatus: onboardingState.onboardingStatus,
     };
     await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
     return this.getSeller(sellerId);
@@ -902,12 +926,13 @@ class AdminService {
     };
   }
 
-  sanitizeModules(modules) {
+  sanitizeModules(modules, role = ROLES.SUB_ADMIN) {
+    const assignableModules = this.getAssignableModuleSlugs(role);
     const normalized = Array.from(
       new Set((modules || []).map(cleanModuleName).filter(Boolean)),
     );
     return normalized.filter((moduleName) =>
-      DEFAULT_PLATFORM_MODULES.includes(moduleName),
+      assignableModules.includes(moduleName),
     );
   }
 
@@ -1042,7 +1067,7 @@ class AdminService {
     if (existing) {
       throw new AppError("User already exists", 409);
     }
-    const allowedModules = this.sanitizeModules(payload.allowedModules);
+    const allowedModules = this.sanitizeModules(payload.allowedModules, ROLES.SUB_ADMIN);
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
@@ -1095,14 +1120,22 @@ class AdminService {
   }
 
   async listPlatformSubAdmins(query, actor) {
-    const ownerAdminId = actor.isSuperAdmin
+    const ownerAdminId = actor.isSuperAdmin || actor.role === ROLES.ADMIN
       ? query.ownerAdminId || null
       : actor.ownerAdminId || actor.userId;
     return this.adminRepository.listSubAdmins({ ownerAdminId });
   }
 
   async updatePlatformSubAdminModules(userId, payload, actor) {
-    let allowedModules = this.sanitizeModules(payload.allowedModules);
+    const existingUser = await this.adminRepository.getUserById(userId);
+    if (!existingUser || ![ROLES.SUB_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(existingUser.role)) {
+      throw new AppError("Sub-admin not found", 404);
+    }
+    if (existingUser.role === ROLES.SELLER_SUB_ADMIN && actor.role === ROLES.SUB_ADMIN && !actor.isSuperAdmin) {
+      throw new AppError("Forbidden", 403);
+    }
+
+    let allowedModules = this.sanitizeModules(payload.allowedModules, existingUser.role);
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
@@ -1122,8 +1155,11 @@ class AdminService {
     modulePermissions = constrained.modulePermissions;
     const updated = await this.adminRepository.updateSubAdminModules(
       userId,
-      actor.isSuperAdmin ? null : actor.ownerAdminId || actor.userId,
+      actor.isSuperAdmin || actor.role === ROLES.ADMIN || existingUser.role === ROLES.SELLER_SUB_ADMIN
+        ? null
+        : actor.ownerAdminId || actor.userId,
       allowedModules,
+      [existingUser.role],
     );
     if (!updated) {
       throw new AppError("Sub-admin not found", 404);

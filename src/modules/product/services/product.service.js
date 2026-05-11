@@ -76,7 +76,39 @@ class ProductService {
     }
   }
 
+  normalizeImages(images = []) {
+    if (!Array.isArray(images)) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(
+        images
+          .map((image) => (typeof image === "string" ? image.trim() : ""))
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  normalizeProductMedia(payload = {}) {
+    const normalized = { ...payload };
+
+    if (Object.prototype.hasOwnProperty.call(payload, "images")) {
+      normalized.images = this.normalizeImages(payload.images);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "variants")) {
+      normalized.variants = (payload.variants || []).map((variant) => ({
+        ...variant,
+        images: this.normalizeImages(variant.images),
+      }));
+    }
+
+    return normalized;
+  }
+
   async createProduct(payload, actor) {
+    payload = this.normalizeProductMedia(payload);
     const categoryKey = payload.categoryId || payload.category;
     const category = await this.platformRepository.getCategory(categoryKey);
     if (!category) {
@@ -88,9 +120,9 @@ class ProductService {
     );
     this.validateVariants(payload.variants || []);
 
-    const isSeller = actor.role === "seller";
+    const isSeller = actor.role === "seller" || actor.role === "seller-sub-admin";
     const status = isSeller ? PRODUCT_STATUS.PENDING_APPROVAL : payload.status || PRODUCT_STATUS.DRAFT;
-    const sellerId = isSeller ? actor.userId : payload.sellerId || actor.userId;
+    const sellerId = isSeller ? actor.ownerSellerId || actor.userId : payload.sellerId || actor.userId;
     const product = await this.productRepository.create({
       ...payload,
       categoryId: payload.categoryId || payload.category,
@@ -140,9 +172,14 @@ class ProductService {
       throw new AppError("Product not found", 404);
     }
 
-    if (actor.role === "seller" && existingProduct.sellerId !== actor.userId) {
+    if (
+      (actor.role === "seller" || actor.role === "seller-sub-admin") &&
+      existingProduct.sellerId !== (actor.ownerSellerId || actor.userId)
+    ) {
       throw new AppError("Permission denied", 403);
     }
+
+    payload = this.normalizeProductMedia(payload);
 
     const categoryKey = payload.categoryId || payload.category || existingProduct.categoryId || existingProduct.category;
     const category = await this.platformRepository.getCategory(categoryKey);

@@ -24,6 +24,7 @@ const dynamicPricingRoutes = require("../modules/pricing/routes/dynamic-pricing.
 const commissionRoutes = require("../modules/seller/routes/commission.routes");
 const notificationPreferenceRoutes = require("../modules/notification/routes/notification-preference.routes");
 const { deliveryRoutes } = require("../modules/delivery/routes/delivery.routes");
+const { fileUploaderRoutes } = require("../shared/routes/file-uploader.routes");
 const { metaRoutes } = require("../shared/routes/meta.routes");
 
 function registerRoutes(app) {
@@ -54,6 +55,7 @@ function registerRoutes(app) {
   app.use(`${env.apiPrefix}/sellers/commissions`, commissionRoutes);
   app.use(`${env.apiPrefix}/notifications`, notificationPreferenceRoutes);
   app.use(`${env.apiPrefix}/delivery`, deliveryRoutes);
+  app.use(`${env.apiPrefix}/file-uploader`, fileUploaderRoutes);
   app.use(`${env.apiPrefix}/meta`, metaRoutes);
 }
 

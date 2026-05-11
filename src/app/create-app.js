@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
@@ -45,6 +46,7 @@ async function createApp() {
     }),
   );
   app.use(express.urlencoded({ extended: true, limit: env.upload.jsonBodyLimit }));
+  app.use("/uploads", express.static(path.resolve(__dirname, "../../uploads")));
   app.use(auditLog);
   app.use(createMetricsMiddleware()); // Track performance metrics
 

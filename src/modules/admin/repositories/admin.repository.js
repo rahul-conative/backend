@@ -448,18 +448,18 @@ class AdminRepository {
     return UserModel.findOne({ email });
   }
 
-  async listSubAdmins({ ownerAdminId = null } = {}) {
-    const filter = { role: "sub-admin" };
+  async listSubAdmins({ ownerAdminId = null, roles = ["sub-admin", "seller-sub-admin"] } = {}) {
+    const filter = { role: { $in: roles } };
     if (ownerAdminId) {
       filter.ownerAdminId = ownerAdminId;
     }
     return UserModel.find(filter)
-      .select("email phone role profile accountStatus allowedModules ownerAdminId createdAt updatedAt")
+      .select("email phone role profile accountStatus allowedModules ownerAdminId ownerSellerId createdAt updatedAt")
       .sort({ createdAt: -1 });
   }
 
-  async updateSubAdminModules(userId, ownerAdminId, allowedModules) {
-    const filter = { _id: userId, role: "sub-admin" };
+  async updateSubAdminModules(userId, ownerAdminId, allowedModules, roles = ["sub-admin", "seller-sub-admin"]) {
+    const filter = { _id: userId, role: { $in: roles } };
     if (ownerAdminId) {
       filter.ownerAdminId = ownerAdminId;
     }
@@ -468,7 +468,7 @@ class AdminRepository {
       filter,
       { $set: { allowedModules } },
       { new: true },
-    ).select("email phone role profile accountStatus allowedModules ownerAdminId createdAt updatedAt");
+    ).select("email phone role profile accountStatus allowedModules ownerAdminId ownerSellerId createdAt updatedAt");
   }
 
   async upsertFeatureFlag({ flagKey, description, enabled, rolloutPercentage, targetRules, actorId }) {

@@ -10,6 +10,8 @@ const { ContentPageModel } = require("../../src/modules/platform/models/content-
 const { ProductFamilyModel } = require("../../src/modules/platform/models/product-family.model");
 const { ProductVariantModel } = require("../../src/modules/platform/models/product-variant.model");
 const { ProductReviewModel } = require("../../src/modules/platform/models/product-review.model");
+const { HsnCodeModel } = require("../../src/modules/platform/models/hsn-code.model");
+const { GeographyModel } = require("../../src/modules/platform/models/geography.model");
 const { LoyaltyModel } = require("../../src/modules/loyalty/models/loyalty.model");
 const { RecommendationModel } = require("../../src/modules/recommendation/models/recommendation.model");
 const { DynamicPricingModel } = require("../../src/modules/pricing/models/dynamic-pricing.model");
@@ -48,7 +50,27 @@ async function seedMongo() {
       legalBusinessName: "Demo Seller Pvt Ltd",
       supportEmail: sellerEmail,
       supportPhone: "8888888888",
+      businessType: "private_limited",
+      gstNumber: "29ABCDE1234F1Z5",
+      panNumber: "ABCDE1234F",
+      kycStatus: "verified",
+      bankVerificationStatus: "verified",
+      goLiveStatus: "ready",
       onboardingStatus: "ready_for_go_live",
+      onboardingChecklist: {
+        profileCompleted: true,
+        kycSubmitted: true,
+        gstVerified: true,
+        bankLinked: true,
+        firstProductPublished: true,
+      },
+      bankDetails: {
+        accountHolderName: "Demo Seller Pvt Ltd",
+        accountNumber: "123456789012",
+        ifscCode: "HDFC0001234",
+        bankName: "HDFC Bank",
+        branchName: "Bengaluru",
+      },
     },
   });
 
@@ -97,6 +119,8 @@ async function seedMongo() {
   );
 
   await seedCategories();
+  await seedGeographies();
+  await seedHsnCodes();
   await seedCmsContent();
 
   await ProductFamilyModel.findOneAndUpdate(
@@ -252,11 +276,11 @@ async function seedMongo() {
 }
 
 async function findOrCreateUser(email, payload) {
-  const existing = await UserModel.findOne({ email });
-  if (existing) {
-    return existing;
-  }
-  return UserModel.create(payload);
+  return UserModel.findOneAndUpdate(
+    { email },
+    { $set: payload },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
 }
 
 async function seedCategories() {
@@ -404,6 +428,100 @@ async function seedCategories() {
             active: true,
           },
         },
+        { upsert: true, new: true },
+      ),
+    ),
+  );
+}
+
+async function seedGeographies() {
+  const geographies = [
+    {
+      countryCode: "IN",
+      countryName: "India",
+      active: true,
+      states: [
+        {
+          stateCode: "KA",
+          stateName: "Karnataka",
+          cities: ["Bengaluru", "Mysuru", "Mangalore"],
+        },
+        {
+          stateCode: "MH",
+          stateName: "Maharashtra",
+          cities: ["Mumbai", "Pune", "Nagpur"],
+        },
+      ],
+    },
+    {
+      countryCode: "US",
+      countryName: "United States",
+      active: true,
+      states: [
+        {
+          stateCode: "CA",
+          stateName: "California",
+          cities: ["Los Angeles", "San Francisco", "San Diego"],
+        },
+        {
+          stateCode: "NY",
+          stateName: "New York",
+          cities: ["New York", "Buffalo", "Rochester"],
+        },
+      ],
+    },
+  ];
+
+  await Promise.all(
+    geographies.map((geo) =>
+      GeographyModel.findOneAndUpdate(
+        { countryCode: geo.countryCode },
+        { $set: geo },
+        { upsert: true, new: true },
+      ),
+    ),
+  );
+}
+
+async function seedHsnCodes() {
+  const hsnCodes = [
+    {
+      code: "8471",
+      description: "Automatic data processing machines and units thereof",
+      gstRate: 18,
+      cessRate: 0,
+      taxType: "gst",
+      exempt: false,
+      category: "electronics",
+      active: true,
+    },
+    {
+      code: "8517",
+      description: "Telephone sets, including smartphones",
+      gstRate: 18,
+      cessRate: 0,
+      taxType: "gst",
+      exempt: false,
+      category: "electronics",
+      active: true,
+    },
+    {
+      code: "4202",
+      description: "Trunks, suitcases, and similar containers",
+      gstRate: 18,
+      cessRate: 0,
+      taxType: "gst",
+      exempt: false,
+      category: "fashion",
+      active: true,
+    },
+  ];
+
+  await Promise.all(
+    hsnCodes.map((item) =>
+      HsnCodeModel.findOneAndUpdate(
+        { code: item.code },
+        { $set: item },
         { upsert: true, new: true },
       ),
     ),
@@ -668,6 +786,38 @@ async function seedPostgres(context) {
   const paymentId = uuidv4();
   const walletId = uuidv4();
   const payoutId = uuidv4();
+
+  await postgresPool.query(
+    `INSERT INTO seller_kyc (
+      id, seller_id, pan_number, gst_number, aadhaar_number, legal_name, business_type,
+      verification_status, documents, rejection_reason, submitted_at, reviewed_by, reviewed_at
+    ) VALUES (
+      $1,$2,$3,$4,$5,$6,$7,'verified',$8,NULL,NOW(),$9,NOW()
+    )
+    ON CONFLICT (seller_id) DO UPDATE SET
+      pan_number = EXCLUDED.pan_number,
+      gst_number = EXCLUDED.gst_number,
+      aadhaar_number = EXCLUDED.aadhaar_number,
+      legal_name = EXCLUDED.legal_name,
+      business_type = EXCLUDED.business_type,
+      verification_status = EXCLUDED.verification_status,
+      documents = EXCLUDED.documents,
+      rejection_reason = NULL,
+      reviewed_by = EXCLUDED.reviewed_by,
+      reviewed_at = NOW(),
+      updated_at = NOW()`,
+    [
+      uuidv4(),
+      String(context.seller.id),
+      "ABCDE1234F",
+      "29ABCDE1234F1Z5",
+      null,
+      "Demo Seller Pvt Ltd",
+      "private_limited",
+      JSON.stringify({ source: "seed-script" }),
+      String(context.admin.id),
+    ],
+  );
 
   const existingOrder = await postgresPool.query("SELECT id FROM orders WHERE buyer_id = $1 LIMIT 1", [
     String(context.buyer.id),
