@@ -71,6 +71,7 @@ const createProductSchema = Joi.object({
     metadata: Joi.object().default({}),
     stock: Joi.number().integer().min(0).required(),
     images: Joi.array().items(Joi.string().uri()).default([]),
+    gstRate: Joi.number().min(0).max(100).default(18),
     status: Joi.string()
       .valid(...Object.values(PRODUCT_STATUS))
       .default(PRODUCT_STATUS.DRAFT),
@@ -142,6 +143,7 @@ const updateProductSchema = Joi.object({
     metadata: Joi.object(),
     stock: Joi.number().integer().min(0),
     images: Joi.array().items(Joi.string().uri()),
+    gstRate: Joi.number().min(0).max(100),
     status: Joi.string().valid(...Object.values(PRODUCT_STATUS)),
   }).required(),
   query: Joi.object({}).required(),

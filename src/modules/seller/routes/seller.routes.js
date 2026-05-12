@@ -132,6 +132,13 @@ sellerRoutes.patch(
   catchErrors(sellerController.updateSettings),
 );
 sellerRoutes.post(
+  "/me/kyc",
+  authenticate,
+  allowActions(ACTIONS.SELLER_KYC_SUBMIT),
+  checkInput(submitKycSchema),
+  catchErrors(sellerController.submitKyc),
+);
+sellerRoutes.post(
   "/me/kyc/documents",
   authenticate,
   allowActions(ACTIONS.SELLER_KYC_SUBMIT),

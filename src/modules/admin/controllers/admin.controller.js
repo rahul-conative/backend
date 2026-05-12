@@ -62,6 +62,11 @@ class AdminController {
     res.json(okResponse(seller));
   };
 
+  getSellerKyc = async (req, res) => {
+    const result = await this.adminService.getSellerKyc(req.params.sellerId);
+    res.json(okResponse(result));
+  };
+
   updateSellerKycStatus = async (req, res) => {
     const actor = getCurrentUser(req);
     const seller = await this.adminService.updateSellerKycStatus(

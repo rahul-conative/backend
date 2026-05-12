@@ -197,6 +197,11 @@ adminRoutes.get(
   checkInput(sellerParamSchema),
   catchErrors(adminController.getSeller),
 );
+adminRoutes.get(
+  "/sellers/:sellerId/kyc",
+  checkInput(sellerParamSchema),
+  catchErrors(adminController.getSellerKyc),
+);
 adminRoutes.patch(
   "/vendors/:sellerId/status",
   checkInput(updateVendorStatusSchema),

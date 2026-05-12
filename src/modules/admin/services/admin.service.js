@@ -21,6 +21,7 @@ const {
 } = require("../../../shared/auth/module-access");
 const {
   makeSellerOnboardingState,
+  SELLER_ONBOARDING_STATUS,
 } = require("../../../shared/domain/seller-onboarding");
 
 class AdminService {
@@ -77,6 +78,32 @@ class AdminService {
     return new Map(rows.map((row) => [String(row.seller_id), row]));
   }
 
+  formatKycDocuments(documents) {
+    if (!documents) return {};
+    try {
+      return typeof documents === "string" ? JSON.parse(documents) : documents;
+    } catch {
+      return {};
+    }
+  }
+
+  formatKycForAdmin(kyc) {
+    if (!kyc) return null;
+    return {
+      verificationStatus: kyc.verification_status,
+      legalName: kyc.legal_name,
+      businessType: kyc.business_type,
+      panNumber: kyc.pan_number,
+      gstNumber: kyc.gst_number,
+      aadhaarNumber: kyc.aadhaar_number,
+      rejectionReason: kyc.rejection_reason || null,
+      reviewedBy: kyc.reviewed_by || null,
+      submittedAt: kyc.submitted_at || null,
+      reviewedAt: kyc.reviewed_at || null,
+      documents: this.formatKycDocuments(kyc.documents),
+    };
+  }
+
   enrichSellerForAdmin(seller, kyc = null) {
     const plainSeller = this.toPlainObject(seller);
     const sellerProfile = this.toPlainObject(plainSeller.sellerProfile || {});
@@ -102,6 +129,19 @@ class AdminService {
         kycReviewedAt: kyc?.reviewed_at || null,
         requirements: onboardingState.requirements,
       },
+      kyc: this.formatKycForAdmin(kyc),
+    };
+  }
+
+  async getSellerKyc(sellerId) {
+    const seller = await this.adminRepository.getUserById(sellerId);
+    if (!seller || seller.role !== ROLES.SELLER) {
+      throw new AppError("Seller not found", 404);
+    }
+    const kyc = await this.adminRepository.getSellerKycById(sellerId);
+    return {
+      sellerId,
+      kyc: this.formatKycForAdmin(kyc),
     };
   }
 
@@ -308,7 +348,11 @@ class AdminService {
       onboardingChecklist: onboardingState.checklist,
       onboardingStatus: onboardingState.onboardingStatus,
     };
-    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    const accountStatusUpdate =
+      onboardingState.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
+        ? { accountStatus: "active" }
+        : {};
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile, ...accountStatusUpdate });
     return this.getSeller(sellerId);
   }
 
@@ -339,7 +383,11 @@ class AdminService {
       onboardingChecklist: onboardingState.checklist,
       onboardingStatus: onboardingState.onboardingStatus,
     };
-    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    const accountStatusUpdate =
+      onboardingState.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
+        ? { accountStatus: "active" }
+        : {};
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile, ...accountStatusUpdate });
     return this.getSeller(sellerId);
   }
 

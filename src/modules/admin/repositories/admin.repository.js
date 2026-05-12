@@ -131,16 +131,26 @@ class AdminRepository {
          rejection_reason,
          submitted_at,
          reviewed_at,
+         reviewed_by,
          legal_name,
          business_type,
          pan_number,
          gst_number,
-         aadhaar_number
+         aadhaar_number,
+         documents
        FROM seller_kyc
        WHERE seller_id = ANY($1::text[])`,
       [normalizedIds],
     );
     return rows;
+  }
+
+  async getSellerKycById(sellerId) {
+    const { rows } = await postgresPool.query(
+      `SELECT * FROM seller_kyc WHERE seller_id = $1 LIMIT 1`,
+      [String(sellerId)],
+    );
+    return rows[0] || null;
   }
 
   async updateUserById(userId, payload) {
