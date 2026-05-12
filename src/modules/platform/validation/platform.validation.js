@@ -348,6 +348,221 @@ const contentPageSlugSchema = Joi.object({
   }).required(),
 });
 
+const createBrandSchema = Joi.object({
+  body: Joi.object({
+    name: Joi.string().trim().required(),
+    logo: Joi.string().allow(""),
+    thumbnails: Joi.string().allow(""),
+    active: Joi.boolean().default(true),
+    sortOrder: Joi.number().integer().default(0),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
+const updateBrandSchema = Joi.object({
+  body: Joi.object({
+    name: Joi.string().trim(),
+    logo: Joi.string().allow(""),
+    thumbnails: Joi.string().allow(""),
+    active: Joi.boolean(),
+    sortOrder: Joi.number().integer(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    brandId: Joi.string().required(),
+  }).required(),
+});
+
+const listBrandsSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(
+    Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
+      active: Joi.boolean(),
+    }),
+  ),
+  params: Joi.object({}).required(),
+});
+
+const brandIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    brandId: Joi.string().required(),
+  }).required(),
+});
+
+const createWarrantyTemplateSchema = Joi.object({
+  body: Joi.object({
+    period: Joi.string().trim().required(),
+    active: Joi.boolean().default(true),
+    metadata: Joi.object().default({}),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
+const updateWarrantyTemplateSchema = Joi.object({
+  body: Joi.object({
+    period: Joi.string().trim(),
+    active: Joi.boolean(),
+    metadata: Joi.object(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    templateId: Joi.string().required(),
+  }).required(),
+});
+
+const listWarrantyTemplatesSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(
+    Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
+      active: Joi.boolean(),
+    }),
+  ),
+  params: Joi.object({}).required(),
+});
+
+const warrantyTemplateIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    templateId: Joi.string().required(),
+  }).required(),
+});
+
+const createFinishSchema = Joi.object({
+  body: Joi.object({ name: Joi.string().trim().required(), active: Joi.boolean().default(true) }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+const updateFinishSchema = Joi.object({
+  body: Joi.object({ name: Joi.string().trim(), active: Joi.boolean() }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ finishId: Joi.string().required() }).required(),
+});
+const listFinishesSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  params: Joi.object({}).required(),
+});
+const finishIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ finishId: Joi.string().required() }).required(),
+});
+
+const createDimensionSchema = Joi.object({
+  body: Joi.object({ dimensions_value: Joi.string().trim().required(), active: Joi.boolean().default(true) }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+const updateDimensionSchema = Joi.object({
+  body: Joi.object({ dimensions_value: Joi.string().trim(), active: Joi.boolean() }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ dimensionId: Joi.string().required() }).required(),
+});
+const listDimensionsSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  params: Joi.object({}).required(),
+});
+const dimensionIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ dimensionId: Joi.string().required() }).required(),
+});
+
+const createBatchSchema = Joi.object({
+  body: Joi.object({
+    batchCode: Joi.string().trim().required(),
+    manufactureDate: Joi.number().required(),
+    expiryDate: Joi.number().required(),
+    active: Joi.boolean().default(true),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+const updateBatchSchema = Joi.object({
+  body: Joi.object({
+    batchCode: Joi.string().trim(),
+    manufactureDate: Joi.number(),
+    expiryDate: Joi.number(),
+    active: Joi.boolean(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ batchId: Joi.string().required() }).required(),
+});
+const listBatchesSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  params: Joi.object({}).required(),
+});
+const batchIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ batchId: Joi.string().required() }).required(),
+});
+
+const createProductOptionSchema = Joi.object({
+  body: Joi.object({ name: Joi.string().trim().required(), active: Joi.boolean().default(true) }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+const updateProductOptionSchema = Joi.object({
+  body: Joi.object({ name: Joi.string().trim(), active: Joi.boolean() }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ optionId: Joi.string().required() }).required(),
+});
+const listProductOptionsSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  params: Joi.object({}).required(),
+});
+const productOptionIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ optionId: Joi.string().required() }).required(),
+});
+
+const createProductOptionValueSchema = Joi.object({
+  body: Joi.object({
+    option_id: Joi.string().required(),
+    name: Joi.string().trim().required(),
+    active: Joi.boolean().default(true),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+const updateProductOptionValueSchema = Joi.object({
+  body: Joi.object({
+    option_id: Joi.string(),
+    name: Joi.string().trim(),
+    active: Joi.boolean(),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ optionValueId: Joi.string().required() }).required(),
+});
+const listProductOptionValuesSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(
+    Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), option_id: Joi.string(), active: Joi.boolean() }),
+  ),
+  params: Joi.object({}).required(),
+});
+const productOptionValueIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({ optionValueId: Joi.string().required() }).required(),
+});
+
 module.exports = {
   createCategorySchema,
   updateCategorySchema,
@@ -375,4 +590,32 @@ module.exports = {
   updateContentPageSchema,
   listContentPagesSchema,
   contentPageSlugSchema,
+  createBrandSchema,
+  updateBrandSchema,
+  listBrandsSchema,
+  brandIdSchema,
+  createWarrantyTemplateSchema,
+  updateWarrantyTemplateSchema,
+  listWarrantyTemplatesSchema,
+  warrantyTemplateIdSchema,
+  createFinishSchema,
+  updateFinishSchema,
+  listFinishesSchema,
+  finishIdSchema,
+  createDimensionSchema,
+  updateDimensionSchema,
+  listDimensionsSchema,
+  dimensionIdSchema,
+  createBatchSchema,
+  updateBatchSchema,
+  listBatchesSchema,
+  batchIdSchema,
+  createProductOptionSchema,
+  updateProductOptionSchema,
+  listProductOptionsSchema,
+  productOptionIdSchema,
+  createProductOptionValueSchema,
+  updateProductOptionValueSchema,
+  listProductOptionValuesSchema,
+  productOptionValueIdSchema,
 };

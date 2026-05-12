@@ -94,6 +94,34 @@ const {
   updateContentPageSchema,
   listContentPagesSchema,
   contentPageSlugSchema,
+  createBrandSchema,
+  updateBrandSchema,
+  listBrandsSchema,
+  brandIdSchema,
+  createWarrantyTemplateSchema,
+  updateWarrantyTemplateSchema,
+  listWarrantyTemplatesSchema,
+  warrantyTemplateIdSchema,
+  createFinishSchema,
+  updateFinishSchema,
+  listFinishesSchema,
+  finishIdSchema,
+  createDimensionSchema,
+  updateDimensionSchema,
+  listDimensionsSchema,
+  dimensionIdSchema,
+  createBatchSchema,
+  updateBatchSchema,
+  listBatchesSchema,
+  batchIdSchema,
+  createProductOptionSchema,
+  updateProductOptionSchema,
+  listProductOptionsSchema,
+  productOptionIdSchema,
+  createProductOptionValueSchema,
+  updateProductOptionValueSchema,
+  listProductOptionValuesSchema,
+  productOptionValueIdSchema,
 } = require("../../platform/validation/platform.validation");
 const {
   createProductSchema,
@@ -634,5 +662,82 @@ adminRoutes.delete(
   checkInput(contentPageSlugSchema),
   catchErrors(platformController.deleteContentPage),
 );
+
+adminRoutes.post(
+  "/platform/brands",
+  checkInput(createBrandSchema),
+  catchErrors(platformController.createBrand),
+);
+adminRoutes.get(
+  "/platform/brands",
+  checkInput(listBrandsSchema),
+  catchErrors(platformController.listBrands),
+);
+adminRoutes.get(
+  "/platform/brands/:brandId",
+  checkInput(brandIdSchema),
+  catchErrors(platformController.getBrand),
+);
+adminRoutes.patch(
+  "/platform/brands/:brandId",
+  checkInput(updateBrandSchema),
+  catchErrors(platformController.updateBrand),
+);
+adminRoutes.delete(
+  "/platform/brands/:brandId",
+  checkInput(brandIdSchema),
+  catchErrors(platformController.deleteBrand),
+);
+
+adminRoutes.post(
+  "/platform/warranty-templates",
+  checkInput(createWarrantyTemplateSchema),
+  catchErrors(platformController.createWarrantyTemplate),
+);
+adminRoutes.get(
+  "/platform/warranty-templates",
+  checkInput(listWarrantyTemplatesSchema),
+  catchErrors(platformController.listWarrantyTemplates),
+);
+adminRoutes.get(
+  "/platform/warranty-templates/:templateId",
+  checkInput(warrantyTemplateIdSchema),
+  catchErrors(platformController.getWarrantyTemplate),
+);
+adminRoutes.patch(
+  "/platform/warranty-templates/:templateId",
+  checkInput(updateWarrantyTemplateSchema),
+  catchErrors(platformController.updateWarrantyTemplate),
+);
+adminRoutes.delete(
+  "/platform/warranty-templates/:templateId",
+  checkInput(warrantyTemplateIdSchema),
+  catchErrors(platformController.deleteWarrantyTemplate),
+);
+
+adminRoutes.post("/platform/finishes", checkInput(createFinishSchema), catchErrors(platformController.createFinish));
+adminRoutes.get("/platform/finishes", checkInput(listFinishesSchema), catchErrors(platformController.listFinishes));
+adminRoutes.patch("/platform/finishes/:finishId", checkInput(updateFinishSchema), catchErrors(platformController.updateFinish));
+adminRoutes.delete("/platform/finishes/:finishId", checkInput(finishIdSchema), catchErrors(platformController.deleteFinish));
+
+adminRoutes.post("/platform/dimensions", checkInput(createDimensionSchema), catchErrors(platformController.createDimension));
+adminRoutes.get("/platform/dimensions", checkInput(listDimensionsSchema), catchErrors(platformController.listDimensions));
+adminRoutes.patch("/platform/dimensions/:dimensionId", checkInput(updateDimensionSchema), catchErrors(platformController.updateDimension));
+adminRoutes.delete("/platform/dimensions/:dimensionId", checkInput(dimensionIdSchema), catchErrors(platformController.deleteDimension));
+
+adminRoutes.post("/platform/batches", checkInput(createBatchSchema), catchErrors(platformController.createBatch));
+adminRoutes.get("/platform/batches", checkInput(listBatchesSchema), catchErrors(platformController.listBatches));
+adminRoutes.patch("/platform/batches/:batchId", checkInput(updateBatchSchema), catchErrors(platformController.updateBatch));
+adminRoutes.delete("/platform/batches/:batchId", checkInput(batchIdSchema), catchErrors(platformController.deleteBatch));
+
+adminRoutes.post("/platform/product-options", checkInput(createProductOptionSchema), catchErrors(platformController.createProductOption));
+adminRoutes.get("/platform/product-options", checkInput(listProductOptionsSchema), catchErrors(platformController.listProductOptions));
+adminRoutes.patch("/platform/product-options/:optionId", checkInput(updateProductOptionSchema), catchErrors(platformController.updateProductOption));
+adminRoutes.delete("/platform/product-options/:optionId", checkInput(productOptionIdSchema), catchErrors(platformController.deleteProductOption));
+
+adminRoutes.post("/platform/product-option-values", checkInput(createProductOptionValueSchema), catchErrors(platformController.createProductOptionValue));
+adminRoutes.get("/platform/product-option-values", checkInput(listProductOptionValuesSchema), catchErrors(platformController.listProductOptionValues));
+adminRoutes.patch("/platform/product-option-values/:optionValueId", checkInput(updateProductOptionValueSchema), catchErrors(platformController.updateProductOptionValue));
+adminRoutes.delete("/platform/product-option-values/:optionValueId", checkInput(productOptionValueIdSchema), catchErrors(platformController.deleteProductOptionValue));
 
 module.exports = { adminRoutes };

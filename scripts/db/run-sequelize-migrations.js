@@ -29,8 +29,12 @@ function loadMigrationFiles() {
     .sort((a, b) => a.localeCompare(b))
     .map((fileName) => {
       const migration = require(path.join(dir, fileName));
-      if (!migration.id || typeof migration.up !== "function") {
+      if (!migration || typeof migration.up !== "function") {
         throw new Error(`Invalid migration file: ${fileName}`);
+      }
+      const derivedId = fileName.replace(/\.js$/i, "");
+      if (!migration.id) {
+        migration.id = derivedId;
       }
       return migration;
     });
@@ -39,9 +43,14 @@ function loadMigrationFiles() {
 async function applyMigration(migration) {
   const queryInterface = sequelize.getQueryInterface();
   const transaction = await sequelize.transaction();
+  const context = { queryInterface, Sequelize, transaction };
 
   try {
-    await migration.up({ queryInterface, Sequelize, transaction });
+    if (migration.up.length >= 2) {
+      await migration.up(queryInterface, Sequelize, { transaction });
+    } else {
+      await migration.up(context);
+    }
     await sequelize.query("INSERT INTO _app_migrations (id) VALUES ($1)", {
       bind: [migration.id],
       transaction,
@@ -77,4 +86,3 @@ main()
   .finally(async () => {
     await sequelize.close();
   });
-

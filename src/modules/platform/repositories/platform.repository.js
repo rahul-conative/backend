@@ -4,6 +4,13 @@ const { ProductVariantModel } = require("../models/product-variant.model");
 const { HsnCodeModel } = require("../models/hsn-code.model");
 const { GeographyModel } = require("../models/geography.model");
 const { ContentPageModel } = require("../models/content-page.model");
+const { PlatformBrandModel } = require("../models/platform-brand.model");
+const { WarrantyTemplateModel } = require("../models/warranty-template.model");
+const { PlatformFinishModel } = require("../models/platform-finish.model");
+const { PlatformDimensionModel } = require("../models/platform-dimension.model");
+const { PlatformBatchModel } = require("../models/platform-batch.model");
+const { PlatformProductOptionModel } = require("../models/platform-product-option.model");
+const { PlatformProductOptionValueModel } = require("../models/platform-product-option-value.model");
 const { mongoose } = require("../../../infrastructure/mongo/mongo-client");
 
 function makeCodeOrIdFilter(value, codeField = "code") {
@@ -173,6 +180,174 @@ class PlatformRepository {
 
   async deleteContentPage(slug) {
     return ContentPageModel.findOneAndDelete(makeCodeOrIdFilter(slug, "slug"));
+  }
+
+  async createBrand(payload) {
+    return PlatformBrandModel.create(payload);
+  }
+
+  async updateBrand(brandId, payload) {
+    return PlatformBrandModel.findByIdAndUpdate(brandId, payload, { new: true });
+  }
+
+  async getBrand(brandId) {
+    return PlatformBrandModel.findById(brandId);
+  }
+
+  async listBrands(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformBrandModel.find(filter).sort({ sortOrder: 1, name: 1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformBrandModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteBrand(brandId) {
+    return PlatformBrandModel.findByIdAndDelete(brandId);
+  }
+
+  async createWarrantyTemplate(payload) {
+    return WarrantyTemplateModel.create(payload);
+  }
+
+  async updateWarrantyTemplate(templateId, payload) {
+    return WarrantyTemplateModel.findByIdAndUpdate(templateId, payload, { new: true });
+  }
+
+  async getWarrantyTemplate(templateId) {
+    return WarrantyTemplateModel.findById(templateId);
+  }
+
+  async listWarrantyTemplates(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      WarrantyTemplateModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      WarrantyTemplateModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteWarrantyTemplate(templateId) {
+    return WarrantyTemplateModel.findByIdAndDelete(templateId);
+  }
+
+  async createFinish(payload) {
+    return PlatformFinishModel.create(payload);
+  }
+
+  async updateFinish(finishId, payload) {
+    return PlatformFinishModel.findByIdAndUpdate(finishId, payload, { new: true });
+  }
+
+  async getFinish(finishId) {
+    return PlatformFinishModel.findById(finishId);
+  }
+
+  async listFinishes(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformFinishModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformFinishModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteFinish(finishId) {
+    return PlatformFinishModel.findByIdAndDelete(finishId);
+  }
+
+  async createDimension(payload) {
+    return PlatformDimensionModel.create(payload);
+  }
+
+  async updateDimension(dimensionId, payload) {
+    return PlatformDimensionModel.findByIdAndUpdate(dimensionId, payload, { new: true });
+  }
+
+  async getDimension(dimensionId) {
+    return PlatformDimensionModel.findById(dimensionId);
+  }
+
+  async listDimensions(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformDimensionModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformDimensionModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteDimension(dimensionId) {
+    return PlatformDimensionModel.findByIdAndDelete(dimensionId);
+  }
+
+  async createBatch(payload) {
+    return PlatformBatchModel.create(payload);
+  }
+
+  async updateBatch(batchId, payload) {
+    return PlatformBatchModel.findByIdAndUpdate(batchId, payload, { new: true });
+  }
+
+  async getBatch(batchId) {
+    return PlatformBatchModel.findById(batchId);
+  }
+
+  async listBatches(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformBatchModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformBatchModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteBatch(batchId) {
+    return PlatformBatchModel.findByIdAndDelete(batchId);
+  }
+
+  async createProductOption(payload) {
+    return PlatformProductOptionModel.create(payload);
+  }
+
+  async updateProductOption(optionId, payload) {
+    return PlatformProductOptionModel.findByIdAndUpdate(optionId, payload, { new: true });
+  }
+
+  async getProductOption(optionId) {
+    return PlatformProductOptionModel.findById(optionId);
+  }
+
+  async listProductOptions(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformProductOptionModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformProductOptionModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteProductOption(optionId) {
+    return PlatformProductOptionModel.findByIdAndDelete(optionId);
+  }
+
+  async createProductOptionValue(payload) {
+    return PlatformProductOptionValueModel.create(payload);
+  }
+
+  async updateProductOptionValue(optionValueId, payload) {
+    return PlatformProductOptionValueModel.findByIdAndUpdate(optionValueId, payload, { new: true });
+  }
+
+  async getProductOptionValue(optionValueId) {
+    return PlatformProductOptionValueModel.findById(optionValueId);
+  }
+
+  async listProductOptionValues(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      PlatformProductOptionValueModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformProductOptionValueModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async deleteProductOptionValue(optionValueId) {
+    return PlatformProductOptionValueModel.findByIdAndDelete(optionValueId);
   }
 }
 

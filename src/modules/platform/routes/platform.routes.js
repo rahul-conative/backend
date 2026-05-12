@@ -30,6 +30,34 @@ const {
   updateContentPageSchema,
   listContentPagesSchema,
   contentPageSlugSchema,
+  createBrandSchema,
+  updateBrandSchema,
+  listBrandsSchema,
+  brandIdSchema,
+  createWarrantyTemplateSchema,
+  updateWarrantyTemplateSchema,
+  listWarrantyTemplatesSchema,
+  warrantyTemplateIdSchema,
+  createFinishSchema,
+  updateFinishSchema,
+  listFinishesSchema,
+  finishIdSchema,
+  createDimensionSchema,
+  updateDimensionSchema,
+  listDimensionsSchema,
+  dimensionIdSchema,
+  createBatchSchema,
+  updateBatchSchema,
+  listBatchesSchema,
+  batchIdSchema,
+  createProductOptionSchema,
+  updateProductOptionSchema,
+  listProductOptionsSchema,
+  productOptionIdSchema,
+  createProductOptionValueSchema,
+  updateProductOptionValueSchema,
+  listProductOptionValuesSchema,
+  productOptionValueIdSchema,
 } = require("../validation/platform.validation");
 
 const platformRoutes = express.Router();
@@ -183,5 +211,86 @@ platformRoutes.delete(
   checkInput(contentPageSlugSchema),
   catchErrors(platformController.deleteContentPage),
 );
+
+platformRoutes.get("/brands", checkInput(listBrandsSchema), catchErrors(platformController.listBrands));
+platformRoutes.get("/brands/:brandId", checkInput(brandIdSchema), catchErrors(platformController.getBrand));
+platformRoutes.post(
+  "/brands",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createBrandSchema),
+  catchErrors(platformController.createBrand),
+);
+platformRoutes.patch(
+  "/brands/:brandId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateBrandSchema),
+  catchErrors(platformController.updateBrand),
+);
+platformRoutes.delete(
+  "/brands/:brandId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(brandIdSchema),
+  catchErrors(platformController.deleteBrand),
+);
+
+platformRoutes.get(
+  "/warranty-templates",
+  checkInput(listWarrantyTemplatesSchema),
+  catchErrors(platformController.listWarrantyTemplates),
+);
+platformRoutes.get(
+  "/warranty-templates/:templateId",
+  checkInput(warrantyTemplateIdSchema),
+  catchErrors(platformController.getWarrantyTemplate),
+);
+platformRoutes.post(
+  "/warranty-templates",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createWarrantyTemplateSchema),
+  catchErrors(platformController.createWarrantyTemplate),
+);
+platformRoutes.patch(
+  "/warranty-templates/:templateId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateWarrantyTemplateSchema),
+  catchErrors(platformController.updateWarrantyTemplate),
+);
+platformRoutes.delete(
+  "/warranty-templates/:templateId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(warrantyTemplateIdSchema),
+  catchErrors(platformController.deleteWarrantyTemplate),
+);
+
+platformRoutes.get("/finishes", checkInput(listFinishesSchema), catchErrors(platformController.listFinishes));
+platformRoutes.post("/finishes", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(createFinishSchema), catchErrors(platformController.createFinish));
+platformRoutes.patch("/finishes/:finishId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateFinishSchema), catchErrors(platformController.updateFinish));
+platformRoutes.delete("/finishes/:finishId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(finishIdSchema), catchErrors(platformController.deleteFinish));
+
+platformRoutes.get("/dimensions", checkInput(listDimensionsSchema), catchErrors(platformController.listDimensions));
+platformRoutes.post("/dimensions", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(createDimensionSchema), catchErrors(platformController.createDimension));
+platformRoutes.patch("/dimensions/:dimensionId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateDimensionSchema), catchErrors(platformController.updateDimension));
+platformRoutes.delete("/dimensions/:dimensionId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(dimensionIdSchema), catchErrors(platformController.deleteDimension));
+
+platformRoutes.get("/batches", checkInput(listBatchesSchema), catchErrors(platformController.listBatches));
+platformRoutes.post("/batches", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(createBatchSchema), catchErrors(platformController.createBatch));
+platformRoutes.patch("/batches/:batchId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateBatchSchema), catchErrors(platformController.updateBatch));
+platformRoutes.delete("/batches/:batchId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(batchIdSchema), catchErrors(platformController.deleteBatch));
+
+platformRoutes.get("/product-options", checkInput(listProductOptionsSchema), catchErrors(platformController.listProductOptions));
+platformRoutes.post("/product-options", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(createProductOptionSchema), catchErrors(platformController.createProductOption));
+platformRoutes.patch("/product-options/:optionId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateProductOptionSchema), catchErrors(platformController.updateProductOption));
+platformRoutes.delete("/product-options/:optionId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(productOptionIdSchema), catchErrors(platformController.deleteProductOption));
+
+platformRoutes.get("/product-option-values", checkInput(listProductOptionValuesSchema), catchErrors(platformController.listProductOptionValues));
+platformRoutes.post("/product-option-values", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(createProductOptionValueSchema), catchErrors(platformController.createProductOptionValue));
+platformRoutes.patch("/product-option-values/:optionValueId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateProductOptionValueSchema), catchErrors(platformController.updateProductOptionValue));
+platformRoutes.delete("/product-option-values/:optionValueId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(productOptionValueIdSchema), catchErrors(platformController.deleteProductOptionValue));
 
 module.exports = { platformRoutes };

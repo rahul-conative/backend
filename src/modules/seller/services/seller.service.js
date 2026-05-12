@@ -231,16 +231,25 @@ class SellerService {
   }
 
   assertSellerOwnerActor(actor) {
-    if (actor.role !== ROLES.SELLER) {
-      throw new AppError("Only seller owners can manage seller sub-admin access", 403);
+    if (actor.role === ROLES.SELLER) {
+      const sellerId = this.getSellerId(actor);
+      if (!sellerId) {
+        throw new AppError("Seller account could not be found", 403);
+      }
+      return sellerId;
     }
 
-    const sellerId = this.getSellerId(actor);
-    if (!sellerId) {
-      throw new AppError("Seller account could not be found", 403);
+    // Seller sub-admins can manage sub-admin access if they have the sellers:add permission.
+    // Their owner seller ID is stored in ownerSellerId on the JWT.
+    if (actor.role === ROLES.SELLER_SUB_ADMIN) {
+      const sellerId = actor.ownerSellerId || actor.sellerId;
+      if (!sellerId) {
+        throw new AppError("Could not determine parent seller account", 403);
+      }
+      return sellerId;
     }
 
-    return sellerId;
+    throw new AppError("Only seller owners or authorised seller sub-admins can manage seller access", 403);
   }
 
   getSellerWebNextSteps(checklist = {}, kycStatus = null) {

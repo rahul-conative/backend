@@ -1,151 +1,273 @@
 const Joi = require("joi");
-const { PRODUCT_STATUS } = require("../../../shared/domain/commerce-constants");
+const {
+  PRODUCT_STATUS,
+  PRODUCT_TYPE,
+  PRODUCT_VISIBILITY,
+  DIGITAL_FILE_TYPE,
+  SUBSCRIPTION_BILLING_CYCLE,
+} = require("../../../shared/domain/commerce-constants");
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 const optionalString = () => Joi.string().trim().allow("", null);
-const optionalPositiveNumber = () => Joi.number().positive().empty("");
-const optionalNonNegativeInteger = () => Joi.number().integer().min(0).empty("");
-const optionalNonNegativeNumber = () => Joi.number().min(0).empty("");
+const optionalPositiveNumber = () => Joi.number().positive().allow(null).empty("");
+const optionalNonNegativeInteger = () => Joi.number().integer().min(0).allow(null).empty("");
+const optionalNonNegativeNumber = () => Joi.number().min(0).allow(null).empty("");
+
+// ─── Reusable sub-schemas ────────────────────────────────────────────────────
+
+const variantSchema = Joi.object({
+  sku: Joi.string().trim().required(),
+  title: optionalString(),
+  price: optionalNonNegativeNumber(),
+  mrp: optionalNonNegativeNumber(),
+  salePrice: optionalNonNegativeNumber(),
+  gstRate: Joi.number().min(0).max(100),
+  stock: optionalNonNegativeInteger().default(0),
+  barcode: optionalString(),
+  weight: optionalNonNegativeNumber(),
+  weightUnit: optionalString(),
+  dimensions: Joi.object({
+    length: optionalPositiveNumber(),
+    width: optionalPositiveNumber(),
+    height: optionalPositiveNumber(),
+    unit: optionalString(),
+  }),
+  attributes: Joi.object().default({}),
+  images: Joi.array().items(Joi.string().uri()).default([]),
+  status: Joi.string().valid("active", "inactive", "out_of_stock").default("active"),
+  isDefault: Joi.boolean().default(false),
+  sortOrder: Joi.number().integer().min(0).default(0),
+});
+
+const optionSchema = Joi.object({
+  name: Joi.string().trim().required(),
+  slug: optionalString(),
+  values: Joi.array().items(Joi.string().trim()).required(),
+  required: Joi.boolean().default(false),
+  displayType: Joi.string()
+    .valid("dropdown", "button", "color_swatch", "radio", "thumbnail")
+    .default("dropdown"),
+  sortOrder: Joi.number().integer().min(0).default(0),
+});
+
+const seoSchema = Joi.object({
+  metaTitle: Joi.string().trim().max(70).allow("", null),
+  metaDescription: Joi.string().trim().max(160).allow("", null),
+  keywords: Joi.array().items(Joi.string().trim()).default([]),
+  canonicalUrl: Joi.string().uri().allow("", null),
+  ogTitle: optionalString(),
+  ogDescription: optionalString(),
+  ogImage: Joi.string().uri().allow("", null),
+  structuredData: Joi.object(),
+});
+
+const digitalSchema = Joi.object({
+  fileUrl: Joi.string().uri().allow("", null),
+  previewUrl: Joi.string().uri().allow("", null),
+  fileSize: optionalNonNegativeNumber(),
+  fileType: Joi.string().valid(...Object.values(DIGITAL_FILE_TYPE)),
+  licenseType: Joi.string().valid("single_use", "multi_use", "unlimited", "subscription"),
+  downloadLimit: optionalNonNegativeInteger(),
+  expiryDays: optionalNonNegativeInteger(),
+  accessControl: Joi.object({
+    loginRequired: Joi.boolean().default(true),
+    purchaseRequired: Joi.boolean().default(true),
+  }),
+  version: optionalString(),
+  platforms: Joi.array().items(Joi.string().trim()).default([]),
+});
+
+const subscriptionSchema = Joi.object({
+  billingCycle: Joi.string().valid(...Object.values(SUBSCRIPTION_BILLING_CYCLE)).default("monthly"),
+  trialDays: optionalNonNegativeInteger().default(0),
+  recurringPrice: Joi.number().min(0).required(),
+  setupFee: optionalNonNegativeNumber().default(0),
+  maxRenewalCount: optionalNonNegativeInteger(),
+  features: Joi.array().items(Joi.string().trim()).default([]),
+  gracePeriodDays: optionalNonNegativeInteger().default(3),
+  autoRenew: Joi.boolean().default(true),
+  cancellationPolicy: optionalString(),
+});
+
+const bundleItemSchema = Joi.object({
+  productId: Joi.string().required(),
+  variantId: optionalString(),
+  quantity: Joi.number().integer().min(1).required(),
+  price: optionalNonNegativeNumber(),
+  isRequired: Joi.boolean().default(true),
+  title: optionalString(),
+});
+
+const badgeSchema = Joi.object({
+  type: optionalString(),
+  label: Joi.string().trim().required(),
+  color: optionalString(),
+  bgColor: optionalString(),
+  validFrom: Joi.date().allow(null),
+  validTo: Joi.date().allow(null),
+});
+
+const dimensionsSchema = Joi.object({
+  length: optionalPositiveNumber(),
+  width: optionalPositiveNumber(),
+  height: optionalPositiveNumber(),
+  unit: optionalString().default("cm"),
+});
+
+const warrantySchema = Joi.object({
+  period: optionalNonNegativeInteger(),
+  periodUnit: Joi.string().valid("days", "weeks", "months", "years").default("months"),
+  type: optionalString().default("manufacturer"),
+  provider: optionalString(),
+  terms: optionalString(),
+  returnPolicy: Joi.object({
+    eligible: Joi.boolean().default(true),
+    days: optionalNonNegativeInteger().default(7),
+    type: optionalString().default("standard"),
+    restockingFee: optionalNonNegativeNumber().default(0),
+  }).default({}),
+  serviceableCountries: Joi.array().items(Joi.string().trim()).default([]),
+});
+
+const originSchema = Joi.object({
+  country: optionalString(),
+  state: optionalString(),
+  city: optionalString(),
+});
+
+const shippingSchema = Joi.object({
+  freeShipping: Joi.boolean().default(false),
+  freeShippingMinOrder: optionalNonNegativeNumber(),
+  shippingClass: optionalString(),
+  additionalCost: optionalNonNegativeNumber().default(0),
+  processingDays: optionalNonNegativeInteger().default(1),
+  dangerousGoods: Joi.boolean().default(false),
+  requiresColdChain: Joi.boolean().default(false),
+});
+
+const inventorySettingsSchema = Joi.object({
+  trackInventory: Joi.boolean().default(true),
+  allowBackorder: Joi.boolean().default(false),
+  backorderLimit: optionalNonNegativeInteger(),
+  lowStockThreshold: optionalNonNegativeInteger().default(5),
+  outOfStockMessage: optionalString(),
+  manageVariantInventory: Joi.boolean().default(false),
+});
+
+const moderationChecklistSchema = Joi.object({
+  titleVerified: Joi.boolean(),
+  categoryVerified: Joi.boolean(),
+  complianceVerified: Joi.boolean(),
+  mediaVerified: Joi.boolean(),
+  pricingVerified: Joi.boolean(),
+  inventoryVerified: Joi.boolean(),
+}).default({});
+
+// ─── Product body (shared between create/update) ─────────────────────────────
+
+const productBodyBase = {
+  title: Joi.string().min(3).max(200).trim(),
+  shortDescription: Joi.string().max(500).trim().allow("", null),
+  sellerId: optionalString(),
+  description: Joi.string().min(10),
+  productType: Joi.string().valid(...Object.values(PRODUCT_TYPE)),
+  visibility: Joi.string().valid(...Object.values(PRODUCT_VISIBILITY)),
+  publishedAt: Joi.date().allow(null),
+  scheduledAt: Joi.date().allow(null),
+
+  // Pricing
+  price: Joi.number().min(0),
+  mrp: Joi.number().min(0),
+  salePrice: optionalNonNegativeNumber(),
+  costPrice: optionalNonNegativeNumber(),
+  gstRate: Joi.number().min(0).max(100).default(18),
+  gstInclusive: Joi.boolean(),
+  hsnCode: optionalString(),
+  currency: optionalString(),
+
+  // Categorization
+  category: Joi.string(),
+  categoryId: optionalString(),
+  brand: optionalString(),
+  productFamilyCode: optionalString(),
+  tags: Joi.array().items(Joi.string().trim()).default([]),
+  badges: Joi.array().items(badgeSchema).default([]),
+
+  // Identifiers
+  sku: optionalString(),
+  barcode: optionalString(),
+  color: optionalString(),
+
+  // Attributes & variants
+  attributes: Joi.object().default({}),
+  variantAxes: Joi.array().items(Joi.string().trim()).default([]),
+  hasVariants: Joi.boolean(),
+  defaultVariantId: optionalString(),
+  variants: Joi.array().items(variantSchema).default([]),
+  options: Joi.array().items(optionSchema).default([]),
+
+  // Type-specific
+  digital: digitalSchema,
+  subscription: subscriptionSchema,
+  bundleItems: Joi.array().items(bundleItemSchema).default([]),
+  bundleDiscount: optionalNonNegativeNumber(),
+
+  // Specifications (free-form)
+  specifications: Joi.object().default({}),
+
+  // Media
+  images: Joi.array().items(Joi.string().uri()).default([]),
+  videos: Joi.array().items(Joi.string().uri()).default([]),
+  documents: Joi.array().items(Joi.string().uri()).default([]),
+
+  // Physical
+  dimensions: dimensionsSchema.default({}),
+  weight: optionalNonNegativeNumber(),
+  weightUnit: optionalString(),
+  origin: originSchema.default({}),
+  warranty: warrantySchema.default({}),
+
+  // Inventory
+  stock: Joi.number().integer().min(0),
+  inventorySettings: inventorySettingsSchema.default({}),
+
+  // Shipping
+  shipping: shippingSchema.default({}),
+
+  // SEO
+  seo: seoSchema.default({}),
+
+  // Relationships
+  relatedProducts: Joi.array().items(Joi.string()).default([]),
+  crossSellProducts: Joi.array().items(Joi.string()).default([]),
+  upSellProducts: Joi.array().items(Joi.string()).default([]),
+
+  // Meta
+  metadata: Joi.object().default({}),
+  status: Joi.string().valid(...Object.values(PRODUCT_STATUS)),
+};
+
+// ─── Exported schemas ────────────────────────────────────────────────────────
 
 const createProductSchema = Joi.object({
   body: Joi.object({
-    title: Joi.string().min(3).max(120).required(),
-    sellerId: optionalString(),
+    ...productBodyBase,
+    title: Joi.string().min(3).max(200).trim().required(),
     description: Joi.string().min(10).required(),
-    price: Joi.number().positive().required(),
-    mrp: Joi.number().positive().required(),
+    price: Joi.number().min(0).required(),
+    mrp: Joi.number().min(0).required(),
     category: Joi.string().required(),
-    categoryId: Joi.string(),
-    brand: optionalString(),
-    productFamilyCode: optionalString(),
-    sku: optionalString(),
-    color: optionalString(),
-    attributes: Joi.object().default({}),
-    variants: Joi.array().items(
-      Joi.object({
-        sku: Joi.string().trim().required(),
-        price: optionalPositiveNumber(),
-        mrp: optionalPositiveNumber(),
-        stock: optionalNonNegativeInteger().default(0),
-        attributes: Joi.object().default({}),
-        images: Joi.array().items(Joi.string().uri()).default([]),
-      }),
-    ).default([]),
-    options: Joi.array()
-      .items(
-        Joi.object({
-          name: Joi.string().trim().required(),
-          values: Joi.array().items(Joi.string().trim()).required(),
-          required: Joi.boolean().default(false),
-          displayType: Joi.string().trim().default("dropdown"),
-        }),
-      )
-      .default([]),
-    dimensions: Joi.object({
-      length: optionalPositiveNumber(),
-      width: optionalPositiveNumber(),
-      height: optionalPositiveNumber(),
-      unit: Joi.string().trim().default("cm"),
-      weight: optionalPositiveNumber(),
-      weightUnit: Joi.string().trim().default("kg"),
-    }).default({}),
-    hsnCode: optionalString(),
-    origin: Joi.object({
-      country: optionalString(),
-      state: optionalString(),
-      city: optionalString(),
-    }).default({}),
-    warranty: Joi.object({
-      period: optionalNonNegativeInteger(),
-      periodUnit: Joi.string().valid("days", "weeks", "months", "years").default("months"),
-      type: optionalString().default("manufacturer"),
-      provider: optionalString(),
-      terms: optionalString(),
-      returnPolicy: Joi.object({
-        eligible: Joi.boolean().default(true),
-        days: optionalNonNegativeInteger().default(7),
-        type: optionalString().default("standard"),
-        restockingFee: optionalNonNegativeNumber().default(0),
-      }).default({}),
-      serviceableCountries: Joi.array().items(Joi.string().trim()).default([]),
-    }).default({}),
-    metadata: Joi.object().default({}),
     stock: Joi.number().integer().min(0).required(),
-    images: Joi.array().items(Joi.string().uri()).default([]),
-    gstRate: Joi.number().min(0).max(100).default(18),
-    status: Joi.string()
-      .valid(...Object.values(PRODUCT_STATUS))
-      .default(PRODUCT_STATUS.DRAFT),
+    productType: Joi.string().valid(...Object.values(PRODUCT_TYPE)).default(PRODUCT_TYPE.SIMPLE),
+    status: Joi.string().valid(...Object.values(PRODUCT_STATUS)).default(PRODUCT_STATUS.DRAFT),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
 
 const updateProductSchema = Joi.object({
-  body: Joi.object({
-    title: Joi.string().min(3).max(120),
-    sellerId: optionalString(),
-    description: Joi.string().min(10),
-    price: Joi.number().positive(),
-    mrp: Joi.number().positive(),
-    category: Joi.string(),
-    categoryId: Joi.string(),
-    brand: optionalString(),
-    productFamilyCode: optionalString(),
-    sku: optionalString(),
-    color: optionalString(),
-    attributes: Joi.object(),
-    variants: Joi.array().items(
-      Joi.object({
-        sku: Joi.string().trim().required(),
-        price: optionalPositiveNumber(),
-        mrp: optionalPositiveNumber(),
-        stock: optionalNonNegativeInteger(),
-        attributes: Joi.object(),
-        images: Joi.array().items(Joi.string().uri()),
-      }),
-    ),
-    options: Joi.array().items(
-      Joi.object({
-        name: Joi.string().trim().required(),
-        values: Joi.array().items(Joi.string().trim()).required(),
-        required: Joi.boolean(),
-        displayType: Joi.string().trim(),
-      }),
-    ),
-    dimensions: Joi.object({
-      length: optionalPositiveNumber(),
-      width: optionalPositiveNumber(),
-      height: optionalPositiveNumber(),
-      unit: optionalString(),
-      weight: optionalPositiveNumber(),
-      weightUnit: optionalString(),
-    }),
-    hsnCode: optionalString(),
-    origin: Joi.object({
-      country: optionalString(),
-      state: optionalString(),
-      city: optionalString(),
-    }),
-    warranty: Joi.object({
-      period: optionalNonNegativeInteger(),
-      periodUnit: Joi.string().valid("days", "weeks", "months", "years"),
-      type: optionalString(),
-      provider: optionalString(),
-      terms: optionalString(),
-      returnPolicy: Joi.object({
-        eligible: Joi.boolean(),
-        days: optionalNonNegativeInteger(),
-        type: optionalString(),
-        restockingFee: optionalNonNegativeNumber(),
-      }),
-      serviceableCountries: Joi.array().items(Joi.string().trim()),
-    }),
-    metadata: Joi.object(),
-    stock: Joi.number().integer().min(0),
-    images: Joi.array().items(Joi.string().uri()),
-    gstRate: Joi.number().min(0).max(100),
-    status: Joi.string().valid(...Object.values(PRODUCT_STATUS)),
-  }).required(),
+  body: Joi.object(productBodyBase).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
     productId: Joi.string().required(),
@@ -156,9 +278,14 @@ const listProductSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({
     page: Joi.number().integer().min(1),
-    limit: Joi.number().integer().min(1).max(100),
+    limit: Joi.number().integer().min(1).max(200),
+    q: Joi.string().allow(""),
+    keyWord: Joi.string().allow(""),
+    search: Joi.string().allow(""),
     category: Joi.string(),
     status: Joi.string(),
+    productType: Joi.string().valid(...Object.values(PRODUCT_TYPE)),
+    visibility: Joi.string(),
     hsnCode: Joi.string(),
     color: Joi.string(),
     country: Joi.string(),
@@ -166,11 +293,14 @@ const listProductSchema = Joi.object({
     city: Joi.string(),
     productFamilyCode: Joi.string(),
     sku: Joi.string(),
-    q: Joi.string().allow(""),
-    keyWord: Joi.string().allow(""),
-    search: Joi.string().allow(""),
+    brand: Joi.string(),
+    tags: Joi.string(),
     sellerId: Joi.string(),
+    minPrice: Joi.number().min(0),
+    maxPrice: Joi.number().min(0),
+    inStock: Joi.boolean(),
     includeAllStatuses: Joi.boolean(),
+    sortBy: Joi.string().valid("price_asc", "price_desc", "newest", "oldest", "rating", "popular"),
   }).required(),
   params: Joi.object({}).required(),
 });
@@ -179,6 +309,13 @@ const searchProductSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({
     q: Joi.string().min(2).required(),
+    category: Joi.string(),
+    brand: Joi.string(),
+    minPrice: Joi.number().min(0),
+    maxPrice: Joi.number().min(0),
+    productType: Joi.string(),
+    page: Joi.number().integer().min(1),
+    limit: Joi.number().integer().min(1).max(100),
   }).required(),
   params: Joi.object({}).required(),
 });
@@ -188,13 +325,9 @@ const reviewProductSchema = Joi.object({
     status: Joi.string()
       .valid(PRODUCT_STATUS.ACTIVE, PRODUCT_STATUS.INACTIVE, PRODUCT_STATUS.REJECTED)
       .required(),
-    rejectionReason: Joi.string().max(500).allow("", null),
-    checklist: Joi.object({
-      titleVerified: Joi.boolean(),
-      categoryVerified: Joi.boolean(),
-      complianceVerified: Joi.boolean(),
-      mediaVerified: Joi.boolean(),
-    }).default({}),
+    rejectionReason: Joi.string().max(1000).allow("", null),
+    notes: Joi.string().max(500).allow("", null),
+    checklist: moderationChecklistSchema,
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
@@ -202,16 +335,23 @@ const reviewProductSchema = Joi.object({
   }).required(),
 });
 
-const rejectProductSchema = Joi.object({
+const bulkProductSchema = Joi.object({
   body: Joi.object({
-    rejectionReason: Joi.string().max(500).allow("", null),
-    checklist: Joi.object({
-      titleVerified: Joi.boolean(),
-      categoryVerified: Joi.boolean(),
-      complianceVerified: Joi.boolean(),
-      mediaVerified: Joi.boolean(),
-    }).default({}),
-  }).default({}),
+    productIds: Joi.array().items(Joi.string()).min(1).max(100).required(),
+    status: Joi.string().valid(...Object.values(PRODUCT_STATUS)),
+    visibility: Joi.string().valid(...Object.values(PRODUCT_VISIBILITY)),
+  }).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({}).required(),
+});
+
+const updateInventorySchema = Joi.object({
+  body: Joi.object({
+    adjustment: Joi.number().required(),
+    reason: Joi.string().trim().max(200).allow("", null),
+    reference: Joi.string().trim().allow("", null),
+    variantSku: optionalString(),
+  }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
     productId: Joi.string().required(),
@@ -232,6 +372,7 @@ module.exports = {
   listProductSchema,
   searchProductSchema,
   reviewProductSchema,
-  rejectProductSchema,
+  bulkProductSchema,
+  updateInventorySchema,
   productParamSchema,
 };

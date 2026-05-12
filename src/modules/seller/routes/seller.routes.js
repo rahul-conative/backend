@@ -2,7 +2,7 @@ const express = require("express");
 const { SellerController } = require("../controllers/seller.controller");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const { authenticate, authenticatePendingSeller } = require("../../../shared/middleware/authenticate");
-const { allowActions, allowRoles } = require("../../../shared/middleware/access");
+const { allowActions, allowRoles, allowPermissions } = require("../../../shared/middleware/access");
 const { checkInput } = require("../../../shared/middleware/check-input");
 const {
   submitKycSchema,
@@ -156,6 +156,9 @@ sellerRoutes.post(
   "/me/sub-admins",
   authenticate,
   allowRoles(ROLES.SELLER, ROLES.SELLER_SUB_ADMIN),
+  // Seller sub-admins need the sellers:add permission to create sub-sub-admins.
+  // Sellers (full role) are exempt from the permission check (isSuperAdmin bypass in allowPermissions).
+  allowPermissions("sellers:add"),
   checkInput(createSellerSubAdminSchema),
   catchErrors(sellerController.createSubAdmin),
 );
@@ -163,6 +166,7 @@ sellerRoutes.get(
   "/me/sub-admins",
   authenticate,
   allowRoles(ROLES.SELLER, ROLES.SELLER_SUB_ADMIN),
+  allowPermissions("sellers:view"),
   checkInput(listSellerSubAdminsSchema),
   catchErrors(sellerController.listSubAdmins),
 );
@@ -170,6 +174,7 @@ sellerRoutes.patch(
   "/me/sub-admins/:userId/modules",
   authenticate,
   allowRoles(ROLES.SELLER, ROLES.SELLER_SUB_ADMIN),
+  allowPermissions("sellers:edit"),
   checkInput(updateSellerSubAdminModulesSchema),
   catchErrors(sellerController.updateSubAdminModules),
 );

@@ -10,6 +10,8 @@ const {
   listProductSchema,
   searchProductSchema,
   reviewProductSchema,
+  bulkProductSchema,
+  updateInventorySchema,
   productParamSchema,
 } = require("../validation/product.validation");
 const { ACTIONS } = require("../../../shared/constants/actions");
@@ -17,8 +19,14 @@ const { ACTIONS } = require("../../../shared/constants/actions");
 const productRoutes = express.Router();
 const productController = new ProductController();
 
+// ── Public ────────────────────────────────────────────────────────────────────
+
 productRoutes.get("/", checkInput(listProductSchema), catchErrors(productController.list));
 productRoutes.get("/search", checkInput(searchProductSchema), catchErrors(productController.search));
+productRoutes.get("/:productId", checkInput(productParamSchema), catchErrors(productController.getOne));
+
+// ── Seller ────────────────────────────────────────────────────────────────────
+
 productRoutes.get(
   "/seller/me",
   authenticate,
@@ -26,14 +34,6 @@ productRoutes.get(
   checkInput(listProductSchema),
   catchErrors(productController.listMine),
 );
-productRoutes.patch(
-  "/:productId/review",
-  authenticate,
-  allowActions(ACTIONS.CATALOG_REVIEW),
-  checkInput(reviewProductSchema),
-  catchErrors(productController.review),
-);
-productRoutes.get("/:productId", catchErrors(productController.getOne));
 productRoutes.post(
   "/",
   authenticate,
@@ -54,6 +54,50 @@ productRoutes.delete(
   allowActions(ACTIONS.CATALOG_MANAGE),
   checkInput(productParamSchema),
   catchErrors(productController.delete),
+);
+
+// ── Admin / review ────────────────────────────────────────────────────────────
+
+productRoutes.patch(
+  "/:productId/review",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_REVIEW),
+  checkInput(reviewProductSchema),
+  catchErrors(productController.review),
+);
+
+// ── Bulk ─────────────────────────────────────────────────────────────────────
+
+productRoutes.post(
+  "/bulk/update",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_REVIEW),
+  checkInput(bulkProductSchema),
+  catchErrors(productController.bulkUpdate),
+);
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+
+productRoutes.patch(
+  "/:productId/inventory",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateInventorySchema),
+  catchErrors(productController.adjustInventory),
+);
+productRoutes.get(
+  "/inventory/stats",
+  authenticate,
+  catchErrors(productController.inventoryStats),
+);
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+productRoutes.get(
+  "/analytics/top",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_REVIEW),
+  catchErrors(productController.topProducts),
 );
 
 module.exports = { productRoutes };

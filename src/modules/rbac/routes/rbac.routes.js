@@ -49,8 +49,10 @@ const permissionController = new PermissionController();
 const roleController = new RoleController();
 const permissionAssignmentController = new PermissionAssignmentController();
 
-// Apply authentication and keep RBAC management limited to platform admins.
-rbacRoutes.use(authenticate, allowRoles(ROLES.ADMIN));
+// Authentication required for all RBAC routes.
+// Super-admins and admins pass freely; sub-admins are admitted but each
+// route still requires the specific rbac:* permission (enforced below).
+rbacRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
 
 // MODULES ROUTES
 rbacRoutes.get(

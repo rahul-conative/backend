@@ -282,6 +282,210 @@ class PlatformService {
     }
     return this.platformRepository.deleteContentPage(slug);
   }
+
+  async createBrand(payload) {
+    return this.platformRepository.createBrand(payload);
+  }
+
+  async updateBrand(brandId, payload) {
+    const item = await this.platformRepository.getBrand(brandId);
+    if (!item) {
+      throw new AppError("Brand not found", 404);
+    }
+    return this.platformRepository.updateBrand(brandId, payload);
+  }
+
+  async getBrand(brandId) {
+    const item = await this.platformRepository.getBrand(brandId);
+    if (!item) {
+      throw new AppError("Brand not found", 404);
+    }
+    return item;
+  }
+
+  async listBrands(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.name = { $regex: q, $options: "i" };
+    }
+    return this.platformRepository.listBrands(filter, pagination);
+  }
+
+  async deleteBrand(brandId) {
+    const item = await this.platformRepository.getBrand(brandId);
+    if (!item) {
+      throw new AppError("Brand not found", 404);
+    }
+    return this.platformRepository.deleteBrand(brandId);
+  }
+
+  async createWarrantyTemplate(payload) {
+    return this.platformRepository.createWarrantyTemplate(payload);
+  }
+
+  async updateWarrantyTemplate(templateId, payload) {
+    const item = await this.platformRepository.getWarrantyTemplate(templateId);
+    if (!item) {
+      throw new AppError("Warranty template not found", 404);
+    }
+    return this.platformRepository.updateWarrantyTemplate(templateId, payload);
+  }
+
+  async getWarrantyTemplate(templateId) {
+    const item = await this.platformRepository.getWarrantyTemplate(templateId);
+    if (!item) {
+      throw new AppError("Warranty template not found", 404);
+    }
+    return item;
+  }
+
+  async listWarrantyTemplates(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.period = { $regex: q, $options: "i" };
+    }
+    return this.platformRepository.listWarrantyTemplates(filter, pagination);
+  }
+
+  async deleteWarrantyTemplate(templateId) {
+    const item = await this.platformRepository.getWarrantyTemplate(templateId);
+    if (!item) {
+      throw new AppError("Warranty template not found", 404);
+    }
+    return this.platformRepository.deleteWarrantyTemplate(templateId);
+  }
+
+  async createFinish(payload) {
+    return this.platformRepository.createFinish(payload);
+  }
+
+  async updateFinish(finishId, payload) {
+    const item = await this.platformRepository.getFinish(finishId);
+    if (!item) throw new AppError("Finish not found", 404);
+    return this.platformRepository.updateFinish(finishId, payload);
+  }
+
+  async listFinishes(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) filter.name = { $regex: q, $options: "i" };
+    return this.platformRepository.listFinishes(filter, pagination);
+  }
+
+  async deleteFinish(finishId) {
+    const item = await this.platformRepository.getFinish(finishId);
+    if (!item) throw new AppError("Finish not found", 404);
+    return this.platformRepository.deleteFinish(finishId);
+  }
+
+  async createDimension(payload) {
+    return this.platformRepository.createDimension(payload);
+  }
+
+  async updateDimension(dimensionId, payload) {
+    const item = await this.platformRepository.getDimension(dimensionId);
+    if (!item) throw new AppError("Dimension not found", 404);
+    return this.platformRepository.updateDimension(dimensionId, payload);
+  }
+
+  async listDimensions(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) filter.dimensions_value = { $regex: q, $options: "i" };
+    return this.platformRepository.listDimensions(filter, pagination);
+  }
+
+  async deleteDimension(dimensionId) {
+    const item = await this.platformRepository.getDimension(dimensionId);
+    if (!item) throw new AppError("Dimension not found", 404);
+    return this.platformRepository.deleteDimension(dimensionId);
+  }
+
+  async createBatch(payload) {
+    return this.platformRepository.createBatch(payload);
+  }
+
+  async updateBatch(batchId, payload) {
+    const item = await this.platformRepository.getBatch(batchId);
+    if (!item) throw new AppError("Batch not found", 404);
+    return this.platformRepository.updateBatch(batchId, payload);
+  }
+
+  async listBatches(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) filter.batchCode = { $regex: q, $options: "i" };
+    return this.platformRepository.listBatches(filter, pagination);
+  }
+
+  async deleteBatch(batchId) {
+    const item = await this.platformRepository.getBatch(batchId);
+    if (!item) throw new AppError("Batch not found", 404);
+    return this.platformRepository.deleteBatch(batchId);
+  }
+
+  async createProductOption(payload) {
+    return this.platformRepository.createProductOption(payload);
+  }
+
+  async updateProductOption(optionId, payload) {
+    const item = await this.platformRepository.getProductOption(optionId);
+    if (!item) throw new AppError("Product option not found", 404);
+    return this.platformRepository.updateProductOption(optionId, payload);
+  }
+
+  async listProductOptions(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) filter.name = { $regex: q, $options: "i" };
+    return this.platformRepository.listProductOptions(filter, pagination);
+  }
+
+  async deleteProductOption(optionId) {
+    const item = await this.platformRepository.getProductOption(optionId);
+    if (!item) throw new AppError("Product option not found", 404);
+    return this.platformRepository.deleteProductOption(optionId);
+  }
+
+  async createProductOptionValue(payload) {
+    return this.platformRepository.createProductOptionValue(payload);
+  }
+
+  async updateProductOptionValue(optionValueId, payload) {
+    const item = await this.platformRepository.getProductOptionValue(optionValueId);
+    if (!item) throw new AppError("Product option value not found", 404);
+    return this.platformRepository.updateProductOptionValue(optionValueId, payload);
+  }
+
+  async listProductOptionValues(query) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.option_id) filter.option_id = query.option_id;
+    if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
+    const q = query.q || query.keyWord || query.search;
+    if (q) filter.name = { $regex: q, $options: "i" };
+    return this.platformRepository.listProductOptionValues(filter, pagination);
+  }
+
+  async deleteProductOptionValue(optionValueId) {
+    const item = await this.platformRepository.getProductOptionValue(optionValueId);
+    if (!item) throw new AppError("Product option value not found", 404);
+    return this.platformRepository.deleteProductOptionValue(optionValueId);
+  }
 }
 
 module.exports = { PlatformService };

@@ -25,6 +25,12 @@ function isPlatformAdminRole(role) {
   return [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role);
 }
 
+// Full (owner) seller bypasses permission checks on seller-scoped slugs.
+function isOwnerSellerBypass(userRoles, permissionSlugs) {
+  const isOwnerSeller = userRoles.includes(ROLES.SELLER);
+  return isOwnerSeller && permissionSlugs.every((slug) => slug.startsWith("sellers:"));
+}
+
 function enforceModuleScope(req) {
   if (!usesModuleAccess(req.auth)) {
     return null;
@@ -127,6 +133,13 @@ function allowPermissions(...permissionSlugs) {
       return next();
     }
 
+    const userRoles = getUserRoles(req);
+
+    // Owner sellers bypass permission checks for seller-scoped permissions.
+    if (isOwnerSellerBypass(userRoles, permissionSlugs)) {
+      return next();
+    }
+
     const scopeError = enforceModuleScope(req);
     if (scopeError) {
       return next(scopeError);
@@ -135,7 +148,6 @@ function allowPermissions(...permissionSlugs) {
     const grantedPermissions = Array.isArray(req.auth.permissions)
       ? req.auth.permissions
       : [];
-    const userRoles = getUserRoles(req);
     const allowed = permissionSlugs.every((permission) => {
       if (grantedPermissions.includes(permission)) {
         return true;
