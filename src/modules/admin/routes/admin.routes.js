@@ -502,6 +502,11 @@ adminRoutes.delete(
 );
 
 // Platform Management Routes
+adminRoutes.get(
+  "/platform/catalog-prefill",
+  catchErrors(platformController.getCatalogPrefillData),
+);
+
 adminRoutes.post(
   "/platform/categories",
   checkInput(createCategorySchema),

@@ -31,6 +31,9 @@ const createCategorySchema = Joi.object({
       .default([]),
     active: Joi.boolean().default(true),
     sortOrder: Joi.number().integer().default(0),
+    imageUrl: Joi.string().allow(""),
+    bannerUrl: Joi.string().allow(""),
+    iconUrl: Joi.string().allow(""),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -57,6 +60,9 @@ const updateCategorySchema = Joi.object({
     ),
     active: Joi.boolean(),
     sortOrder: Joi.number().integer(),
+    imageUrl: Joi.string().allow(""),
+    bannerUrl: Joi.string().allow(""),
+    iconUrl: Joi.string().allow(""),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
@@ -299,6 +305,18 @@ const createContentPageSchema = Joi.object({
     title: Joi.string().trim().required(),
     pageType: Joi.string().trim().required(),
     body: Joi.string().required(),
+    excerpt: Joi.string().allow(""),
+    category: Joi.string().allow(""),
+    tags: Joi.array().items(Joi.string().trim()).default([]),
+    coverImage: Joi.string().allow(""),
+    thumbnailUrl: Joi.string().allow(""),
+    heroImage: Joi.string().allow(""),
+    galleryImages: Joi.array().items(Joi.string()).default([]),
+    author: Joi.object({
+      name: Joi.string().allow(""),
+      avatar: Joi.string().allow(""),
+    }).default({}),
+    readTime: Joi.number().integer().min(0).default(0),
     language: Joi.string().trim().default("en"),
     published: Joi.boolean().default(false),
     publishedAt: Joi.date().optional(),
@@ -314,6 +332,18 @@ const updateContentPageSchema = Joi.object({
     title: Joi.string().trim(),
     pageType: Joi.string().trim(),
     body: Joi.string(),
+    excerpt: Joi.string().allow(""),
+    category: Joi.string().allow(""),
+    tags: Joi.array().items(Joi.string().trim()),
+    coverImage: Joi.string().allow(""),
+    thumbnailUrl: Joi.string().allow(""),
+    heroImage: Joi.string().allow(""),
+    galleryImages: Joi.array().items(Joi.string()),
+    author: Joi.object({
+      name: Joi.string().allow(""),
+      avatar: Joi.string().allow(""),
+    }),
+    readTime: Joi.number().integer().min(0),
     language: Joi.string().trim(),
     published: Joi.boolean(),
     publishedAt: Joi.date().optional(),
@@ -534,17 +564,23 @@ const productOptionIdSchema = Joi.object({
 
 const createProductOptionValueSchema = Joi.object({
   body: Joi.object({
-    option_id: Joi.string().required(),
+    optionId: Joi.string(),
+    option_id: Joi.string(),
     name: Joi.string().trim().required(),
+    valueCode: Joi.string().trim().allow(""),
     active: Joi.boolean().default(true),
-  }).required(),
+  })
+    .or("optionId", "option_id")
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
 const updateProductOptionValueSchema = Joi.object({
   body: Joi.object({
+    optionId: Joi.string(),
     option_id: Joi.string(),
     name: Joi.string().trim(),
+    valueCode: Joi.string().trim().allow(""),
     active: Joi.boolean(),
   }).required(),
   query: Joi.object({}).required(),
@@ -553,7 +589,14 @@ const updateProductOptionValueSchema = Joi.object({
 const listProductOptionValuesSchema = Joi.object({
   body: Joi.object({}).required(),
   query: paginationQuery.concat(
-    Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), option_id: Joi.string(), active: Joi.boolean() }),
+    Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
+      option_id: Joi.string(),
+      optionId: Joi.string(),
+      active: Joi.boolean(),
+    }),
   ),
   params: Joi.object({}).required(),
 });

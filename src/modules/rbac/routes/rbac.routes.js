@@ -129,6 +129,13 @@ rbacRoutes.patch(
   catchErrors(permissionController.updatePermission),
 );
 
+rbacRoutes.delete(
+  "/permissions/:permissionId",
+  checkInput(permissionParamSchema),
+  allowPermissions("rbac:delete"),
+  catchErrors(permissionController.deletePermission),
+);
+
 // ROLES ROUTES
 rbacRoutes.get(
   "/roles",
@@ -156,6 +163,13 @@ rbacRoutes.patch(
   checkInput({ ...roleParamSchema, body: updateRoleSchema.body }),
   allowPermissions("rbac:update"),
   catchErrors(roleController.updateRole),
+);
+
+rbacRoutes.delete(
+  "/roles/:roleId",
+  checkInput(roleParamSchema),
+  allowPermissions("rbac:delete"),
+  catchErrors(roleController.deleteRole),
 );
 
 rbacRoutes.get(

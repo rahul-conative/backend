@@ -19,6 +19,7 @@ const PERMISSION_ACTIONS = [
   "add",
   "edit",
   "update",
+  "action",
   "delete",
   "status",
   "approval",
@@ -258,6 +259,17 @@ class RbacRepository {
     return permission.update(updates);
   }
 
+  async deletePermission(id) {
+    const permission = await Permission.findByPk(id);
+    if (!permission) {
+      throw new AppError("Permission not found", 404);
+    }
+    await RolePermission.destroy({ where: { permissionId: id } });
+    await UserPermission.destroy({ where: { permissionId: id } });
+    await permission.destroy();
+    return { deleted: true };
+  }
+
   // ROLES
   async createRole(roleData) {
     const id = uuidv4();
@@ -317,6 +329,17 @@ class RbacRepository {
       throw new AppError("Role not found", 404);
     }
     return role.update(updates);
+  }
+
+  async deleteRole(id) {
+    const role = await Role.findByPk(id);
+    if (!role) {
+      throw new AppError("Role not found", 404);
+    }
+    await RolePermission.destroy({ where: { roleId: id } });
+    await UserRole.destroy({ where: { roleId: id } });
+    await role.destroy();
+    return { deleted: true };
   }
 
   // ROLE PERMISSIONS

@@ -5,6 +5,7 @@ const permissionActions = [
   "add",
   "edit",
   "update",
+  "action",
   "delete",
   "status",
   "approval",

@@ -26,6 +26,11 @@ class RoleController {
     res.json(okResponse(role));
   };
 
+  deleteRole = async (req, res) => {
+    const result = await this.rbacService.deleteRole(req.params.roleId);
+    res.json(okResponse(result));
+  };
+
   getRolePermissions = async (req, res) => {
     const permissions = await this.rbacService.getRolePermissions(req.params.roleId);
     res.json(okResponse(permissions));

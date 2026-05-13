@@ -1,6 +1,11 @@
 const { getPage } = require("../../../shared/tools/page");
 const { PlatformRepository } = require("../repositories/platform.repository");
 const { AppError } = require("../../../shared/errors/app-error");
+const {
+  AdminTaxModel,
+  AdminSubTaxModel,
+  AdminTaxRuleModel,
+} = require("../../admin/models/common-management.model");
 
 class PlatformService {
   constructor({ platformRepository = new PlatformRepository() } = {}) {
@@ -462,29 +467,115 @@ class PlatformService {
   }
 
   async createProductOptionValue(payload) {
-    return this.platformRepository.createProductOptionValue(payload);
+    const normalized = await this.normalizeProductOptionValuePayload(payload);
+    return this.platformRepository.createProductOptionValue(normalized);
   }
 
   async updateProductOptionValue(optionValueId, payload) {
     const item = await this.platformRepository.getProductOptionValue(optionValueId);
     if (!item) throw new AppError("Product option value not found", 404);
-    return this.platformRepository.updateProductOptionValue(optionValueId, payload);
+    const normalized = await this.normalizeProductOptionValuePayload(payload, { partial: true });
+    return this.platformRepository.updateProductOptionValue(optionValueId, normalized);
   }
 
   async listProductOptionValues(query) {
     const pagination = getPage(query);
     const filter = {};
-    if (query.option_id) filter.option_id = query.option_id;
+    if (query.option_id || query.optionId) filter.optionId = query.option_id || query.optionId;
     if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     const q = query.q || query.keyWord || query.search;
     if (q) filter.name = { $regex: q, $options: "i" };
-    return this.platformRepository.listProductOptionValues(filter, pagination);
+    const result = await this.platformRepository.listProductOptionValues(filter, pagination);
+    return {
+      ...result,
+      items: await this.decorateProductOptionValues(result.items),
+    };
   }
 
   async deleteProductOptionValue(optionValueId) {
     const item = await this.platformRepository.getProductOptionValue(optionValueId);
     if (!item) throw new AppError("Product option value not found", 404);
     return this.platformRepository.deleteProductOptionValue(optionValueId);
+  }
+
+  async normalizeProductOptionValuePayload(payload = {}, { partial = false } = {}) {
+    const optionId = payload.optionId || payload.option_id;
+    if (!partial && !optionId) {
+      throw new AppError("optionId is required", 400);
+    }
+
+    const normalized = { ...payload };
+    delete normalized.option_id;
+
+    if (optionId) {
+      const option = await this.platformRepository.getProductOption(optionId);
+      if (!option) {
+        throw new AppError("Product option not found", 404);
+      }
+      normalized.optionId = String(option._id);
+      normalized.option_id = String(option._id);
+      normalized.optionName = option.name;
+    }
+
+    if (normalized.valueCode === undefined && normalized.name) {
+      normalized.valueCode = String(normalized.name)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+    }
+
+    return normalized;
+  }
+
+  async decorateProductOptionValues(items = []) {
+    if (!Array.isArray(items) || !items.length) return items;
+    const optionIds = Array.from(new Set(items.map((item) => String(item.optionId || "")).filter(Boolean)));
+    if (!optionIds.length) return items;
+
+    const options = await Promise.all(optionIds.map((id) => this.platformRepository.getProductOption(id)));
+    const optionMap = new Map(options.filter(Boolean).map((opt) => [String(opt._id), opt]));
+
+    return items.map((item) => {
+      const value = item.toObject ? item.toObject() : { ...item };
+      const option = optionMap.get(String(value.optionId || ""));
+      return {
+        ...value,
+        optionId: value.optionId || value.option_id || "",
+        optionName: value.optionName || option?.name || "",
+      };
+    });
+  }
+
+  async getCatalogPrefillData(query = {}) {
+    const categories = (await this.platformRepository.listCategories({}, { skip: 0, limit: 500 })).items || [];
+    const families = (await this.platformRepository.listProductFamilies({}, { skip: 0, limit: 500 })).items || [];
+    const variants = (await this.platformRepository.listProductVariants({}, { skip: 0, limit: 500 })).items || [];
+    const hsnCodes = (await this.platformRepository.listHsnCodes({ active: true }, { skip: 0, limit: 1000 })).items || [];
+    const options = await this.platformRepository.listAllProductOptions(query.includeInactive ? {} : { active: true });
+    const optionValuesRaw = await this.platformRepository.listAllProductOptionValues(query.includeInactive ? {} : { active: true });
+    const optionValues = await this.decorateProductOptionValues(optionValuesRaw);
+    const [taxes, subTaxes, taxRules] = await Promise.all([
+      AdminTaxModel.find(query.includeInactive ? {} : { active: true }).sort({ name: 1 }),
+      AdminSubTaxModel.find(query.includeInactive ? {} : { active: true }).sort({ name: 1 }),
+      AdminTaxRuleModel.find(query.includeInactive ? {} : { active: true }).sort({ createdAt: -1 }),
+    ]);
+
+    return {
+      categories,
+      categoryAttributes: categories.map((category) => ({
+        categoryKey: category.categoryKey,
+        title: category.title,
+        attributeSchema: this.normalizeCategoryAttributes(category),
+      })),
+      families,
+      variants,
+      hsnCodes,
+      taxes,
+      subTaxes,
+      taxRules,
+      options,
+      optionValues,
+    };
   }
 }
 

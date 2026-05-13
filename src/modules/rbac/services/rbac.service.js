@@ -51,7 +51,16 @@ class RbacService {
         permissions: permissionCount,
         assignedPermissions: assignedPermissionCount,
       },
-      actions: ["view", "add", "edit", "update", "delete", "status", "approval"],
+      actions: [
+        "view",
+        "add",
+        "edit",
+        "update",
+        "action",
+        "delete",
+        "status",
+        "approval",
+      ],
       assignedPermissionIds: matrix.assignedPermissionIds,
     };
   }
@@ -126,6 +135,11 @@ class RbacService {
     return this.rbacRepository.updatePermission(id, updates);
   }
 
+  async deletePermission(id) {
+    await this.getPermission(id);
+    return this.rbacRepository.deletePermission(id);
+  }
+
   // ROLE OPERATIONS
   async createRole(roleData) {
     const existingRole = await this.rbacRepository.getRoleBySlug(roleData.slug);
@@ -162,6 +176,11 @@ class RbacService {
     }
 
     return this.rbacRepository.updateRole(id, updates);
+  }
+
+  async deleteRole(id) {
+    await this.getRole(id);
+    return this.rbacRepository.deleteRole(id);
   }
 
   // ROLE PERMISSION ASSIGNMENT

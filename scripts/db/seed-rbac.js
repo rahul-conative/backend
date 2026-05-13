@@ -11,6 +11,7 @@ const STANDARD_PERMISSION_ACTIONS = [
   { key: "add", label: "Add" },
   { key: "edit", label: "Edit" },
   { key: "update", label: "Update" },
+  { key: "action", label: "Action" },
   { key: "delete", label: "Delete" },
   { key: "status", label: "Status" },
   { key: "approval", label: "Approval" },

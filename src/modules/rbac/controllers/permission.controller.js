@@ -28,6 +28,11 @@ class PermissionController {
     );
     res.json(okResponse(permission));
   };
+
+  deletePermission = async (req, res) => {
+    const result = await this.rbacService.deletePermission(req.params.permissionId);
+    res.json(okResponse(result));
+  };
 }
 
 module.exports = { PermissionController };

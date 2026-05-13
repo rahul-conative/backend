@@ -63,6 +63,8 @@ const {
 const platformRoutes = express.Router();
 const platformController = new PlatformController();
 
+platformRoutes.get("/catalog-prefill", catchErrors(platformController.getCatalogPrefillData));
+
 platformRoutes.get("/categories", checkInput(listCategoriesSchema), catchErrors(platformController.listCategories));
 platformRoutes.get("/categories/:categoryKey", checkInput(categoryKeySchema), catchErrors(platformController.getCategory));
 platformRoutes.get(

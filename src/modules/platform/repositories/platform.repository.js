@@ -349,6 +349,14 @@ class PlatformRepository {
   async deleteProductOptionValue(optionValueId) {
     return PlatformProductOptionValueModel.findByIdAndDelete(optionValueId);
   }
+
+  async listAllProductOptions(filter = {}) {
+    return PlatformProductOptionModel.find(filter).sort({ name: 1 });
+  }
+
+  async listAllProductOptionValues(filter = {}) {
+    return PlatformProductOptionValueModel.find(filter).sort({ name: 1 });
+  }
 }
 
 module.exports = { PlatformRepository };

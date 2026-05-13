@@ -362,6 +362,30 @@ async function seedUsers(passwordHash) {
 // ─── 2. Categories ────────────────────────────────────────────────────────────
 
 async function seedCategories() {
+  const categoryImageMap = {
+    electronics: '/image/png/Electronics.png',
+    fashion: '/image/png/Fashion.png',
+    'home-kitchen': '/image/png/Home.png',
+    books: '/image/png/ForYou.png',
+    'sports-fitness': '/image/png/SportsFitness.png',
+    beauty: '/image/png/Beauty.png',
+    grocery: '/image/png/FoodHealth.png',
+    mobiles: '/image/png/Mobiles.png',
+    laptops: '/image/jpg/productImg1.jpg',
+    audio: '/image/jpg/productImg2.jpg',
+    televisions: '/image/jpg/productImg3.jpg',
+    'mens-clothing': '/image/png/men-fashion.png',
+    'womens-clothing': '/image/jpg/stylish-girls.jpg',
+    footwear: '/image/png/stylish-pair.png',
+    jewellery: '/image/png/Ring.png',
+    'home-decor': '/image/jpg/home-decor.jpg',
+    furniture: '/image/png/Furniture.png',
+    'kitchen-appliances': '/image/png/Appliances.png',
+    skincare: '/image/png/Perfume.png',
+    haircare: '/image/png/SprayBottle.png',
+    beverages: '/image/png/FoodHealth.png',
+  };
+
   const categories = [
     // Electronics
     { categoryKey: 'electronics', title: 'Electronics', parentKey: null, level: 0, sortOrder: 1,
@@ -449,7 +473,15 @@ async function seedCategories() {
   await Promise.all(categories.map((cat) =>
     CategoryTreeModel.findOneAndUpdate(
       { categoryKey: cat.categoryKey },
-      { $set: { ...cat, active: true } },
+      {
+        $set: {
+          ...cat,
+          active: true,
+          imageUrl: categoryImageMap[cat.categoryKey] || categoryImageMap[cat.parentKey] || '',
+          bannerUrl: categoryImageMap[cat.categoryKey] || categoryImageMap[cat.parentKey] || '',
+          iconUrl: categoryImageMap[cat.categoryKey] || categoryImageMap[cat.parentKey] || '',
+        },
+      },
       { upsert: true, new: true },
     ),
   ));

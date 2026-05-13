@@ -310,6 +310,11 @@ class PlatformController {
     const item = await this.platformService.deleteProductOptionValue(req.params.optionValueId);
     res.json(okResponse(item));
   };
+
+  getCatalogPrefillData = async (req, res) => {
+    const result = await this.platformService.getCatalogPrefillData(req.query);
+    res.json(okResponse(result));
+  };
 }
 
 module.exports = { PlatformController };
