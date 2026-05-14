@@ -4,11 +4,25 @@ const router = express.Router();
 const { authenticate } = require("../../../shared/middleware/authenticate");
 const { RecommendationService } = require("../services/recommendation.service");
 const { recommendationValidation } = require("../../validation");
+const jwt = require("jsonwebtoken");
+const { env } = require("../../../config/env");
+
+function optionalAuthenticate(req, _res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return next();
+
+  try {
+    req.auth = jwt.verify(authHeader.replace("Bearer ", ""), env.jwtAccessSecret);
+  } catch {
+    req.auth = null;
+  }
+  return next();
+}
 
 // ==============================
 // Get personalized recommendations
 // ==============================
-router.get("/", authenticate, async (req, res, next) => {
+router.get("/", optionalAuthenticate, async (req, res, next) => {
   try {
     const { error, value } =
       recommendationValidation.getRecommendations.validate(req.query);
@@ -22,13 +36,6 @@ router.get("/", authenticate, async (req, res, next) => {
     }
 
     const userId = req.auth?.sub;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
 
     const recs = await RecommendationService.getRecommendations(userId, value);
 
@@ -106,11 +113,12 @@ router.get("/trending", async (req, res, next) => {
       });
     }
 
-    const { category, period } = value;
+    const { category, period, limit } = value;
 
     const trending = await RecommendationService.getTrendingProducts(
       category,
-      period
+      period,
+      { limit },
     );
 
     return res.status(200).json({

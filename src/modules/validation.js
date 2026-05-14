@@ -29,6 +29,7 @@ const recommendationValidation = {
   getTrending: Joi.object({
     category: Joi.string().optional(),
     period: Joi.string().valid("today", "week", "month").default("week"),
+    limit: Joi.number().integer().min(1).max(50).default(10),
   }),
 
   addRecommendation: Joi.object({

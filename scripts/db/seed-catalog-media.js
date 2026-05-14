@@ -3,16 +3,36 @@
 
 const fs = require("fs");
 const path = require("path");
+const cloudinary = require("cloudinary").v2;
 const { connectMongo } = require("../../src/infrastructure/mongo/mongo-client");
 const { ProductModel } = require("../../src/modules/product/models/product.model");
 const { CategoryTreeModel } = require("../../src/modules/platform/models/category-tree.model");
 const { ContentPageModel } = require("../../src/modules/platform/models/content-page.model");
 const { storageService } = require("../../src/shared/storage/storage-service");
+const { env } = require("../../src/config/env");
 
 const CUSTOMER_PUBLIC_IMAGE_DIR = path.resolve(__dirname, "../../../customer/public/image");
 const CACHE_FILE = path.resolve(__dirname, "./.catalog-media-cache.json");
 const VALID_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const DEFAULT_PURGE_FOLDERS = ["ecommerce/categories", "ecommerce/products", "ecommerce/cms"];
+
+function parseArgs(argv = []) {
+  const parsed = {
+    sourceDir: CUSTOMER_PUBLIC_IMAGE_DIR,
+    purgeCloudinary: false,
+    clearCache: false,
+  };
+  for (const arg of argv) {
+    if (arg === "--purge-cloudinary") parsed.purgeCloudinary = true;
+    else if (arg === "--clear-cache") parsed.clearCache = true;
+    else if (arg.startsWith("--source=")) {
+      const source = arg.split("=")[1];
+      if (source) parsed.sourceDir = path.resolve(process.cwd(), source);
+    }
+  }
+  return parsed;
+}
 
 function listImageFiles(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -51,6 +71,43 @@ function loadCache() {
 
 function saveCache(cache) {
   fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
+}
+
+function hasCloudinaryConfig() {
+  return Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
+}
+
+async function purgeCloudinaryFolders(folders = DEFAULT_PURGE_FOLDERS) {
+  if (!hasCloudinaryConfig()) {
+    throw new Error("Cloudinary credentials missing in environment");
+  }
+
+  cloudinary.config({
+    cloud_name: env.cloudinary.cloudName,
+    api_key: env.cloudinary.apiKey,
+    api_secret: env.cloudinary.apiSecret,
+  });
+
+  for (const folder of folders) {
+    console.log(`🧹 Purging Cloudinary folder: ${folder}`);
+    let nextCursor = undefined;
+    do {
+      const search = await cloudinary.search
+        .expression(`folder:${folder}`)
+        .max_results(500)
+        .next_cursor(nextCursor)
+        .execute();
+      const resources = Array.isArray(search?.resources) ? search.resources : [];
+      const publicIds = resources.map((item) => item.public_id).filter(Boolean);
+      if (publicIds.length) {
+        await cloudinary.api.delete_resources(publicIds, { resource_type: "image" });
+        console.log(`  ✓ Deleted ${publicIds.length} assets from ${folder}`);
+      } else {
+        console.log(`  ✓ No assets found in ${folder}`);
+      }
+      nextCursor = search?.next_cursor || null;
+    } while (nextCursor);
+  }
 }
 
 async function uploadWithCache(absPath, cache, folder) {
@@ -223,16 +280,21 @@ async function seedCmsImages(imageFiles, cache) {
 }
 
 async function main() {
+  const options = parseArgs(process.argv.slice(2));
   console.log("⏳ Seeding catalog media (Cloudinary + Mongo)...");
   await connectMongo();
 
-  const imageFiles = listImageFiles(CUSTOMER_PUBLIC_IMAGE_DIR);
-  if (!imageFiles.length) {
-    throw new Error(`No image files found in ${CUSTOMER_PUBLIC_IMAGE_DIR}`);
+  if (options.purgeCloudinary) {
+    await purgeCloudinaryFolders(DEFAULT_PURGE_FOLDERS);
   }
-  console.log(`✓ Found ${imageFiles.length} local images in customer/public/image`);
 
-  const cache = loadCache();
+  const imageFiles = listImageFiles(options.sourceDir);
+  if (!imageFiles.length) {
+    throw new Error(`No image files found in ${options.sourceDir}`);
+  }
+  console.log(`✓ Found ${imageFiles.length} local images in ${options.sourceDir}`);
+
+  const cache = options.clearCache ? {} : loadCache();
   await seedCategoryImages(imageFiles, cache);
   await seedProductImages(imageFiles, cache);
   await seedCmsImages(imageFiles, cache);
