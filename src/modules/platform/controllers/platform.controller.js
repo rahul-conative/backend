@@ -161,6 +161,21 @@ class PlatformController {
     res.json(okResponse(item));
   };
 
+  listProductReviews = async (req, res) => {
+    const result = await this.platformService.listProductReviews(req.query);
+    res.json(okResponse(result.items, { total: result.total }));
+  };
+
+  updateProductReview = async (req, res) => {
+    const item = await this.platformService.updateProductReview(req.params.reviewId, req.body);
+    res.json(okResponse(item));
+  };
+
+  deleteProductReview = async (req, res) => {
+    const item = await this.platformService.deleteProductReview(req.params.reviewId);
+    res.json(okResponse(item));
+  };
+
   createBrand = async (req, res) => {
     const item = await this.platformService.createBrand(req.body);
     res.status(201).json(okResponse(item));

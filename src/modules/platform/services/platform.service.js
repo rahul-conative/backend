@@ -288,6 +288,41 @@ class PlatformService {
     return this.platformRepository.deleteContentPage(slug);
   }
 
+  async listProductReviews(query = {}) {
+    const pagination = getPage(query);
+    const filter = {};
+    if (query.productId) filter.productId = query.productId;
+    if (query.buyerId) filter.buyerId = query.buyerId;
+    if (query.orderId) filter.orderId = query.orderId;
+    if (query.status) filter.status = query.status;
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { reviewText: { $regex: q, $options: "i" } },
+        { productId: { $regex: q, $options: "i" } },
+        { buyerId: { $regex: q, $options: "i" } },
+      ];
+    }
+    return this.platformRepository.listProductReviews(filter, pagination);
+  }
+
+  async updateProductReview(reviewId, payload) {
+    const item = await this.platformRepository.getProductReview(reviewId);
+    if (!item) {
+      throw new AppError("Product review not found", 404);
+    }
+    return this.platformRepository.updateProductReview(reviewId, payload);
+  }
+
+  async deleteProductReview(reviewId) {
+    const item = await this.platformRepository.getProductReview(reviewId);
+    if (!item) {
+      throw new AppError("Product review not found", 404);
+    }
+    return this.platformRepository.deleteProductReview(reviewId);
+  }
+
   async createBrand(payload) {
     return this.platformRepository.createBrand(payload);
   }
