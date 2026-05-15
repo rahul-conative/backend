@@ -94,6 +94,9 @@ const {
   updateContentPageSchema,
   listContentPagesSchema,
   contentPageSlugSchema,
+  listProductReviewsSchema,
+  updateProductReviewSchema,
+  productReviewIdSchema,
   createBrandSchema,
   updateBrandSchema,
   listBrandsSchema,
@@ -666,6 +669,22 @@ adminRoutes.delete(
   "/platform/content-pages/:slug",
   checkInput(contentPageSlugSchema),
   catchErrors(platformController.deleteContentPage),
+);
+
+adminRoutes.get(
+  "/platform/product-reviews",
+  checkInput(listProductReviewsSchema),
+  catchErrors(platformController.listProductReviews),
+);
+adminRoutes.patch(
+  "/platform/product-reviews/:reviewId",
+  checkInput(updateProductReviewSchema),
+  catchErrors(platformController.updateProductReview),
+);
+adminRoutes.delete(
+  "/platform/product-reviews/:reviewId",
+  checkInput(productReviewIdSchema),
+  catchErrors(platformController.deleteProductReview),
 );
 
 adminRoutes.post(

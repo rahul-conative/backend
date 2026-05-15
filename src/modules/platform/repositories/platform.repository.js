@@ -11,6 +11,7 @@ const { PlatformDimensionModel } = require("../models/platform-dimension.model")
 const { PlatformBatchModel } = require("../models/platform-batch.model");
 const { PlatformProductOptionModel } = require("../models/platform-product-option.model");
 const { PlatformProductOptionValueModel } = require("../models/platform-product-option-value.model");
+const { ProductReviewModel } = require("../models/product-review.model");
 const { mongoose } = require("../../../infrastructure/mongo/mongo-client");
 
 function makeCodeOrIdFilter(value, codeField = "code") {
@@ -180,6 +181,26 @@ class PlatformRepository {
 
   async deleteContentPage(slug) {
     return ContentPageModel.findOneAndDelete(makeCodeOrIdFilter(slug, "slug"));
+  }
+
+  async getProductReview(reviewId) {
+    return ProductReviewModel.findById(reviewId);
+  }
+
+  async listProductReviews(filter = {}, pagination = {}) {
+    const [items, total] = await Promise.all([
+      ProductReviewModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      ProductReviewModel.countDocuments(filter),
+    ]);
+    return { items, total };
+  }
+
+  async updateProductReview(reviewId, payload) {
+    return ProductReviewModel.findByIdAndUpdate(reviewId, payload, { new: true });
+  }
+
+  async deleteProductReview(reviewId) {
+    return ProductReviewModel.findByIdAndDelete(reviewId);
   }
 
   async createBrand(payload) {

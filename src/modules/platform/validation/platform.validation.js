@@ -378,6 +378,45 @@ const contentPageSlugSchema = Joi.object({
   }).required(),
 });
 
+const listProductReviewsSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: paginationQuery.concat(
+    Joi.object({
+      q: Joi.string().allow(""),
+      keyWord: Joi.string().allow(""),
+      search: Joi.string().allow(""),
+      productId: Joi.string(),
+      buyerId: Joi.string(),
+      orderId: Joi.string(),
+      status: Joi.string(),
+    }),
+  ),
+  params: Joi.object({}).required(),
+});
+
+const updateProductReviewSchema = Joi.object({
+  body: Joi.object({
+    rating: Joi.number().min(1).max(5),
+    title: Joi.string().allow(""),
+    reviewText: Joi.string().allow(""),
+    media: Joi.array().items(Joi.string()),
+    helpfulVotes: Joi.number().integer().min(0),
+    status: Joi.string(),
+  }).min(1).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    reviewId: Joi.string().required(),
+  }).required(),
+});
+
+const productReviewIdSchema = Joi.object({
+  body: Joi.object({}).required(),
+  query: Joi.object({}).required(),
+  params: Joi.object({
+    reviewId: Joi.string().required(),
+  }).required(),
+});
+
 const createBrandSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().trim().required(),
@@ -633,6 +672,9 @@ module.exports = {
   updateContentPageSchema,
   listContentPagesSchema,
   contentPageSlugSchema,
+  listProductReviewsSchema,
+  updateProductReviewSchema,
+  productReviewIdSchema,
   createBrandSchema,
   updateBrandSchema,
   listBrandsSchema,
