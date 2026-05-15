@@ -10,7 +10,7 @@ class UserRepository {
   }
 
   async findById(userId) {
-    return UserModel.findById(userId);
+    return UserModel.findById(userId).select("-passwordHash -refreshSessions.tokenHash");
   }
 
   async findByProvider(provider, providerUserId) {

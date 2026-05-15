@@ -71,7 +71,7 @@ class AdminRepository {
     const skip = (Number(page) - 1) * Number(limit);
     const [items, total] = await Promise.all([
       UserModel.find(filter)
-        .select("email phone role accountStatus sellerProfile createdAt updatedAt")
+        .select("email phone role accountStatus profile sellerProfile createdAt updatedAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
