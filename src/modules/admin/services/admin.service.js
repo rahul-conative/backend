@@ -397,33 +397,47 @@ class AdminService {
         }).requirements.bankDetails.missingFields,
       });
     }
+    const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
+    const kyc = kycBySellerId.get(String(sellerId)) || null;
     const nextSellerProfileBase = {
       ...(seller.sellerProfile || {}),
       bankVerificationStatus: payload.bankVerificationStatus,
       bankRejectionReason:
         payload.bankVerificationStatus === "rejected" ? payload.bankRejectionReason || null : null,
-      goLiveStatus:
-        payload.bankVerificationStatus === "rejected"
-          ? "pending"
-          : seller?.sellerProfile?.goLiveStatus || "pending",
       verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : seller?.sellerProfile?.verifiedBy || null,
       verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : seller?.sellerProfile?.verifiedAt || null,
     };
-    const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
     const onboardingState = makeSellerOnboardingState({
       sellerProfile: nextSellerProfileBase,
       user: seller,
-      kyc: kycBySellerId.get(String(sellerId)) || null,
+      kyc,
     });
+    const shouldActivateSeller =
+      payload.bankVerificationStatus === "verified" &&
+      onboardingState.kycStatus === "verified" &&
+      onboardingState.requirements.profile.completed === true &&
+      onboardingState.requirements.bankDetails.completed === true;
     const nextSellerProfile = {
       ...nextSellerProfileBase,
       onboardingChecklist: onboardingState.checklist,
-      onboardingStatus: onboardingState.onboardingStatus,
+      onboardingStatus: shouldActivateSeller
+        ? SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
+        : onboardingState.onboardingStatus,
+      goLiveStatus:
+        payload.bankVerificationStatus === "rejected"
+          ? "pending"
+          : shouldActivateSeller
+            ? "live"
+            : seller?.sellerProfile?.goLiveStatus || "pending",
+      goLiveApprovedBy: shouldActivateSeller ? actor.userId || null : seller?.sellerProfile?.goLiveApprovedBy || null,
+      goLiveApprovedAt: shouldActivateSeller ? new Date() : seller?.sellerProfile?.goLiveApprovedAt || null,
     };
     await this.adminRepository.updateUserById(sellerId, {
       sellerProfile: nextSellerProfile,
       ...(payload.bankVerificationStatus === "rejected"
         ? { accountStatus: "pending_approval" }
+        : shouldActivateSeller
+          ? { accountStatus: "active" }
         : {}),
     });
     return this.getSeller(sellerId);

@@ -354,18 +354,22 @@ class AuthService {
       kyc = await this.authRepository.findSellerKycBySellerId(user.id);
     }
 
-    const onboardingChecklist = isSeller ? this.makeSellerChecklist(user, kyc) : {};
-    const kycStatus = getSellerKycStatus(kyc, onboardingChecklist);
-    const onboardingStatus = isSeller
-      ? this.getSellerAuthStatus(user, onboardingChecklist, kycStatus)
-      : user?.sellerProfile?.onboardingStatus || "initiated";
     const sellerProfile = isSeller ? this.toPlainObject(user?.sellerProfile || {}) : {};
+    const onboardingState = isSeller
+      ? makeSellerOnboardingState({ sellerProfile, user, kyc })
+      : null;
+    const onboardingChecklist = onboardingState?.checklist || {};
+    const kycStatus = onboardingState?.kycStatus || getSellerKycStatus(kyc, onboardingChecklist);
+    const onboardingStatus = isSeller
+      ? onboardingState.onboardingStatus
+      : user?.sellerProfile?.onboardingStatus || "initiated";
     const bankVerificationStatus = sellerProfile.bankVerificationStatus || "not_submitted";
     const goLiveStatus = sellerProfile.goLiveStatus || "pending";
     const sellerOnboardingComplete =
-      onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE &&
-      bankVerificationStatus === "verified" &&
-      goLiveStatus === "live" &&
+      kycStatus === "verified" &&
+      onboardingState?.requirements?.profile?.completed === true &&
+      onboardingState?.requirements?.bankDetails?.completed === true &&
+      bankVerificationStatus !== "rejected" &&
       user.accountStatus === "active";
     const flowState = {
       role: user.role,
@@ -381,9 +385,7 @@ class AuthService {
       goLiveStatus,
       sellerProfile: isSeller ? sellerProfile : null,
       kyc: isSeller ? this.formatSellerKycForStatus(kyc) : null,
-      requirements: isSeller
-        ? makeSellerOnboardingState({ sellerProfile, user, kyc }).requirements
-        : {},
+      requirements: onboardingState?.requirements || {},
     };
 
     return flowState;
