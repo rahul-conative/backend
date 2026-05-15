@@ -22,6 +22,7 @@ const {
 const {
   makeSellerOnboardingState,
   SELLER_ONBOARDING_STATUS,
+  hasCompleteSellerBankDetails,
 } = require("../../../shared/domain/seller-onboarding");
 
 class AdminService {
@@ -255,16 +256,40 @@ class AdminService {
   }
 
   async updateUser(userId, payload) {
-    const user = await this.adminRepository.updateUserById(userId, payload);
+    const existingUser = await this.adminRepository.getUserById(userId);
+    if (!existingUser) {
+      throw new AppError("User not found", 404);
+    }
+    const nextPayload = { ...payload };
+    let kyc = null;
+
+    if (existingUser.role === ROLES.SELLER) {
+      kyc = await this.adminRepository.getSellerKycById(userId);
+      if (payload.sellerProfile) {
+        const nextSellerProfileBase = {
+          ...this.toPlainObject(existingUser.sellerProfile || {}),
+          ...payload.sellerProfile,
+        };
+        const onboardingState = makeSellerOnboardingState({
+          sellerProfile: nextSellerProfileBase,
+          user: { ...this.toPlainObject(existingUser), sellerProfile: nextSellerProfileBase },
+          kyc,
+        });
+        nextPayload.sellerProfile = {
+          ...nextSellerProfileBase,
+          kycStatus: onboardingState.kycStatus,
+          onboardingChecklist: onboardingState.checklist,
+          onboardingStatus: onboardingState.onboardingStatus,
+        };
+      }
+    }
+
+    const user = await this.adminRepository.updateUserById(userId, nextPayload);
     if (!user) {
       throw new AppError("User not found", 404);
     }
     if (user.role === ROLES.SELLER) {
-      const kycBySellerId = await this.getSellerKycByIdMap([userId]);
-      return this.enrichSellerForAdmin(
-        user,
-        kycBySellerId.get(String(userId)) || null,
-      );
+      return this.enrichSellerForAdmin(user, kyc);
     }
     return user;
   }
@@ -348,11 +373,7 @@ class AdminService {
       onboardingChecklist: onboardingState.checklist,
       onboardingStatus: onboardingState.onboardingStatus,
     };
-    const accountStatusUpdate =
-      onboardingState.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
-        ? { accountStatus: "active" }
-        : {};
-    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile, ...accountStatusUpdate });
+    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
     return this.getSeller(sellerId);
   }
 
@@ -364,11 +385,27 @@ class AdminService {
     if (!seller || seller.role !== ROLES.SELLER) {
       throw new AppError("Seller not found", 404);
     }
+    if (
+      payload.bankVerificationStatus === "verified" &&
+      !hasCompleteSellerBankDetails(seller?.sellerProfile?.bankDetails || {})
+    ) {
+      throw new AppError("Bank details must be submitted before bank can be verified", 400, {
+        missingFields: makeSellerOnboardingState({
+          sellerProfile: seller.sellerProfile || {},
+          user: seller,
+          kyc: null,
+        }).requirements.bankDetails.missingFields,
+      });
+    }
     const nextSellerProfileBase = {
       ...(seller.sellerProfile || {}),
       bankVerificationStatus: payload.bankVerificationStatus,
       bankRejectionReason:
         payload.bankVerificationStatus === "rejected" ? payload.bankRejectionReason || null : null,
+      goLiveStatus:
+        payload.bankVerificationStatus === "rejected"
+          ? "pending"
+          : seller?.sellerProfile?.goLiveStatus || "pending",
       verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : seller?.sellerProfile?.verifiedBy || null,
       verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : seller?.sellerProfile?.verifiedAt || null,
     };
@@ -383,11 +420,12 @@ class AdminService {
       onboardingChecklist: onboardingState.checklist,
       onboardingStatus: onboardingState.onboardingStatus,
     };
-    const accountStatusUpdate =
-      onboardingState.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
-        ? { accountStatus: "active" }
-        : {};
-    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile, ...accountStatusUpdate });
+    await this.adminRepository.updateUserById(sellerId, {
+      sellerProfile: nextSellerProfile,
+      ...(payload.bankVerificationStatus === "rejected"
+        ? { accountStatus: "pending_approval" }
+        : {}),
+    });
     return this.getSeller(sellerId);
   }
 
@@ -410,31 +448,72 @@ class AdminService {
       throw new AppError("Seller not found", 404);
     }
     const profile = seller.sellerProfile || {};
+    const kyc = await this.adminRepository.getSellerKycById(sellerId);
+    const onboardingState = makeSellerOnboardingState({
+      sellerProfile: profile,
+      user: seller,
+      kyc,
+    });
+    const kycStatus = onboardingState.kycStatus;
+    const bankVerificationStatus = profile.bankVerificationStatus || "not_submitted";
     const accountStatus = seller.accountStatus;
+    const bankDetailsComplete = onboardingState.requirements.bankDetails.completed === true;
     const profileCompleted =
       profile.profileCompleted === true ||
       profile.onboardingChecklist?.profileCompleted === true ||
+      onboardingState.requirements.profile.completed === true ||
       Boolean(profile.displayName && profile.legalBusinessName && profile.supportEmail && profile.supportPhone);
+    const bankReady =
+      bankVerificationStatus === "verified" ||
+      (bankVerificationStatus === "submitted" && bankDetailsComplete);
     const canGoLive =
-      (profile.kycStatus === "verified" || profile.kycStatus === "approved") &&
-      profile.bankVerificationStatus === "verified" &&
-      profileCompleted &&
-      accountStatus === "active";
+      kycStatus === "verified" &&
+      bankReady &&
+      profileCompleted;
 
     if (payload.goLiveStatus === "live" && !canGoLive) {
       throw new AppError(
-        "Seller can go live only when KYC and bank are verified, profile is completed, and account is active",
+        "Seller can go live only when KYC and bank are verified, and profile is completed",
         400,
+        {
+          kycStatus,
+          bankVerificationStatus,
+          profileCompleted,
+          accountStatus,
+          onboardingStatus: onboardingState.onboardingStatus,
+          missingBankFields: onboardingState.requirements.bankDetails.missingFields,
+          missingProfileFields: onboardingState.requirements.profile.missingFields,
+        },
       );
     }
 
     const nextSellerProfile = {
       ...profile,
+      kycStatus,
+      bankVerificationStatus:
+        payload.goLiveStatus === "live" && bankReady ? "verified" : bankVerificationStatus,
+      bankRejectionReason: payload.goLiveStatus === "live" && bankReady ? null : profile.bankRejectionReason || null,
+      onboardingChecklist: onboardingState.checklist,
+      onboardingStatus:
+        payload.goLiveStatus === "live"
+          ? SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
+          : onboardingState.onboardingStatus,
       goLiveStatus: payload.goLiveStatus,
+      verifiedBy:
+        payload.goLiveStatus === "live" && bankReady
+          ? actor.userId || profile.verifiedBy || null
+          : profile.verifiedBy || null,
+      verifiedAt:
+        payload.goLiveStatus === "live" && bankReady
+          ? profile.verifiedAt || new Date()
+          : profile.verifiedAt || null,
       goLiveApprovedBy: payload.goLiveStatus === "live" ? actor.userId || null : null,
       goLiveApprovedAt: payload.goLiveStatus === "live" ? new Date() : null,
     };
-    await this.adminRepository.updateUserById(sellerId, { sellerProfile: nextSellerProfile });
+    await this.adminRepository.updateUserById(sellerId, {
+      sellerProfile: nextSellerProfile,
+      ...(payload.goLiveStatus === "live" ? { accountStatus: "active" } : {}),
+    });
     return this.getSeller(sellerId);
   }
 

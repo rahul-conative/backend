@@ -171,19 +171,15 @@ class SellerService {
 
     const kycRecord = await this.sellerRepository.findKycBySellerId(sellerId);
     const nextProfile = this.mergeSellerProfile(existingSeller.sellerProfile || {}, payload);
+    if (
+      this.hasCompleteBankDetails(nextProfile.bankDetails) &&
+      !["verified", "submitted"].includes(nextProfile.bankVerificationStatus)
+    ) {
+      nextProfile.bankVerificationStatus = "submitted";
+      nextProfile.bankRejectionReason = null;
+    }
     const nextProfileWithOnboarding = this.withOnboardingState(nextProfile, kycRecord, existingSeller);
     const updatedSeller = await this.sellerRepository.updateSellerProfile(sellerId, nextProfileWithOnboarding);
-
-    if (
-      nextProfileWithOnboarding.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE &&
-      existingSeller.accountStatus !== "active"
-    ) {
-      await this.sellerRepository.updateSellerAccountStatus(
-        sellerId,
-        "active",
-        nextProfileWithOnboarding.onboardingStatus,
-      );
-    }
 
     return updatedSeller?.sellerProfile || null;
   }
@@ -430,6 +426,14 @@ class SellerService {
         ...payload,
       },
     };
+    if (
+      section === "bankDetails" &&
+      this.hasCompleteBankDetails(nextProfile.bankDetails) &&
+      !["verified", "submitted"].includes(nextProfile.bankVerificationStatus)
+    ) {
+      nextProfile.bankVerificationStatus = "submitted";
+      nextProfile.bankRejectionReason = null;
+    }
     const updatedSeller = await this.sellerRepository.updateSellerProfile(
       sellerId,
       this.withOnboardingState(nextProfile, kycRecord, existingSeller),
@@ -554,15 +558,11 @@ class SellerService {
     if (seller) {
       const existingProfile = this.mergeKycIntoSellerProfile(seller.sellerProfile || {}, record);
       const nextProfile = this.withOnboardingState(existingProfile, record, seller);
-      const nextAccountStatus =
-        nextProfile.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
-          ? "active"
-          : "pending_approval";
 
       await this.sellerRepository.updateSellerOnboardingState(
         sellerId,
         nextProfile,
-        nextAccountStatus,
+        seller.accountStatus || "pending_approval",
       );
     }
 

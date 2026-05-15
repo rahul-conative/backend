@@ -125,7 +125,9 @@ function makeSellerOnboardingChecklist({
     profileCompleted: hasCompleteSellerProfile(profile, { user, kyc }),
     kycSubmitted: Boolean(kyc),
     gstVerified: kyc?.verification_status === KYC_STATUS.VERIFIED,
-    bankLinked: hasCompleteSellerBankDetails(profile.bankDetails),
+    bankLinked:
+      profile.bankVerificationStatus !== "rejected" &&
+      hasCompleteSellerBankDetails(profile.bankDetails),
     firstProductPublished: storedChecklist.firstProductPublished === true,
   };
 }

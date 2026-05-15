@@ -87,7 +87,12 @@ class AuthService {
       return true;
     }
 
-    return user?.sellerProfile?.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE;
+    return (
+      user?.sellerProfile?.onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE &&
+      user?.sellerProfile?.bankVerificationStatus === "verified" &&
+      user?.sellerProfile?.goLiveStatus === "live" &&
+      user?.accountStatus === "active"
+    );
   }
 
   async getSellerLoginFlowState(user) {
@@ -120,6 +125,41 @@ class AuthService {
       kycStatus,
       user?.sellerProfile?.onboardingStatus,
     );
+  }
+
+  toPlainObject(value = {}) {
+    if (!value) {
+      return {};
+    }
+    if (typeof value.toObject === "function") {
+      return value.toObject({ depopulate: true });
+    }
+    return { ...value };
+  }
+
+  formatKycDocuments(documents) {
+    if (!documents) return {};
+    try {
+      return typeof documents === "string" ? JSON.parse(documents) : documents;
+    } catch {
+      return {};
+    }
+  }
+
+  formatSellerKycForStatus(kyc) {
+    if (!kyc) return null;
+    return {
+      verificationStatus: kyc.verification_status,
+      legalName: kyc.legal_name,
+      businessType: kyc.business_type,
+      panNumber: kyc.pan_number,
+      gstNumber: kyc.gst_number,
+      aadhaarNumber: kyc.aadhaar_number,
+      rejectionReason: kyc.rejection_reason || null,
+      submittedAt: kyc.submitted_at || null,
+      reviewedAt: kyc.reviewed_at || null,
+      documents: this.formatKycDocuments(kyc.documents),
+    };
   }
 
   async makeOnboardingResponse(user) {
@@ -319,7 +359,14 @@ class AuthService {
     const onboardingStatus = isSeller
       ? this.getSellerAuthStatus(user, onboardingChecklist, kycStatus)
       : user?.sellerProfile?.onboardingStatus || "initiated";
-    const sellerOnboardingComplete = onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE;
+    const sellerProfile = isSeller ? this.toPlainObject(user?.sellerProfile || {}) : {};
+    const bankVerificationStatus = sellerProfile.bankVerificationStatus || "not_submitted";
+    const goLiveStatus = sellerProfile.goLiveStatus || "pending";
+    const sellerOnboardingComplete =
+      onboardingStatus === SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE &&
+      bankVerificationStatus === "verified" &&
+      goLiveStatus === "live" &&
+      user.accountStatus === "active";
     const flowState = {
       role: user.role,
       emailVerified: Boolean(user.emailVerified),
@@ -329,8 +376,13 @@ class AuthService {
       checklist: onboardingChecklist,
       kycStatus,
       kycRejectionReason: kyc?.rejection_reason || null,
+      bankVerificationStatus,
+      bankRejectionReason: sellerProfile.bankRejectionReason || null,
+      goLiveStatus,
+      sellerProfile: isSeller ? sellerProfile : null,
+      kyc: isSeller ? this.formatSellerKycForStatus(kyc) : null,
       requirements: isSeller
-        ? makeSellerOnboardingState({ sellerProfile: user?.sellerProfile || {}, user, kyc }).requirements
+        ? makeSellerOnboardingState({ sellerProfile, user, kyc }).requirements
         : {},
     };
 

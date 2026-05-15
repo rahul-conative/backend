@@ -60,7 +60,8 @@ class AuthRepository {
          business_type,
          pan_number,
          gst_number,
-         aadhaar_number
+         aadhaar_number,
+         documents
        FROM seller_kyc
        WHERE seller_id = $1
        LIMIT 1`,
