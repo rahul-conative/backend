@@ -27,7 +27,6 @@ function getRequestModule(req) {
       return null;
     }
 
-    if (second === "cms") {
     if (second === "platform" && ["categories", "brands", "hsn-codes"].includes(third)) {
       return "products";
     }
