@@ -21,10 +21,6 @@ const { createOtp } = require("../../../shared/tools/otp");
 const { redis } = require("../../../infrastructure/redis/redis-client");
 const { sendMail } = require("../../../infrastructure/mail/mailer");
 const otpEmailTemplate = require("../../../../templates/otp-email.ejs");
-const ejs = require("ejs");
-const path = require("path");
-const fs = require("fs");
-const { env } = require("../../../config/env");
 const {
   SELLER_ONBOARDING_STATUS,
   makeSellerOnboardingChecklist,
@@ -543,8 +539,7 @@ class AuthService {
         throw new AppError("Account is suspended. Please contact support.", 403);
       }
     }
-    const isProduction = env.production;
-    const otp = isProduction ? createOtp() : "123456";
+    const otp = createOtp();
     const otpKey = `otp:${email}:${purpose}`;
 
     // Store OTP in Redis with 10 minute expiration
@@ -557,16 +552,11 @@ class AuthService {
       otp,
       purpose: this.getOtpPurposeLabel(purpose),
     });
-    if (isProduction) {
-      await sendMail({
-        to: email,
-        subject: `OTP for ${this.getOtpPurposeLabel(purpose)}`,
-        html,
-      });
-    } else {
-      console.log(`OTP for ${email} (${purpose}): ${otp}`);
-    }
-
+    await sendMail({
+      to: email,
+      subject: `OTP for ${this.getOtpPurposeLabel(purpose)}`,
+      html,
+    });
 
     await eventPublisher.publish(
       makeEvent(
