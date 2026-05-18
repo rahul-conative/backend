@@ -64,6 +64,18 @@ class AuthService {
     return labels[purpose] || "Verification";
   }
 
+  normalizeOtpEmail(email) {
+    return String(email || "").trim().toLowerCase();
+  }
+
+  makeOtpKey(email, purpose) {
+    return `otp:${this.normalizeOtpEmail(email)}:${purpose}`;
+  }
+
+  makeVerifiedOtpKey(email, purpose) {
+    return `otp_verified:${this.normalizeOtpEmail(email)}:${purpose}`;
+  }
+
   makeInitialSellerProfile(payload = {}) {
     const profileName = [payload.profile?.firstName, payload.profile?.lastName]
       .map((value) => String(value || "").trim())
@@ -540,7 +552,7 @@ class AuthService {
       }
     }
     const otp = createOtp();
-    const otpKey = `otp:${email}:${purpose}`;
+    const otpKey = this.makeOtpKey(email, purpose);
 
     // Store OTP in Redis with 10 minute expiration
     await redis.setex(otpKey, 600, otp);
@@ -575,16 +587,23 @@ class AuthService {
   }
 
   async verifyOtp(payload, requestContext = {}) {
-    const { email, otp, purpose = "registration" } = payload;
-    const otpKey = `otp:${email}:${purpose}`;
+    const { email, otp, purpose = "registration", consumeOtp } = payload;
+    const otpKey = this.makeOtpKey(email, purpose);
+    const verifiedOtpKey = this.makeVerifiedOtpKey(email, purpose);
 
     const storedOtp = await redis.get(otpKey);
     if (!storedOtp || storedOtp !== otp) {
       throw new AppError("Invalid or expired OTP", 400);
     }
 
-    // Delete OTP after successful verification
-    await redis.del(otpKey);
+    const shouldConsumeOtp =
+      typeof consumeOtp === "boolean" ? consumeOtp : purpose !== "forgot_password";
+    if (purpose === "forgot_password") {
+      await redis.setex(verifiedOtpKey, 600, otp);
+    }
+    if (shouldConsumeOtp) {
+      await redis.del(otpKey);
+    }
 
     if (purpose === "login") {
       const user = await this.authRepository.findUserByEmail(email);
@@ -626,7 +645,7 @@ class AuthService {
     const { email, otp, newPassword } = payload;
 
     // First verify OTP
-    await this.verifyOtp({ email, otp, purpose: "forgot_password" }, requestContext);
+    await this.ensureForgotPasswordOtpVerified(email, otp);
 
     // Update password
     const passwordHash = await hashText(newPassword);
@@ -636,8 +655,25 @@ class AuthService {
     }
 
     await this.authRepository.updatePassword(user.id, passwordHash);
+    await redis.del(this.makeOtpKey(email, "forgot_password"));
+    await redis.del(this.makeVerifiedOtpKey(email, "forgot_password"));
 
     return { message: "Password reset successfully" };
+  }
+
+  async ensureForgotPasswordOtpVerified(email, otp) {
+    const otpKey = this.makeOtpKey(email, "forgot_password");
+    const verifiedOtpKey = this.makeVerifiedOtpKey(email, "forgot_password");
+    const [storedOtp, verifiedOtp] = await Promise.all([
+      redis.get(otpKey),
+      redis.get(verifiedOtpKey),
+    ]);
+
+    if (storedOtp === otp || verifiedOtp === otp) {
+      return true;
+    }
+
+    throw new AppError("Invalid or expired OTP", 400);
   }
 
   async changePassword(payload, requestContext = {}) {
