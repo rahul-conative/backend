@@ -55,12 +55,19 @@ class PlatformRepository {
   }
 
   async deleteCategory(categoryKey) {
-    if (mongoose.Types.ObjectId.isValid(String(categoryKey))) {
-      return CategoryTreeModel.findOneAndDelete({
-        $or: [{ _id: categoryKey }, { categoryKey }],
+    const category = await this.getCategory(categoryKey);
+    if (!category) return null;
+
+    const keysToDelete = [category.categoryKey];
+    for (let index = 0; index < keysToDelete.length; index += 1) {
+      const children = await CategoryTreeModel.find({ parentKey: keysToDelete[index] }).select("categoryKey");
+      children.forEach((child) => {
+        if (!keysToDelete.includes(child.categoryKey)) keysToDelete.push(child.categoryKey);
       });
     }
-    return CategoryTreeModel.findOneAndDelete({ categoryKey });
+
+    await CategoryTreeModel.deleteMany({ categoryKey: { $in: keysToDelete } });
+    return { ...category.toObject(), deletedCount: keysToDelete.length };
   }
 
   async createProductFamily(payload) {

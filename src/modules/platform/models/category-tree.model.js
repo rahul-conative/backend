@@ -29,6 +29,7 @@ const categoryTreeSchema = new mongoose.Schema(
     imageUrl: { type: String, default: "" },
     bannerUrl: { type: String, default: "" },
     iconUrl: { type: String, default: "" },
+    isDashboardVisible: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },
 );

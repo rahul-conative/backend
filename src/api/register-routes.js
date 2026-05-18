@@ -39,6 +39,7 @@ function registerRoutes(app) {
   app.use(`${env.apiPrefix}/notifications`, notificationRoutes);
   app.use(`${env.apiPrefix}/analytics`, analyticsRoutes);
   app.use(`${env.apiPrefix}/pricing`, pricingRoutes);
+  app.use(`${env.apiPrefix}/coupons`, pricingRoutes);
   app.use(`${env.apiPrefix}/wallets`, walletRoutes);
   app.use(`${env.apiPrefix}/admin`, adminRoutes);
   app.use(`${env.apiPrefix}/tax`, taxRoutes);

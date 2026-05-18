@@ -5,8 +5,16 @@ const paginationQuery = Joi.object({
   limit: Joi.number().integer().min(1).max(100),
 });
 
+const withCategoryAliases = (schema) =>
+  schema
+    .rename("name", "title", { ignoreUndefined: true, override: false })
+    .rename("categoryName", "title", { ignoreUndefined: true, override: false })
+    .rename("thumbnails", "imageUrl", { ignoreUndefined: true, override: false })
+    .rename("seoUrl", "imageUrl", { ignoreUndefined: true, override: false })
+    .rename("priority", "sortOrder", { ignoreUndefined: true, override: false });
+
 const createCategorySchema = Joi.object({
-  body: Joi.object({
+  body: withCategoryAliases(Joi.object({
     categoryKey: Joi.string().trim().required(),
     title: Joi.string().trim().required(),
     parentKey: Joi.string().allow(null, ""),
@@ -34,13 +42,14 @@ const createCategorySchema = Joi.object({
     imageUrl: Joi.string().allow(""),
     bannerUrl: Joi.string().allow(""),
     iconUrl: Joi.string().allow(""),
-  }).required(),
+    isDashboardVisible: Joi.boolean().default(false),
+  })).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
 
 const updateCategorySchema = Joi.object({
-  body: Joi.object({
+  body: withCategoryAliases(Joi.object({
     title: Joi.string().trim(),
     parentKey: Joi.string().allow(null, ""),
     level: Joi.number().integer().min(0),
@@ -63,7 +72,8 @@ const updateCategorySchema = Joi.object({
     imageUrl: Joi.string().allow(""),
     bannerUrl: Joi.string().allow(""),
     iconUrl: Joi.string().allow(""),
-  }).required(),
+    isDashboardVisible: Joi.boolean(),
+  })).required(),
   query: Joi.object({}).required(),
   params: Joi.object({
     categoryKey: Joi.string().required(),

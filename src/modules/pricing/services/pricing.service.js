@@ -166,7 +166,7 @@ class PricingService {
   }
 
   async createCoupon(payload) {
-    return this.pricingRepository.createCoupon(payload);
+    return this.pricingRepository.createCoupon(this.normalizeCouponPayload(payload));
   }
 
   async listCoupons() {
@@ -182,11 +182,21 @@ class PricingService {
   }
 
   async updateCoupon(couponId, payload) {
-    const coupon = await this.pricingRepository.updateCoupon(couponId, payload);
+    const coupon = await this.pricingRepository.updateCoupon(couponId, this.normalizeCouponPayload(payload));
     if (!coupon) {
       throw new AppError("Coupon not found", 404);
     }
     return coupon;
+  }
+
+  normalizeCouponPayload(payload = {}) {
+    const normalized = { ...payload };
+    if (normalized.type === "flat") normalized.type = "fixed";
+    if (typeof normalized.isDisable === "boolean" && typeof normalized.active !== "boolean") {
+      normalized.active = !normalized.isDisable;
+    }
+    delete normalized.isDisable;
+    return normalized;
   }
 
   async deleteCoupon(couponId) {

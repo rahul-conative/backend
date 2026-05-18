@@ -119,12 +119,13 @@ function makeSellerOnboardingChecklist({
 } = {}) {
   const profile = sellerProfile || {};
   const storedChecklist = existingChecklist || profile.onboardingChecklist || {};
+  const storedKycStatus = profile.kycStatus || profile.verificationStatus;
 
   return {
     ...DEFAULT_SELLER_CHECKLIST,
     profileCompleted: hasCompleteSellerProfile(profile, { user, kyc }),
-    kycSubmitted: Boolean(kyc),
-    gstVerified: kyc?.verification_status === KYC_STATUS.VERIFIED,
+    kycSubmitted: Boolean(kyc) || Boolean(storedKycStatus),
+    gstVerified: kyc?.verification_status === KYC_STATUS.VERIFIED || storedKycStatus === KYC_STATUS.VERIFIED,
     bankLinked:
       profile.bankVerificationStatus !== "rejected" &&
       hasCompleteSellerBankDetails(profile.bankDetails),
@@ -150,7 +151,11 @@ function makeSellerOnboardingRequirements({ sellerProfile = {}, user = {}, kyc =
   };
 }
 
-function getSellerKycStatus(kyc, checklist = {}) {
+function getSellerKycStatus(kyc, checklist = {}, sellerProfile = {}) {
+  if (sellerProfile?.kycStatus || sellerProfile?.verificationStatus) {
+    return sellerProfile.kycStatus || sellerProfile.verificationStatus;
+  }
+
   if (kyc?.verification_status) {
     return kyc.verification_status;
   }
@@ -189,7 +194,7 @@ function getSellerOnboardingStatus(
 
 function makeSellerOnboardingState({ sellerProfile = {}, user = {}, kyc = null } = {}) {
   const checklist = makeSellerOnboardingChecklist({ sellerProfile, user, kyc });
-  const kycStatus = getSellerKycStatus(kyc, checklist);
+  const kycStatus = getSellerKycStatus(kyc, checklist, sellerProfile);
   const onboardingStatus = getSellerOnboardingStatus(
     checklist,
     kycStatus,
