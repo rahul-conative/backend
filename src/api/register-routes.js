@@ -26,6 +26,7 @@ const notificationPreferenceRoutes = require("../modules/notification/routes/not
 const { deliveryRoutes } = require("../modules/delivery/routes/delivery.routes");
 const { fileUploaderRoutes } = require("../shared/routes/file-uploader.routes");
 const { metaRoutes } = require("../shared/routes/meta.routes");
+const { cmsRoutes } = require("../modules/cms/routes/cms.routes");
 
 function registerRoutes(app) {
   app.use(`${env.apiPrefix}/auth`, authRoutes);
@@ -57,6 +58,7 @@ function registerRoutes(app) {
   app.use(`${env.apiPrefix}/delivery`, deliveryRoutes);
   app.use(`${env.apiPrefix}/file-uploader`, fileUploaderRoutes);
   app.use(`${env.apiPrefix}/meta`, metaRoutes);
+  app.use(`${env.apiPrefix}/cms`, cmsRoutes);
 }
 
 module.exports = { registerRoutes };

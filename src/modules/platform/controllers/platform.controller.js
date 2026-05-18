@@ -136,31 +136,6 @@ class PlatformController {
     res.json(okResponse(item));
   };
 
-  createContentPage = async (req, res) => {
-    const item = await this.platformService.createContentPage(req.body);
-    res.status(201).json(okResponse(item));
-  };
-
-  updateContentPage = async (req, res) => {
-    const item = await this.platformService.updateContentPage(req.params.slug, req.body);
-    res.json(okResponse(item));
-  };
-
-  getContentPage = async (req, res) => {
-    const item = await this.platformService.getContentPage(req.params.slug);
-    res.json(okResponse(item));
-  };
-
-  listContentPages = async (req, res) => {
-    const result = await this.platformService.listContentPages(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
-  };
-
-  deleteContentPage = async (req, res) => {
-    const item = await this.platformService.deleteContentPage(req.params.slug);
-    res.json(okResponse(item));
-  };
-
   listProductReviews = async (req, res) => {
     const result = await this.platformService.listProductReviews(req.query);
     res.json(okResponse(result.items, { total: result.total }));

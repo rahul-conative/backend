@@ -58,13 +58,62 @@ class PlatformService {
     };
   }
 
+  buildCategoryTree(categories = [], maxDepth = 3) {
+    const normalizedMaxDepth = Number.isFinite(Number(maxDepth)) ? Number(maxDepth) : 3;
+    const byKey = new Map();
+    const roots = [];
+
+    categories.forEach((category) => {
+      byKey.set(category.categoryKey, { ...category, children: [] });
+    });
+
+    byKey.forEach((node) => {
+      if (node.parentKey && byKey.has(node.parentKey)) {
+        const parent = byKey.get(node.parentKey);
+        if ((parent.level ?? 0) < normalizedMaxDepth - 1) {
+          parent.children.push(node);
+        }
+      } else {
+        roots.push(node);
+      }
+    });
+
+    const sortNodes = (nodes = []) => {
+      nodes.sort(
+        (a, b) =>
+          (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0) ||
+          String(a.title || "").localeCompare(String(b.title || "")),
+      );
+      nodes.forEach((node) => {
+        if (Array.isArray(node.children) && node.children.length) {
+          sortNodes(node.children);
+        }
+      });
+    };
+
+    sortNodes(roots);
+    return roots;
+  }
+
   async listCategories(query) {
-    const pagination = getPage(query);
+    const isTreeRequested = query.tree === true || query.tree === "true";
+    const pagination = isTreeRequested
+      ? { page: 1, limit: 1000, skip: 0 }
+      : getPage(query);
     const filter = {};
     if (query.parentKey) filter.parentKey = query.parentKey;
     if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     if (query.categoryKey) filter.categoryKey = query.categoryKey;
-    return this.platformRepository.listCategories(filter, pagination);
+
+    const result = await this.platformRepository.listCategories(filter, pagination);
+
+    if (!isTreeRequested) {
+      return result;
+    }
+
+    const maxDepth = query.maxDepth || 3;
+    const tree = this.buildCategoryTree(result.items || [], maxDepth);
+    return { items: tree, total: tree.length };
   }
 
   async deleteCategory(categoryKey) {
@@ -235,57 +284,6 @@ class PlatformService {
       throw new AppError("Geography record not found", 404);
     }
     return this.platformRepository.deleteGeography(countryCode);
-  }
-
-  async createContentPage(payload) {
-    if (payload.published && !payload.publishedAt) {
-      payload.publishedAt = new Date();
-    }
-    return this.platformRepository.createContentPage(payload);
-  }
-
-  async updateContentPage(slug, payload) {
-    const item = await this.platformRepository.getContentPage(slug);
-    if (!item) {
-      throw new AppError("Content page not found", 404);
-    }
-    if (payload.published && !payload.publishedAt) {
-      payload.publishedAt = new Date();
-    }
-    return this.platformRepository.updateContentPage(slug, payload);
-  }
-
-  async getContentPage(slug) {
-    const item = await this.platformRepository.getContentPage(slug);
-    if (!item) {
-      throw new AppError("Content page not found", 404);
-    }
-    return item;
-  }
-
-  async listContentPages(query) {
-    const pagination = getPage(query);
-    const filter = {};
-    if (query.pageType) filter.pageType = query.pageType;
-    if (query.language) filter.language = query.language;
-    if (query.published !== undefined) filter.published = query.published === true || query.published === "true";
-    const q = query.q || query.keyWord || query.search;
-    if (q) {
-      filter.$or = [
-        { title: { $regex: q, $options: "i" } },
-        { slug: { $regex: q, $options: "i" } },
-        { body: { $regex: q, $options: "i" } },
-      ];
-    }
-    return this.platformRepository.listContentPages(filter, pagination);
-  }
-
-  async deleteContentPage(slug) {
-    const item = await this.platformRepository.getContentPage(slug);
-    if (!item) {
-      throw new AppError("Content page not found", 404);
-    }
-    return this.platformRepository.deleteContentPage(slug);
   }
 
   async listProductReviews(query = {}) {

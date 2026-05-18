@@ -77,6 +77,8 @@ const listCategoriesSchema = Joi.object({
       parentKey: Joi.string(),
       active: Joi.boolean(),
       categoryKey: Joi.string(),
+      tree: Joi.boolean(),
+      maxDepth: Joi.number().integer().min(1).max(6),
     }),
   ),
   params: Joi.object({}).required(),
@@ -296,85 +298,6 @@ const geographyParamSchema = Joi.object({
   query: Joi.object({}).required(),
   params: Joi.object({
     countryCode: Joi.string().required(),
-  }).required(),
-});
-
-const createContentPageSchema = Joi.object({
-  body: Joi.object({
-    slug: Joi.string().trim().required(),
-    title: Joi.string().trim().required(),
-    pageType: Joi.string().trim().required(),
-    body: Joi.string().required(),
-    excerpt: Joi.string().allow(""),
-    category: Joi.string().allow(""),
-    tags: Joi.array().items(Joi.string().trim()).default([]),
-    coverImage: Joi.string().allow(""),
-    thumbnailUrl: Joi.string().allow(""),
-    heroImage: Joi.string().allow(""),
-    galleryImages: Joi.array().items(Joi.string()).default([]),
-    author: Joi.object({
-      name: Joi.string().allow(""),
-      avatar: Joi.string().allow(""),
-    }).default({}),
-    readTime: Joi.number().integer().min(0).default(0),
-    language: Joi.string().trim().default("en"),
-    published: Joi.boolean().default(false),
-    publishedAt: Joi.date().optional(),
-    metadata: Joi.object().default({}),
-  }).required(),
-  query: Joi.object({}).required(),
-  params: Joi.object({}).required(),
-});
-
-const updateContentPageSchema = Joi.object({
-  body: Joi.object({
-    slug: Joi.string().trim(),
-    title: Joi.string().trim(),
-    pageType: Joi.string().trim(),
-    body: Joi.string(),
-    excerpt: Joi.string().allow(""),
-    category: Joi.string().allow(""),
-    tags: Joi.array().items(Joi.string().trim()),
-    coverImage: Joi.string().allow(""),
-    thumbnailUrl: Joi.string().allow(""),
-    heroImage: Joi.string().allow(""),
-    galleryImages: Joi.array().items(Joi.string()),
-    author: Joi.object({
-      name: Joi.string().allow(""),
-      avatar: Joi.string().allow(""),
-    }),
-    readTime: Joi.number().integer().min(0),
-    language: Joi.string().trim(),
-    published: Joi.boolean(),
-    publishedAt: Joi.date().optional(),
-    metadata: Joi.object(),
-  }).required(),
-  query: Joi.object({}).required(),
-  params: Joi.object({
-    slug: Joi.string().required(),
-  }).required(),
-});
-
-const listContentPagesSchema = Joi.object({
-  body: Joi.object({}).required(),
-  query: paginationQuery.concat(
-    Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
-      pageType: Joi.string(),
-      language: Joi.string(),
-      published: Joi.boolean(),
-    }),
-  ),
-  params: Joi.object({}).required(),
-});
-
-const contentPageSlugSchema = Joi.object({
-  body: Joi.object({}).required(),
-  query: Joi.object({}).required(),
-  params: Joi.object({
-    slug: Joi.string().required(),
   }).required(),
 });
 
@@ -668,10 +591,6 @@ module.exports = {
   listGeographiesSchema,
   geographyParamSchema,
   geographyCodeSchema: geographyParamSchema,
-  createContentPageSchema,
-  updateContentPageSchema,
-  listContentPagesSchema,
-  contentPageSlugSchema,
   listProductReviewsSchema,
   updateProductReviewSchema,
   productReviewIdSchema,

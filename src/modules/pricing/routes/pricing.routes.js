@@ -1,23 +1,23 @@
 const express = require("express");
 const { PricingController } = require("../controllers/pricing.controller");
-const { PlatformController } = require("../../platform/controllers/platform.controller");
+const { CmsController } = require("../../cms/controllers/cms.controller");
 const { authenticate } = require("../../../shared/middleware/authenticate");
 const { allowActions } = require("../../../shared/middleware/access");
 const { ACTIONS } = require("../../../shared/constants/actions");
 const { checkInput } = require("../../../shared/middleware/check-input");
 const { createCouponSchema, updateCouponSchema, couponParamSchema } = require("../validation/pricing.validation");
 const {
-  createContentPageSchema,
-  updateContentPageSchema,
-  listContentPagesSchema,
-  contentPageSlugSchema,
-} = require("../../platform/validation/platform.validation");
+  createPageSchema,
+  updatePageSchema,
+  listPagesSchema,
+  slugParam,
+} = require("../../cms/validation/cms.validation");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
 
 const pricingRoutes = express.Router();
 const pricingController = new PricingController();
-const platformController = new PlatformController();
-const PROMOTION_BANNER_PAGE_TYPE = "promotion_banner";
+const cmsController = new CmsController();
+const PROMOTION_BANNER_PAGE_TYPE = "promotion-banner";
 
 function forcePromotionBannerPageType(req, res, next) {
   req.query.pageType = PROMOTION_BANNER_PAGE_TYPE;
@@ -67,31 +67,31 @@ pricingRoutes.get(
   authenticate,
   allowActions(ACTIONS.ORDER_MANAGE),
   forcePromotionBannerPageType,
-  checkInput(listContentPagesSchema),
-  catchErrors(platformController.listContentPages),
+  checkInput(listPagesSchema),
+  catchErrors(cmsController.listPages),
 );
 pricingRoutes.post(
   "/promotion-banners",
   authenticate,
   allowActions(ACTIONS.ORDER_MANAGE),
   forcePromotionBannerPageType,
-  checkInput(createContentPageSchema),
-  catchErrors(platformController.createContentPage),
+  checkInput(createPageSchema),
+  catchErrors(cmsController.createPage),
 );
 pricingRoutes.patch(
   "/promotion-banners/:slug",
   authenticate,
   allowActions(ACTIONS.ORDER_MANAGE),
   forcePromotionBannerPageType,
-  checkInput(updateContentPageSchema),
-  catchErrors(platformController.updateContentPage),
+  checkInput(updatePageSchema),
+  catchErrors(cmsController.updatePage),
 );
 pricingRoutes.delete(
   "/promotion-banners/:slug",
   authenticate,
   allowActions(ACTIONS.ORDER_MANAGE),
-  checkInput(contentPageSlugSchema),
-  catchErrors(platformController.deleteContentPage),
+  checkInput(slugParam),
+  catchErrors(cmsController.deletePage),
 );
 
 module.exports = { pricingRoutes };

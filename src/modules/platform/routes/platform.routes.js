@@ -26,10 +26,6 @@ const {
   updateGeographySchema,
   listGeographiesSchema,
   geographyParamSchema,
-  createContentPageSchema,
-  updateContentPageSchema,
-  listContentPagesSchema,
-  contentPageSlugSchema,
   createBrandSchema,
   updateBrandSchema,
   listBrandsSchema,
@@ -188,30 +184,6 @@ platformRoutes.delete(
   allowActions(ACTIONS.CATALOG_MANAGE),
   checkInput(geographyParamSchema),
   catchErrors(platformController.deleteGeography),
-);
-
-platformRoutes.get("/cms", checkInput(listContentPagesSchema), catchErrors(platformController.listContentPages));
-platformRoutes.get("/cms/:slug", checkInput(contentPageSlugSchema), catchErrors(platformController.getContentPage));
-platformRoutes.post(
-  "/cms",
-  authenticate,
-  allowActions(ACTIONS.CATALOG_MANAGE),
-  checkInput(createContentPageSchema),
-  catchErrors(platformController.createContentPage),
-);
-platformRoutes.patch(
-  "/cms/:slug",
-  authenticate,
-  allowActions(ACTIONS.CATALOG_MANAGE),
-  checkInput(updateContentPageSchema),
-  catchErrors(platformController.updateContentPage),
-);
-platformRoutes.delete(
-  "/cms/:slug",
-  authenticate,
-  allowActions(ACTIONS.CATALOG_MANAGE),
-  checkInput(contentPageSlugSchema),
-  catchErrors(platformController.deleteContentPage),
 );
 
 platformRoutes.get("/brands", checkInput(listBrandsSchema), catchErrors(platformController.listBrands));

@@ -27,7 +27,7 @@ function getRequestModule(req) {
       return null;
     }
 
-    if (second === "platform" && third === "content-pages") {
+    if (second === "cms") {
       return "cms";
     }
 
@@ -68,9 +68,6 @@ function getRequestModule(req) {
   }
   if (first === "sellers" && second === "me" && third === "access") {
     return "sellers";
-  }
-  if (first === "platform" && second === "cms") {
-    return "cms";
   }
   if (first === "pricing" && second === "promotion-banners") {
     return "cms";

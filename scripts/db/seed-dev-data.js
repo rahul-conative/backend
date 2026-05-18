@@ -8,7 +8,7 @@ const { UserModel } = require('../../src/modules/user/models/user.model');
 const { ProductModel } = require('../../src/modules/product/models/product.model');
 const { CartModel } = require('../../src/modules/cart/models/cart.model');
 const { CategoryTreeModel } = require('../../src/modules/platform/models/category-tree.model');
-const { ContentPageModel } = require('../../src/modules/platform/models/content-page.model');
+const { StaticPageModel } = require('../../src/modules/cms/models/static-page.model');
 const { ProductFamilyModel } = require('../../src/modules/platform/models/product-family.model');
 const { ProductVariantModel } = require('../../src/modules/platform/models/product-variant.model');
 const { ProductReviewModel } = require('../../src/modules/platform/models/product-review.model');
@@ -897,7 +897,7 @@ async function seedCmsContent() {
   ];
 
   await Promise.all(pages.map((page) =>
-    ContentPageModel.findOneAndUpdate(
+    StaticPageModel.findOneAndUpdate(
       { slug: page.slug },
       { $set: { ...page, language: 'en', published: true, publishedAt } },
       { upsert: true, new: true },

@@ -4,6 +4,13 @@ const { ProductController } = require("../../product/controllers/product.control
 const {
   PlatformController,
 } = require("../../platform/controllers/platform.controller");
+const { CmsController } = require("../../cms/controllers/cms.controller");
+const {
+  slugParam: cmsSlugParam,
+  createPageSchema: cmsCreateSchema,
+  updatePageSchema: cmsUpdateSchema,
+  listPagesSchema: cmsListSchema,
+} = require("../../cms/validation/cms.validation");
 const { authenticate } = require("../../../shared/middleware/authenticate");
 const { allowRoles, allowPermissions } = require("../../../shared/middleware/access");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
@@ -90,10 +97,6 @@ const {
   updateGeographySchema,
   listGeographiesSchema,
   geographyCodeSchema,
-  createContentPageSchema,
-  updateContentPageSchema,
-  listContentPagesSchema,
-  contentPageSlugSchema,
   listProductReviewsSchema,
   updateProductReviewSchema,
   productReviewIdSchema,
@@ -137,6 +140,7 @@ const {
 
 const adminRoutes = express.Router();
 const adminController = new AdminController();
+const cmsController = new CmsController();
 const platformController = new PlatformController();
 const productController = new ProductController();
 
@@ -645,32 +649,6 @@ adminRoutes.delete(
   catchErrors(platformController.deleteGeography),
 );
 
-adminRoutes.post(
-  "/platform/content-pages",
-  checkInput(createContentPageSchema),
-  catchErrors(platformController.createContentPage),
-);
-adminRoutes.get(
-  "/platform/content-pages",
-  checkInput(listContentPagesSchema),
-  catchErrors(platformController.listContentPages),
-);
-adminRoutes.get(
-  "/platform/content-pages/:slug",
-  checkInput(contentPageSlugSchema),
-  catchErrors(platformController.getContentPage),
-);
-adminRoutes.patch(
-  "/platform/content-pages/:slug",
-  checkInput(updateContentPageSchema),
-  catchErrors(platformController.updateContentPage),
-);
-adminRoutes.delete(
-  "/platform/content-pages/:slug",
-  checkInput(contentPageSlugSchema),
-  catchErrors(platformController.deleteContentPage),
-);
-
 adminRoutes.get(
   "/platform/product-reviews",
   checkInput(listProductReviewsSchema),
@@ -763,5 +741,12 @@ adminRoutes.post("/platform/product-option-values", checkInput(createProductOpti
 adminRoutes.get("/platform/product-option-values", checkInput(listProductOptionValuesSchema), catchErrors(platformController.listProductOptionValues));
 adminRoutes.patch("/platform/product-option-values/:optionValueId", checkInput(updateProductOptionValueSchema), catchErrors(platformController.updateProductOptionValue));
 adminRoutes.delete("/platform/product-option-values/:optionValueId", checkInput(productOptionValueIdSchema), catchErrors(platformController.deleteProductOptionValue));
+
+// CMS Routes
+adminRoutes.get("/cms", checkInput(cmsListSchema), catchErrors(cmsController.listPages));
+adminRoutes.post("/cms", checkInput(cmsCreateSchema), catchErrors(cmsController.createPage));
+adminRoutes.get("/cms/:slug", checkInput(cmsSlugParam), catchErrors(cmsController.getPage));
+adminRoutes.patch("/cms/:slug", checkInput(cmsUpdateSchema), catchErrors(cmsController.updatePage));
+adminRoutes.delete("/cms/:slug", checkInput(cmsSlugParam), catchErrors(cmsController.deletePage));
 
 module.exports = { adminRoutes };

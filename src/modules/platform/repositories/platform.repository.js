@@ -3,7 +3,6 @@ const { ProductFamilyModel } = require("../models/product-family.model");
 const { ProductVariantModel } = require("../models/product-variant.model");
 const { HsnCodeModel } = require("../models/hsn-code.model");
 const { GeographyModel } = require("../models/geography.model");
-const { ContentPageModel } = require("../models/content-page.model");
 const { PlatformBrandModel } = require("../models/platform-brand.model");
 const { WarrantyTemplateModel } = require("../models/warranty-template.model");
 const { PlatformFinishModel } = require("../models/platform-finish.model");
@@ -157,30 +156,6 @@ class PlatformRepository {
 
   async deleteGeography(countryCode) {
     return GeographyModel.findOneAndDelete({ countryCode });
-  }
-
-  async createContentPage(payload) {
-    return ContentPageModel.create(payload);
-  }
-
-  async updateContentPage(slug, payload) {
-    return ContentPageModel.findOneAndUpdate(makeCodeOrIdFilter(slug, "slug"), payload, { new: true });
-  }
-
-  async getContentPage(slug) {
-    return ContentPageModel.findOne(makeCodeOrIdFilter(slug, "slug"));
-  }
-
-  async listContentPages(filter = {}, pagination = {}) {
-    const [items, total] = await Promise.all([
-      ContentPageModel.find(filter).sort({ publishedAt: -1, title: 1 }).skip(pagination.skip).limit(pagination.limit),
-      ContentPageModel.countDocuments(filter),
-    ]);
-    return { items, total };
-  }
-
-  async deleteContentPage(slug) {
-    return ContentPageModel.findOneAndDelete(makeCodeOrIdFilter(slug, "slug"));
   }
 
   async getProductReview(reviewId) {

@@ -86,8 +86,8 @@ const MODULE_CATALOG = [
     order: 8,
     forPlatform: true,
     forSeller: false,
-    apiPath: "/platform/cms",
-    apiAliases: ["/admin/platform/content-pages", "/pricing/promotion-banners"],
+    apiPath: "/admin/cms",
+    apiAliases: ["/cms", "/pricing/promotion-banners"],
     contentTypes: [
       "legal",
       "faq",
