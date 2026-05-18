@@ -113,18 +113,28 @@ class AdminService {
       user: plainSeller,
       kyc,
     });
+    const bankVerificationStatus = sellerProfile.bankVerificationStatus || "not_submitted";
+    const goLiveStatus =
+      plainSeller.accountStatus === "active"
+        ? "live"
+        : sellerProfile.goLiveStatus || "pending";
 
     return {
       ...plainSeller,
       sellerProfile: {
         ...sellerProfile,
+        kycStatus: onboardingState.kycStatus,
+        bankVerificationStatus,
         onboardingChecklist: onboardingState.checklist,
         onboardingStatus: onboardingState.onboardingStatus,
+        goLiveStatus,
       },
       onboarding: {
         status: onboardingState.onboardingStatus,
         checklist: onboardingState.checklist,
         kycStatus: onboardingState.kycStatus,
+        bankVerificationStatus,
+        goLiveStatus,
         kycRejectionReason: kyc?.rejection_reason || null,
         kycSubmittedAt: kyc?.submitted_at || null,
         kycReviewedAt: kyc?.reviewed_at || null,
@@ -353,8 +363,9 @@ class AdminService {
       reviewedBy: actor.userId || null,
     });
 
+    const currentSellerProfile = this.toPlainObject(seller.sellerProfile || {});
     const nextSellerProfileBase = {
-      ...(seller.sellerProfile || {}),
+      ...currentSellerProfile,
       kycStatus: payload.kycStatus,
       rejectionReason: payload.kycStatus === "rejected" ? payload.rejectionReason || null : null,
       verifiedBy: payload.kycStatus === "verified" ? actor.userId || null : null,
@@ -399,20 +410,21 @@ class AdminService {
     }
     const kycBySellerId = await this.getSellerKycByIdMap([sellerId]);
     const kyc = kycBySellerId.get(String(sellerId)) || null;
+    const currentSellerProfile = this.toPlainObject(seller.sellerProfile || {});
     const nextSellerProfileBase = {
-      ...(seller.sellerProfile || {}),
+      ...currentSellerProfile,
       bankVerificationStatus: payload.bankVerificationStatus,
       bankRejectionReason:
         payload.bankVerificationStatus === "rejected" ? payload.bankRejectionReason || null : null,
-      verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : seller?.sellerProfile?.verifiedBy || null,
-      verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : seller?.sellerProfile?.verifiedAt || null,
+      verifiedBy: payload.bankVerificationStatus === "verified" ? actor.userId || null : currentSellerProfile.verifiedBy || null,
+      verifiedAt: payload.bankVerificationStatus === "verified" ? new Date() : currentSellerProfile.verifiedAt || null,
     };
     const onboardingState = makeSellerOnboardingState({
       sellerProfile: nextSellerProfileBase,
       user: seller,
       kyc,
     });
-    const shouldActivateSeller =
+    const readyForGoLive =
       payload.bankVerificationStatus === "verified" &&
       onboardingState.kycStatus === "verified" &&
       onboardingState.requirements.profile.completed === true &&
@@ -420,24 +432,20 @@ class AdminService {
     const nextSellerProfile = {
       ...nextSellerProfileBase,
       onboardingChecklist: onboardingState.checklist,
-      onboardingStatus: shouldActivateSeller
+      onboardingStatus: readyForGoLive
         ? SELLER_ONBOARDING_STATUS.READY_FOR_GO_LIVE
         : onboardingState.onboardingStatus,
       goLiveStatus:
         payload.bankVerificationStatus === "rejected"
           ? "pending"
-          : shouldActivateSeller
-            ? "live"
-            : seller?.sellerProfile?.goLiveStatus || "pending",
-      goLiveApprovedBy: shouldActivateSeller ? actor.userId || null : seller?.sellerProfile?.goLiveApprovedBy || null,
-      goLiveApprovedAt: shouldActivateSeller ? new Date() : seller?.sellerProfile?.goLiveApprovedAt || null,
+          : currentSellerProfile.goLiveStatus || "pending",
+      goLiveApprovedBy: currentSellerProfile.goLiveApprovedBy || null,
+      goLiveApprovedAt: currentSellerProfile.goLiveApprovedAt || null,
     };
     await this.adminRepository.updateUserById(sellerId, {
       sellerProfile: nextSellerProfile,
       ...(payload.bankVerificationStatus === "rejected"
         ? { accountStatus: "pending_approval" }
-        : shouldActivateSeller
-          ? { accountStatus: "active" }
         : {}),
     });
     return this.getSeller(sellerId);
@@ -461,7 +469,7 @@ class AdminService {
     if (!seller || seller.role !== ROLES.SELLER) {
       throw new AppError("Seller not found", 404);
     }
-    const profile = seller.sellerProfile || {};
+    const profile = this.toPlainObject(seller.sellerProfile || {});
     const kyc = await this.adminRepository.getSellerKycById(sellerId);
     const onboardingState = makeSellerOnboardingState({
       sellerProfile: profile,

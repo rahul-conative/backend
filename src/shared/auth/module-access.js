@@ -28,6 +28,15 @@ function getRequestModule(req) {
     }
 
     if (second === "cms") {
+    if (second === "platform" && ["categories", "brands", "hsn-codes"].includes(third)) {
+      return "products";
+    }
+
+    if (second === "common" && ["countries", "states", "cities"].includes(third)) {
+      return "products";
+    }
+
+    if (second === "platform" && third === "content-pages") {
       return "cms";
     }
 
@@ -68,6 +77,12 @@ function getRequestModule(req) {
   }
   if (first === "sellers" && second === "me" && third === "access") {
     return "sellers";
+  }
+  if (first === "platform" && second === "cms") {
+    return "cms";
+  }
+  if (first === "platform" && ["categories", "brands", "hsn-codes"].includes(second)) {
+    return "products";
   }
   if (first === "pricing" && second === "promotion-banners") {
     return "cms";

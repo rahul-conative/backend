@@ -12,7 +12,7 @@ const {
   listPagesSchema: cmsListSchema,
 } = require("../../cms/validation/cms.validation");
 const { authenticate } = require("../../../shared/middleware/authenticate");
-const { allowRoles, allowPermissions } = require("../../../shared/middleware/access");
+const { allowActions, allowRoles, allowPermissions } = require("../../../shared/middleware/access");
 const { catchErrors } = require("../../../shared/middleware/catch-errors");
 const {
   checkInput,
@@ -23,6 +23,12 @@ const {
 const {
   commonManagementRoutes,
 } = require("./common-management.routes");
+const {
+  CommonManagementController,
+} = require("../controllers/common-management.controller");
+const {
+  listSchema: commonListSchema,
+} = require("../validation/common-management.validation");
 const { ROLES } = require("../../../shared/constants/roles");
 const {
   adminOverviewSchema,
@@ -137,12 +143,141 @@ const {
   rejectProductSchema,
   productParamSchema,
 } = require("../../product/validation/product.validation");
+const { ACTIONS } = require("../../../shared/constants/actions");
 
 const adminRoutes = express.Router();
 const adminController = new AdminController();
 const cmsController = new CmsController();
 const platformController = new PlatformController();
 const productController = new ProductController();
+const commonManagementController = new CommonManagementController();
+
+adminRoutes.get(
+  "/platform/categories",
+  authenticate,
+  checkInput(listCategoriesSchema),
+  catchErrors(platformController.listCategories),
+);
+adminRoutes.get(
+  "/platform/categories/:categoryKey",
+  authenticate,
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.getCategory),
+);
+adminRoutes.get(
+  "/categories/:categoryKey/attributes",
+  authenticate,
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.getCategoryAttributes),
+);
+adminRoutes.post(
+  "/platform/categories",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createCategorySchema),
+  catchErrors(platformController.createCategory),
+);
+adminRoutes.patch(
+  "/platform/categories/:categoryKey",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateCategorySchema),
+  catchErrors(platformController.updateCategory),
+);
+adminRoutes.delete(
+  "/platform/categories/:categoryKey",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(categoryKeySchema),
+  catchErrors(platformController.deleteCategory),
+);
+adminRoutes.get(
+  "/platform/brands",
+  authenticate,
+  checkInput(listBrandsSchema),
+  catchErrors(platformController.listBrands),
+);
+adminRoutes.get(
+  "/platform/brands/:brandId",
+  authenticate,
+  checkInput(brandIdSchema),
+  catchErrors(platformController.getBrand),
+);
+adminRoutes.post(
+  "/platform/brands",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createBrandSchema),
+  catchErrors(platformController.createBrand),
+);
+adminRoutes.patch(
+  "/platform/brands/:brandId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateBrandSchema),
+  catchErrors(platformController.updateBrand),
+);
+adminRoutes.delete(
+  "/platform/brands/:brandId",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(brandIdSchema),
+  catchErrors(platformController.deleteBrand),
+);
+adminRoutes.get(
+  "/platform/hsn-codes",
+  authenticate,
+  checkInput(listHsnCodesSchema),
+  catchErrors(platformController.listHsnCodes),
+);
+adminRoutes.get(
+  "/platform/hsn-codes/:hsnCode",
+  authenticate,
+  checkInput(hsnCodeSchema),
+  catchErrors(platformController.getHsnCode),
+);
+adminRoutes.post(
+  "/platform/hsn-codes",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createHsnCodeSchema),
+  catchErrors(platformController.createHsnCode),
+);
+adminRoutes.patch(
+  "/platform/hsn-codes/:hsnCode",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateHsnCodeSchema),
+  catchErrors(platformController.updateHsnCode),
+);
+adminRoutes.delete(
+  "/platform/hsn-codes/:hsnCode",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(hsnCodeSchema),
+  catchErrors(platformController.deleteHsnCode),
+);
+adminRoutes.get(
+  "/common/countries",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(commonListSchema),
+  catchErrors(commonManagementController.listCountries),
+);
+adminRoutes.get(
+  "/common/states",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(commonListSchema),
+  catchErrors(commonManagementController.listStates),
+);
+adminRoutes.get(
+  "/common/cities",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(commonListSchema),
+  catchErrors(commonManagementController.listCities),
+);
 
 adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
 adminRoutes.use("/referral", referralAdminRoutes);
