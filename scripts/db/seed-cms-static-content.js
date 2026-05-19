@@ -369,6 +369,100 @@ function gallery(...images) {
   return [...new Set(images.filter(Boolean))];
 }
 
+function imageObject(url = "", alt = "", type = "") {
+  return {
+    url,
+    alt: alt || "",
+    title: alt || "",
+    caption: "",
+    type,
+  };
+}
+
+function normalizePoints(items = []) {
+  return items.map((item, index) => ({
+    title: item.title || item.question || item.label || "",
+    description: item.description || item.answer || item.subtitle || "",
+    image: imageObject(item.image || item.icon || item.img || "", item.alt || item.title || item.question || "", "point"),
+    cta: {
+      label: item.ctaText || item.label || "",
+      url: item.ctaTo || item.href || item.url || "",
+      target: item.target || "_self",
+    },
+    sortOrder: index,
+  }));
+}
+
+function normalizeSections(data = {}, fallbackTitle = "") {
+  const sourceSections = Array.isArray(data.sections) ? data.sections : [];
+  const sections = sourceSections.map((section, index) => ({
+    type: section.type || (Array.isArray(section.items) ? "feature_grid" : "content"),
+    title: section.title || "",
+    description: section.description || section.subtitle || "",
+    image: imageObject(section.image || section.icon || "", section.title || fallbackTitle, "section"),
+    gallery: gallery(...(section.images || [])).map((url) => imageObject(url, section.title || fallbackTitle, "section_gallery")),
+    points: normalizePoints(section.points || section.items || section.links || []),
+    cta: {
+      label: section.ctaText || "",
+      url: section.ctaTo || "",
+      target: section.target || "_self",
+    },
+    sortOrder: section.sortOrder ?? index,
+  }));
+
+  if (!sections.length && Array.isArray(data.items)) {
+    sections.push({
+      type: "feature_grid",
+      title: fallbackTitle,
+      description: data.description || "",
+      image: imageObject("", fallbackTitle, "section"),
+      gallery: [],
+      points: normalizePoints(data.items),
+      cta: { label: data.ctaText || "", url: data.ctaTo || "", target: "_self" },
+      sortOrder: 0,
+    });
+  }
+
+  return sections;
+}
+
+function makeSeo({ slug, title, excerpt, data, heroImage, routePath }) {
+  const description = excerpt || data?.description || `${title} at Sam Global.`;
+  const keywords = [
+    "Sam Global",
+    title,
+    data?.eyebrow,
+    ...(Array.isArray(data?.seoKeywords) ? data.seoKeywords : []),
+  ].filter(Boolean);
+
+  return {
+    metaTitle: data?.seoTitle || title,
+    metaDescription: data?.seoDescription || description,
+    keywords,
+    focusKeyword: data?.focusKeyword || title,
+    canonicalUrl: routePath || `/${slug}`,
+    robots: "index,follow",
+    ogTitle: data?.ogTitle || data?.seoTitle || title,
+    ogDescription: data?.ogDescription || data?.seoDescription || description,
+    ogImage: imageObject(heroImage, title, "og"),
+    twitterTitle: data?.twitterTitle || data?.seoTitle || title,
+    twitterDescription: data?.twitterDescription || data?.seoDescription || description,
+    twitterImage: imageObject(heroImage, title, "twitter"),
+    schemaType: data?.schemaType || "WebPage",
+    schemaJson: {
+      "@context": "https://schema.org",
+      "@type": data?.schemaType || "WebPage",
+      name: title,
+      description,
+      url: routePath || `/${slug}`,
+    },
+    breadcrumbs: [
+      { label: "Home", url: "/" },
+      { label: title, url: routePath || `/${slug}` },
+    ],
+  };
+}
+
 function pageRecord({
   slug,
   title,
@@ -384,13 +478,30 @@ function pageRecord({
   metadata = {},
 }) {
   const galleryImages = gallery(heroImage, coverImage, thumbnailUrl, ...(metadata.images || []));
+  const description = data?.description || excerpt || "";
   return {
     slug,
     title,
     pageType,
+    status: "published",
+    description,
     body,
-    excerpt,
+    excerpt: excerpt || description,
     tags,
+    image: imageObject(heroImage, title, "hero"),
+    gallery: galleryImages.map((url) => imageObject(url, title, "gallery")),
+    sections: normalizeSections(data || {}, title),
+    cta: {
+      label: data?.ctaText || "",
+      url: data?.ctaTo || routePath || "",
+      target: "_self",
+    },
+    seo: makeSeo({ slug, title, excerpt: excerpt || description, data, heroImage, routePath }),
+    visibility: {
+      channels: ["web", "app"],
+      roles: ["public"],
+    },
+    sortOrder: metadata.sortOrder || 0,
     heroImage,
     coverImage,
     thumbnailUrl,
@@ -811,6 +922,7 @@ async function main() {
   }
 
   await connectMongo();
+  await ContentPageModel.deleteMany({});
   for (const page of pages) {
     await ContentPageModel.findOneAndUpdate(
       { slug: page.slug },
