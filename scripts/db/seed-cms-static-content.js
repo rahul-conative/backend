@@ -45,6 +45,276 @@ async function importCustomerData(fileName) {
   return import(fileUrl);
 }
 
+async function importCustomerDataOrFallback(fileName, fallback) {
+  try {
+    return await importCustomerData(fileName);
+  } catch (error) {
+    if (error?.code !== "ERR_MODULE_NOT_FOUND") throw error;
+    return fallback;
+  }
+}
+
+const fallbackMarketingPages = {
+  deals: {
+    cmsKey: "deals",
+    eyebrow: "Deals",
+    title: "Deals",
+    description: "Explore limited-time offers, curated savings, and featured product picks.",
+    ctaText: "Shop Deals",
+    ctaTo: "/products",
+    sections: [
+      {
+        title: "Featured deals",
+        subtitle: "Fresh savings across everyday categories.",
+        items: [
+          { title: "Fashion offers", description: "Discover styles and essentials with seasonal pricing." },
+          { title: "Electronics picks", description: "Find smart devices, accessories, and home tech offers." },
+          { title: "Home savings", description: "Shop decor, appliances, and useful home upgrades." },
+        ],
+      },
+    ],
+  },
+  brandOutlet: {
+    cmsKey: "brand-outlet",
+    eyebrow: "Brands",
+    title: "Brand Outlet",
+    description: "Shop curated brand selections and outlet-style savings in one place.",
+    ctaText: "Explore Brands",
+    ctaTo: "/products",
+    sections: [
+      {
+        title: "Outlet highlights",
+        subtitle: "A focused place for trusted brands and better-value finds.",
+        items: [
+          { title: "Popular labels", description: "Browse brands customers come back to again and again." },
+          { title: "Seasonal edits", description: "Find relevant picks for current trends and daily needs." },
+          { title: "Value collections", description: "Shop quality-focused collections at practical prices." },
+        ],
+      },
+    ],
+  },
+  giftCards: {
+    cmsKey: "gift-cards",
+    eyebrow: "Gifting",
+    title: "Gift Cards",
+    description: "Give flexible shopping credit for birthdays, celebrations, and everyday surprises.",
+    ctaText: "Browse Gifts",
+    ctaTo: "/products",
+    sections: [
+      {
+        title: "Easy gifting",
+        subtitle: "Simple options for thoughtful last-minute and planned gifts.",
+        items: [
+          { title: "Flexible choice", description: "Let recipients choose the products they actually want." },
+          { title: "Fast delivery", description: "A convenient gifting route for busy shoppers." },
+          { title: "Any occasion", description: "Useful for festivals, birthdays, rewards, and thank-you gifts." },
+        ],
+      },
+    ],
+  },
+  helpContact: {
+    cmsKey: "help-contact",
+    eyebrow: "Support",
+    title: "Help & Contact",
+    description: "Find help for orders, payments, returns, account access, and seller support.",
+    ctaText: "View FAQs",
+    ctaTo: "/faq",
+    sections: [
+      {
+        title: "Support topics",
+        subtitle: "Pick the path that best matches your request.",
+        items: [
+          { title: "Orders", description: "Track purchases, delivery status, invoices, and order updates." },
+          { title: "Returns", description: "Review return eligibility and start a return request." },
+          { title: "Account help", description: "Get support for login, profile, wallet, and preferences." },
+        ],
+      },
+    ],
+  },
+  whoWeAre: {
+    cmsKey: "who-we-are",
+    eyebrow: "Company",
+    title: "Who We Are",
+    description: "Sam Global brings products, sellers, and customer-first shopping experiences together.",
+    ctaText: "Learn More",
+    ctaTo: "/about-us",
+    sections: [],
+  },
+  mobileApp: {
+    cmsKey: "mobile-app",
+    eyebrow: "App",
+    title: "Mobile App",
+    description: "Shop faster, track orders, manage account features, and discover offers from your phone.",
+    ctaText: "Start Shopping",
+    ctaTo: "/products",
+    sections: [],
+  },
+  sellerPolicies: {
+    cmsKey: "seller-policies",
+    eyebrow: "Sellers",
+    title: "Seller Policies",
+    description: "Understand marketplace expectations for catalog, fulfillment, service, and compliance.",
+    ctaText: "Seller Dashboard",
+    ctaTo: "/seller/status",
+    sections: [],
+  },
+  growthSupport: {
+    cmsKey: "growth-support",
+    eyebrow: "Sellers",
+    title: "Growth Support",
+    description: "Tools and guidance to help sellers improve operations and grow on the marketplace.",
+    ctaText: "Get Started",
+    ctaTo: "/seller/status",
+    sections: [],
+  },
+  advertise: {
+    cmsKey: "advertise",
+    eyebrow: "Promotions",
+    title: "Advertise",
+    description: "Promote products and brand stories to customers across the shopping journey.",
+    ctaText: "Contact Support",
+    ctaTo: "/help-contact",
+    sections: [],
+  },
+  blog: {
+    cmsKey: "blog",
+    eyebrow: "Stories",
+    title: "Blog",
+    description: "Read shopping ideas, product stories, seller updates, and platform news.",
+    ctaText: "Explore Products",
+    ctaTo: "/products",
+    sections: [],
+  },
+  updates: {
+    cmsKey: "updates",
+    eyebrow: "News",
+    title: "Updates",
+    description: "Stay current with marketplace improvements, feature releases, and service updates.",
+    ctaText: "Shop Now",
+    ctaTo: "/products",
+    sections: [],
+  },
+  announcements: {
+    cmsKey: "announcements",
+    eyebrow: "Announcements",
+    title: "Announcements",
+    description: "Important platform notices and customer-facing announcements from Sam Global.",
+    ctaText: "View Products",
+    ctaTo: "/products",
+    sections: [],
+  },
+};
+
+const fallbackTermsOfUseData = {
+  title: "Terms of Use",
+  intro: {
+    heading: "Marketplace Terms",
+    description: "By using Sam Global, customers and sellers agree to use the platform lawfully and follow marketplace policies.",
+  },
+  sections: [
+    { title: "Accounts", description: "Users are responsible for accurate account information and account security." },
+    { title: "Orders", description: "Order placement, cancellation, returns, and refunds follow the policies shown at checkout and in account pages." },
+  ],
+};
+
+const fallbackShippingPolicyData = {
+  title: "Shipping Policy",
+  intro: {
+    heading: "Delivery and Shipping",
+    description: "Delivery availability, fees, and timelines depend on product, seller, destination, and carrier coverage.",
+  },
+  sections: [
+    { title: "Tracking", description: "Customers can track dispatch and delivery status from their order page." },
+    { title: "Serviceability", description: "Some pincodes or items may have limited serviceability depending on carrier rules." },
+  ],
+};
+
+const fallbackRefundPolicyData = {
+  title: "Refund Policy",
+  intro: {
+    heading: "Returns and Refunds",
+    description: "Eligible products can be returned within the listed return window after review and approval.",
+  },
+  sections: [
+    { title: "Eligibility", description: "Return eligibility depends on item condition, seller policy, category, and return reason." },
+    { title: "Refund Method", description: "Refunds are processed to the original payment method or wallet where applicable." },
+  ],
+};
+
+const fallbackFaqItems = [
+  { question: "How do I track an order?", answer: "Open your orders page and select an order to view the latest status.", topic: "Orders" },
+  { question: "How do returns work?", answer: "Eligible products can be returned from the order detail page within the return window.", topic: "Returns" },
+  { question: "How do I contact support?", answer: "Use the Help & Contact page or support options in your account.", topic: "Support" },
+];
+
+const fallbackSupportTopics = [
+  { title: "Orders", description: "Track orders, invoices, shipping updates, and delivery status.", href: "/orders" },
+  { title: "Returns", description: "Start and monitor eligible return requests.", href: "/returns" },
+  { title: "Account", description: "Get help with login, profile, wallet, and preferences.", href: "/account/profile" },
+];
+
+const fallbackWhyChooseUsItems = [
+  { title: "Curated selection", description: "Products and categories organized for faster shopping." },
+  { title: "Secure payments", description: "Checkout flows built around payment safety and reliability." },
+  { title: "Customer support", description: "Support paths for orders, returns, and account questions." },
+];
+
+const fallbackCommitmentItems = [
+  { title: "Transparency", description: "Clear policies and visible order information." },
+  { title: "Quality", description: "A marketplace experience focused on dependable service." },
+  { title: "Consistency", description: "Continuous improvements across shopping and seller workflows." },
+];
+
+const fallbackFeatureItems = [
+  { title: "Order tracking", description: "Follow purchases from checkout to delivery." },
+  { title: "Wallet and loyalty", description: "Manage rewards and wallet activity in one place." },
+  { title: "Seller tools", description: "Support for catalog, orders, fulfillment, and payouts." },
+];
+
+const fallbackHeaderData = {
+  topNavLinks: [
+    { name: "Deals", path: "/deals" },
+    { name: "Brand Outlet", path: "/brand-outlet" },
+    { name: "Gift Card", path: "/gift-cards" },
+    { name: "Help & Contact", path: "/help-contact" },
+  ],
+  sellDropdownData: {
+    title: "Start selling in a snap",
+    description: "Turn your products into extra revenue with marketplace tools.",
+    features: [
+      { icon: "camera", text: "Create and manage listings quickly" },
+      { icon: "lock", text: "Seller protections and secure payments" },
+      { icon: "truck", text: "Fulfillment, delivery, and pickup workflows" },
+    ],
+    buttons: [
+      { label: "Start selling", path: "/seller/status" },
+      { label: "Growth support", path: "/growth-support" },
+    ],
+  },
+  accountMenuItems: [
+    { label: "My Profile", path: "/account/profile", icon: "user" },
+    { label: "My Orders", path: "/orders", icon: "shoppingBag" },
+    { label: "Wallet", path: "/wallet", icon: "lock" },
+  ],
+};
+
+const fallbackHeaderMegaMenu = {
+  leftSections: [],
+  promo: null,
+};
+
+const fallbackProductDetailFAQ = [
+  { question: "Is this product eligible for return?", answer: "Return eligibility appears on the product and order detail pages." },
+  { question: "How is warranty handled?", answer: "Warranty details depend on product and seller configuration." },
+];
+
+const fallbackProductDetailData = {
+  images: {
+    mainImage: img.fashion,
+    sideImages: [{ img: img.deals }, { img: img.gift }],
+  },
+};
+
 function kebab(value = "") {
   return String(value)
     .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -319,14 +589,26 @@ function commerceShowcaseRecords() {
 }
 
 async function buildPages() {
-  const { marketingPages, faqItems, supportTopics, whyChooseUsItems, commitmentItems, featureItems } = await importCustomerData("staticPages.js");
-  const { termsOfUseData } = await importCustomerData("termsOfUseData.js");
-  const { shippingPolicyData } = await importCustomerData("shippingPolicyData.js");
-  const { refundPolicyData } = await importCustomerData("refundPolicyData.js");
-  const { faqData } = await importCustomerData("faqData.js");
-  const { productDetailFAQ } = await importCustomerData("productDetailFAQ.js");
-  const { productDetailData } = await importCustomerData("productDetails.js");
-  const { topNavLinks, sellDropdownData, accountMenuItems } = await importCustomerData("header.js");
+  const { marketingPages, faqItems, supportTopics, whyChooseUsItems, commitmentItems, featureItems } =
+    await importCustomerDataOrFallback("staticPages.js", {
+      marketingPages: fallbackMarketingPages,
+      faqItems: fallbackFaqItems,
+      supportTopics: fallbackSupportTopics,
+      whyChooseUsItems: fallbackWhyChooseUsItems,
+      commitmentItems: fallbackCommitmentItems,
+      featureItems: fallbackFeatureItems,
+    });
+  const { termsOfUseData } = await importCustomerDataOrFallback("termsOfUseData.js", { termsOfUseData: fallbackTermsOfUseData });
+  const { shippingPolicyData } = await importCustomerDataOrFallback("shippingPolicyData.js", { shippingPolicyData: fallbackShippingPolicyData });
+  const { refundPolicyData } = await importCustomerDataOrFallback("refundPolicyData.js", { refundPolicyData: fallbackRefundPolicyData });
+  const { faqData } = await importCustomerDataOrFallback("faqData.js", { faqData: fallbackFaqItems });
+  const { productDetailFAQ } = await importCustomerDataOrFallback("productDetailFAQ.js", { productDetailFAQ: fallbackProductDetailFAQ });
+  const { productDetailData } = await importCustomerDataOrFallback("productDetails.js", { productDetailData: fallbackProductDetailData });
+  const { topNavLinks, sellDropdownData, accountMenuItems, megaMenuData } =
+    await importCustomerDataOrFallback("header.js", {
+      ...fallbackHeaderData,
+      megaMenuData: fallbackHeaderMegaMenu,
+    });
 
   const marketingImages = {
     deals: img.deals,
@@ -473,6 +755,30 @@ async function buildPages() {
       coverImage: img.fashion,
       thumbnailUrl: img.logo,
       tags: ["navigation"],
+    }),
+    pageRecord({
+      slug: "header-sell-dropdown",
+      title: "Header Sell Dropdown",
+      pageType: "navigation",
+      body: "Seller dropdown content shown in the customer header.",
+      routePath: "global.header.sell",
+      data: sellDropdownData,
+      heroImage: img.seller,
+      coverImage: img.seller,
+      thumbnailUrl: img.logo,
+      tags: ["navigation", "seller"],
+    }),
+    pageRecord({
+      slug: "header-mega-menu",
+      title: "Header Mega Menu",
+      pageType: "navigation",
+      body: "Mega menu content shown in the customer category bar.",
+      routePath: "global.header.megaMenu",
+      data: megaMenuData || fallbackHeaderMegaMenu,
+      heroImage: img.fashion,
+      coverImage: img.fashion,
+      thumbnailUrl: img.logo,
+      tags: ["navigation", "menu"],
     }),
     pageRecord({
       slug: "product-detail-static-content",

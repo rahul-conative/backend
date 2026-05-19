@@ -61,6 +61,7 @@ const {
 } = require("../validation/platform.validation");
 
 const platformRoutes = express.Router();
+const cmsRoutes = express.Router();
 const platformController = new PlatformController();
 
 platformRoutes.get("/catalog-prefill", catchErrors(platformController.getCatalogPrefillData));
@@ -214,6 +215,30 @@ platformRoutes.delete(
   catchErrors(platformController.deleteContentPage),
 );
 
+cmsRoutes.get("/", checkInput(listContentPagesSchema), catchErrors(platformController.listContentPages));
+cmsRoutes.get("/:slug", checkInput(contentPageSlugSchema), catchErrors(platformController.getContentPage));
+cmsRoutes.post(
+  "/",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(createContentPageSchema),
+  catchErrors(platformController.createContentPage),
+);
+cmsRoutes.patch(
+  "/:slug",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(updateContentPageSchema),
+  catchErrors(platformController.updateContentPage),
+);
+cmsRoutes.delete(
+  "/:slug",
+  authenticate,
+  allowActions(ACTIONS.CATALOG_MANAGE),
+  checkInput(contentPageSlugSchema),
+  catchErrors(platformController.deleteContentPage),
+);
+
 platformRoutes.get("/brands", checkInput(listBrandsSchema), catchErrors(platformController.listBrands));
 platformRoutes.get("/brands/:brandId", checkInput(brandIdSchema), catchErrors(platformController.getBrand));
 platformRoutes.post(
@@ -295,4 +320,4 @@ platformRoutes.post("/product-option-values", authenticate, allowActions(ACTIONS
 platformRoutes.patch("/product-option-values/:optionValueId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(updateProductOptionValueSchema), catchErrors(platformController.updateProductOptionValue));
 platformRoutes.delete("/product-option-values/:optionValueId", authenticate, allowActions(ACTIONS.CATALOG_MANAGE), checkInput(productOptionValueIdSchema), catchErrors(platformController.deleteProductOptionValue));
 
-module.exports = { platformRoutes };
+module.exports = { platformRoutes, cmsRoutes };
