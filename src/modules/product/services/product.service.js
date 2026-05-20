@@ -71,14 +71,75 @@ class ProductService {
 
   // ─── Variant helpers ──────────────────────────────────────────────────────
 
-  validateVariants(variants = []) {
+  normalizeVariantAxis(option = {}) {
+    return String(option.slug || option.name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  normalizeProductOptions(options = []) {
+    if (!Array.isArray(options)) return [];
+    return options
+      .map((option, index) => {
+        const name = String(option?.name || "").trim();
+        const slug = this.normalizeVariantAxis(option);
+        const values = Array.from(
+          new Set(
+            (Array.isArray(option?.values) ? option.values : [])
+              .map((value) => String(value || "").trim())
+              .filter(Boolean),
+          ),
+        );
+
+        if (!name || !values.length) return null;
+
+        return {
+          ...option,
+          name,
+          slug,
+          values,
+          sortOrder: Number(option.sortOrder) || index,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  normalizeVariantAttributes(attributes = {}) {
+    const source = attributes instanceof Map ? Object.fromEntries(attributes) : attributes;
+    return Object.entries(source || {}).reduce((acc, [key, value]) => {
+      const axis = this.normalizeVariantAxis({ name: key });
+      if (axis) acc[axis] = value;
+      return acc;
+    }, {});
+  }
+
+  validateVariants(variants = [], options = []) {
     const skus = new Set();
+    const optionMap = new Map(
+      options.map((option) => [
+        this.normalizeVariantAxis(option),
+        new Set((option.values || []).map((value) => String(value))),
+      ]),
+    );
+
     for (const variant of variants) {
       if (!variant?.sku) continue;
       if (skus.has(variant.sku)) throw new AppError("Variant SKU must be unique", 400);
       skus.add(variant.sku);
       if (variant.stock !== undefined && Number(variant.stock) < 0) {
         throw new AppError("Variant stock must be non-negative", 400);
+      }
+
+      const attributes = this.normalizeVariantAttributes(variant.attributes || {});
+      for (const [axis, value] of Object.entries(attributes)) {
+        if (!optionMap.has(axis)) {
+          throw new AppError(`Variant attribute '${axis}' is not configured as a product option`, 400);
+        }
+        if (!optionMap.get(axis).has(String(value))) {
+          throw new AppError(`Variant attribute '${axis}' has invalid value '${value}'`, 400);
+        }
       }
     }
   }
@@ -87,10 +148,11 @@ class ProductService {
     if (!options.length) return [];
     const [first, ...rest] = options;
     const restCombinations = rest.length ? this.generateVariantCombinations(rest) : [{}];
+    const axis = this.normalizeVariantAxis(first);
     return first.values.flatMap((value) =>
       restCombinations.map((combo) => ({
         ...combo,
-        [first.name.toLowerCase()]: value,
+        [axis]: value,
       })),
     );
   }
@@ -99,12 +161,57 @@ class ProductService {
     const combinations = this.generateVariantCombinations(options);
     return combinations.map((attributes, index) => ({
       sku: `SKU-${Date.now()}-${index + 1}`,
+      title: Object.values(attributes).join(" / "),
       attributes,
       price: basePrice,
       mrp: baseMrp,
       stock: 0,
       status: "active",
+      isDefault: index === 0,
+      sortOrder: index,
     }));
+  }
+
+  normalizeProductVariants(payload = {}) {
+    const hasOptionPayload = Object.prototype.hasOwnProperty.call(payload, "options");
+    const hasVariantPayload = Object.prototype.hasOwnProperty.call(payload, "variants");
+    const hasVariantAxisPayload = Object.prototype.hasOwnProperty.call(payload, "variantAxes");
+
+    if (!hasOptionPayload && !hasVariantPayload && !hasVariantAxisPayload) {
+      return payload;
+    }
+
+    const options = this.normalizeProductOptions(payload.options || []);
+    const explicitVariants = Array.isArray(payload.variants) ? payload.variants : [];
+    const variants = explicitVariants.length
+      ? explicitVariants.map((variant, index) => {
+          const attributes = this.normalizeVariantAttributes(variant.attributes || {});
+          return {
+            ...variant,
+            attributes,
+            title: variant.title || Object.values(attributes).join(" / "),
+            isDefault: variant.isDefault === true || (!explicitVariants.some((v) => v.isDefault) && index === 0),
+            sortOrder: variant.sortOrder ?? index,
+          };
+        })
+      : options.length
+        ? this.buildVariantsFromOptions(options, payload.price || 0, payload.mrp || 0)
+        : [];
+
+    const variantAxes = options.length
+      ? options.map((option) => this.normalizeVariantAxis(option))
+      : Array.isArray(payload.variantAxes)
+        ? payload.variantAxes.map((axis) => this.normalizeVariantAxis({ name: axis })).filter(Boolean)
+        : [];
+
+    return {
+      ...payload,
+      ...(hasOptionPayload ? { options } : {}),
+      ...(hasVariantPayload || (hasOptionPayload && variants.length) ? { variants } : {}),
+      variantAxes,
+      hasVariants: payload.hasVariants === true || variants.length > 0,
+      defaultVariantId: payload.defaultVariantId,
+    };
   }
 
   // ─── Media helpers ────────────────────────────────────────────────────────
@@ -227,6 +334,7 @@ class ProductService {
 
   async createProduct(payload, actor) {
     payload = this.normalizeProductMedia(payload);
+    payload = this.normalizeProductVariants(payload);
     const productType = payload.productType || PRODUCT_TYPE.SIMPLE;
 
     const categoryKey = payload.categoryId || payload.category;
@@ -237,7 +345,7 @@ class ProductService {
       this.normalizeCategoryAttributes(category),
       payload.attributes || {},
     );
-    this.validateVariants(payload.variants || []);
+    this.validateVariants(payload.variants || [], payload.options || []);
     this._validateProductType(productType, payload);
 
     const isSeller = actor.role === "seller" || actor.role === "seller-sub-admin";
@@ -248,9 +356,7 @@ class ProductService {
       ? actor.ownerSellerId || actor.userId
       : payload.sellerId || actor.userId;
 
-    const hasVariants =
-      (payload.hasVariants === true) ||
-      (Array.isArray(payload.variants) && payload.variants.length > 0);
+    const hasVariants = payload.hasVariants === true || (payload.variants || []).length > 0;
 
     const product = await this.productRepository.create({
       ...payload,
@@ -297,6 +403,7 @@ class ProductService {
     }
 
     payload = this.normalizeProductMedia(payload);
+    payload = this.normalizeProductVariants(payload);
 
     const categoryKey =
       payload.categoryId || payload.category || existingProduct.categoryId || existingProduct.category;
@@ -305,7 +412,8 @@ class ProductService {
 
     const nextAttributes = payload.attributes || existingProduct.attributes || {};
     this.validateDynamicAttributes(this.normalizeCategoryAttributes(category), nextAttributes);
-    this.validateVariants(payload.variants || existingProduct.variants || []);
+    const nextOptions = payload.options || existingProduct.options || [];
+    this.validateVariants(payload.variants || existingProduct.variants || [], nextOptions);
 
     const productType = payload.productType || existingProduct.productType || PRODUCT_TYPE.SIMPLE;
     this._validateProductType(productType, { ...existingProduct.toObject(), ...payload });

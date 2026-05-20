@@ -41,9 +41,11 @@ const variantSchema = Joi.object({
 });
 
 const optionSchema = Joi.object({
+  platformOptionId: optionalString(),
   name: Joi.string().trim().required(),
   slug: optionalString(),
   values: Joi.array().items(Joi.string().trim()).required(),
+  valueCodes: Joi.object().pattern(Joi.string(), Joi.string().allow("", null)).default({}),
   required: Joi.boolean().default(false),
   displayType: Joi.string()
     .valid("dropdown", "button", "color_swatch", "radio", "thumbnail")

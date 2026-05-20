@@ -11,7 +11,9 @@ class InventoryRepository {
 
     try {
       for (const item of items) {
-        const updatedProduct = await this.productRepository.reserveStock(item.productId, item.quantity);
+        const updatedProduct = item.variantSku
+          ? await this.productRepository.reserveVariantStock(item.productId, item.variantSku, item.quantity)
+          : await this.productRepository.reserveStock(item.productId, item.quantity);
         if (!updatedProduct) {
           throw new Error(`Insufficient stock for product ${item.productId}`);
         }
@@ -34,7 +36,9 @@ class InventoryRepository {
     } catch (error) {
       await Promise.all(
         reservedProducts.map((item) =>
-          this.productRepository.releaseReservedStock(item.productId, item.quantity),
+          item.variantSku
+            ? this.productRepository.releaseReservedVariantStock(item.productId, item.variantSku, item.quantity)
+            : this.productRepository.releaseReservedStock(item.productId, item.quantity),
         ),
       );
       throw error;
@@ -53,7 +57,9 @@ class InventoryRepository {
 
     await Promise.all(
       reservation.items.map((item) =>
-        this.productRepository.releaseReservedStock(item.productId, item.quantity),
+        item.variantSku
+          ? this.productRepository.releaseReservedVariantStock(item.productId, item.variantSku, item.quantity)
+          : this.productRepository.releaseReservedStock(item.productId, item.quantity),
       ),
     );
 
@@ -70,7 +76,9 @@ class InventoryRepository {
 
     await Promise.all(
       reservation.items.map((item) =>
-        this.productRepository.commitReservedStock(item.productId, item.quantity),
+        item.variantSku
+          ? this.productRepository.commitReservedVariantStock(item.productId, item.variantSku, item.quantity)
+          : this.productRepository.commitReservedStock(item.productId, item.quantity),
       ),
     );
 
@@ -86,7 +94,11 @@ class InventoryRepository {
     }
 
     await Promise.all(
-      reservation.items.map((item) => this.productRepository.addStock(item.productId, item.quantity)),
+      reservation.items.map((item) =>
+        item.variantSku
+          ? this.productRepository.adjustVariantStock(item.productId, item.variantSku, item.quantity)
+          : this.productRepository.addStock(item.productId, item.quantity),
+      ),
     );
 
     reservation.status = "restocked";

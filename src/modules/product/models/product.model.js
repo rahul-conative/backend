@@ -43,9 +43,11 @@ const variantSchema = new mongoose.Schema(
 
 const productOptionSchema = new mongoose.Schema(
   {
+    platformOptionId: { type: String, trim: true },
     name: { type: String, required: true, trim: true },
     slug: { type: String, trim: true },
     values: [{ type: String, trim: true }],
+    valueCodes: { type: Map, of: String, default: {} },
     required: { type: Boolean, default: false },
     displayType: {
       type: String,

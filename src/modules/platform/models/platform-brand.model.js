@@ -3,6 +3,8 @@ const { mongoose } = require("../../../infrastructure/mongo/mongo-client");
 const platformBrandSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, unique: true, index: true },
+    slug: { type: String, trim: true, default: "", index: true },
+    description: { type: String, trim: true, default: "" },
     logo: { type: String, default: "" },
     logoUrl: { type: String, default: "" },
     thumbnails: { type: String, default: "" },

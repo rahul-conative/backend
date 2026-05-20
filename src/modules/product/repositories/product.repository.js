@@ -195,6 +195,34 @@ class ProductRepository {
     );
   }
 
+  async releaseReservedVariantStock(productId, variantSku, quantity) {
+    return ProductModel.findOneAndUpdate(
+      {
+        _id: productId,
+        variants: { $elemMatch: { sku: variantSku, reservedStock: { $gte: quantity } } },
+      },
+      { $inc: { "variants.$.reservedStock": -quantity } },
+      { new: true },
+    );
+  }
+
+  async commitReservedVariantStock(productId, variantSku, quantity) {
+    return ProductModel.findOneAndUpdate(
+      {
+        _id: productId,
+        variants: {
+          $elemMatch: {
+            sku: variantSku,
+            reservedStock: { $gte: quantity },
+            stock: { $gte: quantity },
+          },
+        },
+      },
+      { $inc: { "variants.$.reservedStock": -quantity, "variants.$.stock": -quantity } },
+      { new: true },
+    );
+  }
+
   // ─── Analytics ───────────────────────────────────────────────────────────
 
   async incrementAnalytics(productId, field, increment = 1) {

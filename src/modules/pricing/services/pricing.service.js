@@ -38,17 +38,35 @@ class PricingService {
           throw new AppError(`Product ${item.productId} is not active`, 400);
         }
 
-        const availableStock = product.stock - product.reservedStock;
+        const variant = item.variantSku || item.variantId
+          ? (product.variants || []).find(
+              (candidate) =>
+                String(candidate.sku || "") === String(item.variantSku || "") ||
+                String(candidate._id || candidate.id || "") === String(item.variantId || ""),
+            )
+          : null;
+
+        if ((product.hasVariants || (product.variants || []).length > 0) && !variant) {
+          throw new AppError(`Select a valid variant for ${product.title}`, 400);
+        }
+
+        const availableStock = variant
+          ? (Number(variant.stock) || 0) - (Number(variant.reservedStock) || 0)
+          : product.stock - product.reservedStock;
         if (availableStock < item.quantity) {
           throw new AppError(`Insufficient stock for product ${product.title}`, 409);
         }
 
         const taxData = await this.getProductTaxData(product);
-        const unitPrice = Number(product.price);
+        const unitPrice = Number(variant?.salePrice ?? variant?.price ?? product.price);
         const lineTotal = unitPrice * item.quantity;
 
         return {
           productId: String(product.id),
+          variantId: variant ? String(variant._id || variant.id || item.variantId || "") : "",
+          variantSku: variant?.sku || item.variantSku || "",
+          variantTitle: variant?.title || item.variantTitle || "",
+          attributes: variant?.attributes || item.attributes || {},
           sellerId: product.sellerId,
           category: product.category,
           quantity: item.quantity,

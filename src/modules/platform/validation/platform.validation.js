@@ -23,6 +23,7 @@ const createCategorySchema = Joi.object({
     attributeSchema: Joi.array()
       .items(
         Joi.object({
+          platformOptionId: Joi.string().trim().allow("", null),
           key: Joi.string().trim().required(),
           label: Joi.string().trim().required(),
           type: Joi.string()
@@ -56,6 +57,7 @@ const updateCategorySchema = Joi.object({
     attributesSchema: Joi.object(),
     attributeSchema: Joi.array().items(
       Joi.object({
+        platformOptionId: Joi.string().trim().allow("", null),
         key: Joi.string().trim().required(),
         label: Joi.string().trim().required(),
         type: Joi.string().valid("text", "number", "select", "multi_select", "boolean", "date"),
@@ -105,7 +107,7 @@ const categoryKeySchema = Joi.object({
 const createProductFamilySchema = Joi.object({
   body: Joi.object({
     familyCode: Joi.string().trim().required(),
-    sellerId: Joi.string().required(),
+    sellerId: Joi.string().default("platform"),
     title: Joi.string().trim().required(),
     category: Joi.string().required(),
     baseAttributes: Joi.object().default({}),
@@ -209,6 +211,7 @@ const productVariantIdSchema = Joi.object({
 
 const createHsnCodeSchema = Joi.object({
   body: Joi.object({
+    hsnCode: Joi.string().trim(),
     code: Joi.string().trim().required(),
     description: Joi.string().trim().required(),
     gstRate: Joi.number().min(0).required(),
@@ -217,7 +220,9 @@ const createHsnCodeSchema = Joi.object({
     exempt: Joi.boolean().default(false),
     category: Joi.string().allow(null, ""),
     active: Joi.boolean().default(true),
-  }).required(),
+  })
+    .rename("hsnCode", "code", { ignoreUndefined: true, override: false })
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
@@ -513,8 +518,12 @@ const productReviewIdSchema = Joi.object({
 const createBrandSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().trim().required(),
+    slug: Joi.string().trim().allow(""),
+    description: Joi.string().trim().allow(""),
     logo: Joi.string().allow(""),
+    logoUrl: Joi.string().allow(""),
     thumbnails: Joi.string().allow(""),
+    imageUrl: Joi.string().allow(""),
     active: Joi.boolean().default(true),
     sortOrder: Joi.number().integer().default(0),
   }).required(),
@@ -525,8 +534,12 @@ const createBrandSchema = Joi.object({
 const updateBrandSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().trim(),
+    slug: Joi.string().trim().allow(""),
+    description: Joi.string().trim().allow(""),
     logo: Joi.string().allow(""),
+    logoUrl: Joi.string().allow(""),
     thumbnails: Joi.string().allow(""),
+    imageUrl: Joi.string().allow(""),
     active: Joi.boolean(),
     sortOrder: Joi.number().integer(),
   }).required(),
@@ -559,10 +572,15 @@ const brandIdSchema = Joi.object({
 
 const createWarrantyTemplateSchema = Joi.object({
   body: Joi.object({
+    name: Joi.string().trim(),
+    durationMonths: Joi.number().integer().min(0),
+    terms: Joi.string().trim().allow(""),
     period: Joi.string().trim().required(),
     active: Joi.boolean().default(true),
     metadata: Joi.object().default({}),
-  }).required(),
+  })
+    .rename("name", "period", { ignoreUndefined: true, override: false })
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
@@ -622,12 +640,18 @@ const finishIdSchema = Joi.object({
 });
 
 const createDimensionSchema = Joi.object({
-  body: Joi.object({ dimensions_value: Joi.string().trim().required(), active: Joi.boolean().default(true) }).required(),
+  body: Joi.object({ name: Joi.string().trim(), value: Joi.string().trim(), dimensions_value: Joi.string().trim().required(), active: Joi.boolean().default(true) })
+    .rename("name", "dimensions_value", { ignoreUndefined: true, override: false })
+    .rename("value", "dimensions_value", { ignoreUndefined: true, override: false })
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
 const updateDimensionSchema = Joi.object({
-  body: Joi.object({ dimensions_value: Joi.string().trim(), active: Joi.boolean() }).required(),
+  body: Joi.object({ name: Joi.string().trim(), value: Joi.string().trim(), dimensions_value: Joi.string().trim(), active: Joi.boolean() })
+    .rename("name", "dimensions_value", { ignoreUndefined: true, override: false })
+    .rename("value", "dimensions_value", { ignoreUndefined: true, override: false })
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({ dimensionId: Joi.string().required() }).required(),
 });
@@ -673,13 +697,26 @@ const batchIdSchema = Joi.object({
   params: Joi.object({ batchId: Joi.string().required() }).required(),
 });
 
+const productOptionDisplayTypes = ["button", "dropdown", "color_swatch", "radio", "thumbnail"];
 const createProductOptionSchema = Joi.object({
-  body: Joi.object({ name: Joi.string().trim().required(), active: Joi.boolean().default(true) }).required(),
+  body: Joi.object({
+    name: Joi.string().trim().required(),
+    slug: Joi.string().trim().allow(""),
+    displayType: Joi.string().valid(...productOptionDisplayTypes).default("button"),
+    description: Joi.string().trim().allow("", null),
+    active: Joi.boolean().default(true),
+  }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
 });
 const updateProductOptionSchema = Joi.object({
-  body: Joi.object({ name: Joi.string().trim(), active: Joi.boolean() }).required(),
+  body: Joi.object({
+    name: Joi.string().trim(),
+    slug: Joi.string().trim().allow(""),
+    displayType: Joi.string().valid(...productOptionDisplayTypes),
+    description: Joi.string().trim().allow("", null),
+    active: Joi.boolean(),
+  }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({ optionId: Joi.string().required() }).required(),
 });
@@ -698,10 +735,17 @@ const createProductOptionValueSchema = Joi.object({
   body: Joi.object({
     optionId: Joi.string(),
     option_id: Joi.string(),
+    value: Joi.string().trim(),
+    label: Joi.string().trim(),
     name: Joi.string().trim().required(),
     valueCode: Joi.string().trim().allow(""),
+    colorHex: Joi.string().trim().allow("", null),
+    imageUrl: Joi.string().trim().allow("", null),
+    sortOrder: Joi.number().integer().min(0).default(0),
     active: Joi.boolean().default(true),
   })
+    .rename("value", "name", { ignoreUndefined: true, override: false })
+    .rename("label", "name", { ignoreUndefined: true, override: false })
     .or("optionId", "option_id")
     .required(),
   query: Joi.object({}).required(),
@@ -711,10 +755,18 @@ const updateProductOptionValueSchema = Joi.object({
   body: Joi.object({
     optionId: Joi.string(),
     option_id: Joi.string(),
+    value: Joi.string().trim(),
+    label: Joi.string().trim(),
     name: Joi.string().trim(),
     valueCode: Joi.string().trim().allow(""),
+    colorHex: Joi.string().trim().allow("", null),
+    imageUrl: Joi.string().trim().allow("", null),
+    sortOrder: Joi.number().integer().min(0),
     active: Joi.boolean(),
-  }).required(),
+  })
+    .rename("value", "name", { ignoreUndefined: true, override: false })
+    .rename("label", "name", { ignoreUndefined: true, override: false })
+    .required(),
   query: Joi.object({}).required(),
   params: Joi.object({ optionValueId: Joi.string().required() }).required(),
 });

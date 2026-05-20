@@ -16,7 +16,19 @@ const orderTable = {
 
 const orderItemTable = {
   name: "order_items",
-  columns: ["id", "order_id", "product_id", "seller_id", "quantity", "unit_price", "line_total"],
+  columns: [
+    "id",
+    "order_id",
+    "product_id",
+    "variant_id",
+    "variant_sku",
+    "variant_title",
+    "attributes",
+    "seller_id",
+    "quantity",
+    "unit_price",
+    "line_total",
+  ],
 };
 
 module.exports = { orderTable, orderItemTable };
