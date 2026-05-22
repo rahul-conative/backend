@@ -10,6 +10,7 @@ const categoryTreeSchema = new mongoose.Schema(
     attributeSchema: [
       {
         platformOptionId: { type: String, default: "", index: true },
+        allowCustomOptions: { type: Boolean, default: false },
         key: { type: String, required: true },
         label: { type: String, required: true },
         type: {

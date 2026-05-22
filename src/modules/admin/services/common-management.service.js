@@ -6,6 +6,7 @@ const {
   AdminTaxModel,
   AdminSubTaxModel,
   AdminTaxRuleModel,
+  AdminZipCodeModel,
 } = require("../models/common-management.model");
 
 const toPage = ({ page = 1, limit = 20, size } = {}) => {
@@ -194,6 +195,67 @@ class CommonManagementService {
     ).populate("stateId");
     if (!city) throw new AppError("City not found", 404);
     return this.toLegacy(city);
+  }
+
+  async listZipCodes(query = {}) {
+    const filter = {};
+    if (query.cityId) filter.cityId = query.cityId;
+    if (query.stateId) filter.stateId = query.stateId;
+    if (query.countryId) filter.countryId = query.countryId;
+    if (query.serviceable !== undefined) filter.serviceable = query.serviceable === true || query.serviceable === "true";
+    const result = await this.list(AdminZipCodeModel, query, filter, { zipCode: 1 }, [
+      { path: "countryId", select: "name code" },
+      { path: "stateId", select: "name" },
+      { path: "cityId", select: "name" },
+    ]);
+    return result;
+  }
+
+  async createZipCode(payload) {
+    const doc = await AdminZipCodeModel.create({
+      zipCode: payload.zipCode,
+      areaName: payload.areaName || "",
+      countryId: payload.countryId,
+      stateId: payload.stateId,
+      cityId: payload.cityId,
+      latitude: payload.latitude ?? null,
+      longitude: payload.longitude ?? null,
+      serviceable: payload.serviceable ?? true,
+      codAvailable: payload.codAvailable ?? true,
+      expressDelivery: payload.expressDelivery ?? false,
+      deliveryCharge: Number(payload.deliveryCharge || 0),
+      minOrderAmount: Number(payload.minOrderAmount || 0),
+      estimatedDeliveryDays: Number(payload.estimatedDeliveryDays || 5),
+      active: payload.active ?? payload.isDisable !== true,
+    });
+    return this.toLegacy(
+      await doc.populate([
+        { path: "countryId", select: "name code" },
+        { path: "stateId", select: "name" },
+        { path: "cityId", select: "name" },
+      ]),
+    );
+  }
+
+  async updateZipCode(id, payload) {
+    const updates = {};
+    const fields = [
+      "zipCode", "areaName", "countryId", "stateId", "cityId",
+      "latitude", "longitude", "serviceable", "codAvailable",
+      "expressDelivery", "deliveryCharge", "minOrderAmount",
+      "estimatedDeliveryDays", "active",
+    ];
+    for (const f of fields) {
+      if (payload[f] !== undefined) updates[f] = payload[f];
+    }
+    if (payload.isDisable !== undefined) updates.active = !payload.isDisable;
+    const doc = await AdminZipCodeModel.findByIdAndUpdate(id, updates, { new: true }).populate([
+      { path: "countryId", select: "name code" },
+      { path: "stateId", select: "name" },
+      { path: "cityId", select: "name" },
+    ]);
+    if (!doc) throw new AppError("Zip code not found", 404);
+    return this.toLegacy(doc);
   }
 
   async listTaxes(query = {}) {

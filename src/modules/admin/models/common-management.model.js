@@ -65,12 +65,35 @@ const taxRuleSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+const zipCodeSchema = new mongoose.Schema(
+  {
+    zipCode: { type: String, required: true, trim: true, index: true },
+    areaName: { type: String, default: "", trim: true },
+    countryId: { type: mongoose.Schema.Types.ObjectId, ref: "AdminCountry", required: true, index: true },
+    stateId: { type: mongoose.Schema.Types.ObjectId, ref: "AdminState", required: true, index: true },
+    cityId: { type: mongoose.Schema.Types.ObjectId, ref: "AdminCity", required: true, index: true },
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+    serviceable: { type: Boolean, default: true, index: true },
+    codAvailable: { type: Boolean, default: true },
+    expressDelivery: { type: Boolean, default: false },
+    deliveryCharge: { type: Number, default: 0, min: 0 },
+    minOrderAmount: { type: Number, default: 0, min: 0 },
+    estimatedDeliveryDays: { type: Number, default: 5, min: 1 },
+    active: { type: Boolean, default: true, index: true },
+  },
+  { timestamps: true },
+);
+
+zipCodeSchema.index({ cityId: 1, zipCode: 1 }, { unique: true });
+
 const AdminCountryModel = mongoose.model("AdminCountry", countrySchema);
 const AdminStateModel = mongoose.model("AdminState", stateSchema);
 const AdminCityModel = mongoose.model("AdminCity", citySchema);
 const AdminTaxModel = mongoose.model("AdminTax", taxSchema);
 const AdminSubTaxModel = mongoose.model("AdminSubTax", subTaxSchema);
 const AdminTaxRuleModel = mongoose.model("AdminTaxRule", taxRuleSchema);
+const AdminZipCodeModel = mongoose.model("AdminZipCode", zipCodeSchema);
 
 module.exports = {
   AdminCountryModel,
@@ -79,4 +102,5 @@ module.exports = {
   AdminTaxModel,
   AdminSubTaxModel,
   AdminTaxRuleModel,
+  AdminZipCodeModel,
 };

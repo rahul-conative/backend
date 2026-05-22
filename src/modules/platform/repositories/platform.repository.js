@@ -338,7 +338,7 @@ class PlatformRepository {
 
   async listProductOptions(filter = {}, pagination = {}) {
     const [items, total] = await Promise.all([
-      PlatformProductOptionModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformProductOptionModel.find(filter).sort({ name: 1, createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
       PlatformProductOptionModel.countDocuments(filter),
     ]);
     return { items, total };
@@ -362,7 +362,7 @@ class PlatformRepository {
 
   async listProductOptionValues(filter = {}, pagination = {}) {
     const [items, total] = await Promise.all([
-      PlatformProductOptionValueModel.find(filter).sort({ createdAt: -1 }).skip(pagination.skip).limit(pagination.limit),
+      PlatformProductOptionValueModel.find(filter).sort({ sortOrder: 1, name: 1 }).skip(pagination.skip).limit(pagination.limit),
       PlatformProductOptionValueModel.countDocuments(filter),
     ]);
     return { items, total };
@@ -377,7 +377,7 @@ class PlatformRepository {
   }
 
   async listAllProductOptionValues(filter = {}) {
-    return PlatformProductOptionValueModel.find(filter).sort({ name: 1 });
+    return PlatformProductOptionValueModel.find(filter).sort({ optionId: 1, sortOrder: 1, name: 1 });
   }
 }
 

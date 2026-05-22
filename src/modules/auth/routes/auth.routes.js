@@ -22,7 +22,7 @@ const {
 const authRoutes = express.Router();
 const authController = new AuthController();
 
-authRoutes.use(authRateLimit);
+// authRoutes.use(authRateLimit);
 authRoutes.post("/register", checkInput(registerSchema), catchErrors(authController.register));
 authRoutes.post("/register-otp", checkInput(registerWithOtpSchema), catchErrors(authController.registerWithOtp));
 authRoutes.post("/verify-registration", checkInput(verifyRegistrationSchema), catchErrors(authController.verifyRegistration));

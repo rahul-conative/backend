@@ -279,6 +279,20 @@ const MODULE_CATALOG = [
     apiPath: "/analytics",
   },
 
+  // ── Location Management ───────────────────────────────────────────────────
+  {
+    tab: "Location Management",
+    slug: "locations",
+    name: "Location Management",
+    description: "Countries, states, cities, zip/pin codes, and serviceability",
+    icon: "map-pin",
+    order: 24.5,
+    forPlatform: true,
+    forSeller: false,
+    apiPath: "/admin/common",
+    apiAliases: ["/common"],
+  },
+
   // ── Settings ──────────────────────────────────────────────────────────────
   {
     tab: "Settings",

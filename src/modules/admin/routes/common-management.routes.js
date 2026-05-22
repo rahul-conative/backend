@@ -26,6 +26,9 @@ const {
   taxRuleParamSchema,
   createTaxRuleSchema,
   updateTaxRuleSchema,
+  zipCodeParamSchema,
+  createZipCodeSchema,
+  updateZipCodeSchema,
 } = require("../validation/common-management.validation");
 
 const commonManagementRoutes = express.Router();
@@ -215,6 +218,37 @@ commonManagementRoutes.delete(
   "/tax-rules/:taxRuleId",
   checkInput(taxRuleParamSchema),
   catchErrors(commonManagementController.deleteTaxRules),
+);
+
+commonManagementRoutes.get(
+  "/zip-codes",
+  checkInput(listSchema),
+  catchErrors(commonManagementController.listZipCodes),
+);
+commonManagementRoutes.post(
+  "/zip-codes",
+  checkInput(createZipCodeSchema),
+  catchErrors(commonManagementController.createZipCode),
+);
+commonManagementRoutes.patch(
+  "/zip-codes/status",
+  checkInput(statusSchema),
+  catchErrors(commonManagementController.setZipCodeStatus),
+);
+commonManagementRoutes.delete(
+  "/zip-codes",
+  checkInput(deleteSchema),
+  catchErrors(commonManagementController.deleteZipCodes),
+);
+commonManagementRoutes.patch(
+  "/zip-codes/:zipCodeId",
+  checkInput(updateZipCodeSchema),
+  catchErrors(commonManagementController.updateZipCode),
+);
+commonManagementRoutes.delete(
+  "/zip-codes/:zipCodeId",
+  checkInput(zipCodeParamSchema),
+  catchErrors(commonManagementController.deleteZipCodes),
 );
 
 module.exports = { commonManagementRoutes };

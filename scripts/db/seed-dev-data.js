@@ -782,16 +782,17 @@ async function seedPlatformManagement() {
   ];
 
   for (const optionEntry of optionSeed) {
+    const slug = String(optionEntry.name).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const option = await PlatformProductOptionModel.findOneAndUpdate(
-      { name: optionEntry.name },
-      { $set: { name: optionEntry.name, active: true } },
+      { $or: [{ name: optionEntry.name }, { slug }] },
+      { $set: { name: optionEntry.name, slug, active: true } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
     for (const valueName of optionEntry.values) {
       await PlatformProductOptionValueModel.findOneAndUpdate(
-        { option_id: String(option._id), name: valueName },
-        { $set: { option_id: String(option._id), name: valueName, active: true } },
+        { $or: [{ optionId: String(option._id), name: valueName }, { option_id: String(option._id), name: valueName }] },
+        { $set: { optionId: String(option._id), option_id: String(option._id), optionName: option.name, name: valueName, active: true } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
     }

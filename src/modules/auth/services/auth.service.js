@@ -413,10 +413,6 @@ class AuthService {
       throw new AppError("Invalid credentials", 401);
     }
 
-    if (this.isSellerRole(user.role)) {
-      throw new AppError("Seller accounts must login with OTP from the seller panel", 400);
-    }
-
     if (!user.passwordHash) {
       await this.recordSecurityEvent(SECURITY_EVENTS.AUTH_LOGIN_FAILED, "failed", {
         userId: user.id,

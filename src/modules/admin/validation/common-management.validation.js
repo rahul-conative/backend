@@ -167,6 +167,42 @@ const taxRuleUpdateBody = {
   metadata: Joi.object(),
 };
 
+const zipCodeBody = {
+  zipCode: Joi.string().trim().required(),
+  areaName: Joi.string().allow("", null),
+  countryId: Joi.string().required(),
+  stateId: Joi.string().required(),
+  cityId: Joi.string().required(),
+  latitude: Joi.number().allow(null),
+  longitude: Joi.number().allow(null),
+  serviceable: Joi.boolean(),
+  codAvailable: Joi.boolean(),
+  expressDelivery: Joi.boolean(),
+  deliveryCharge: Joi.number().min(0),
+  minOrderAmount: Joi.number().min(0),
+  estimatedDeliveryDays: Joi.number().integer().min(1),
+  active: Joi.boolean(),
+  isDisable: Joi.boolean(),
+};
+
+const zipCodeUpdateBody = {
+  zipCode: Joi.string().trim(),
+  areaName: Joi.string().allow("", null),
+  countryId: Joi.string(),
+  stateId: Joi.string(),
+  cityId: Joi.string(),
+  latitude: Joi.number().allow(null),
+  longitude: Joi.number().allow(null),
+  serviceable: Joi.boolean(),
+  codAvailable: Joi.boolean(),
+  expressDelivery: Joi.boolean(),
+  deliveryCharge: Joi.number().min(0),
+  minOrderAmount: Joi.number().min(0),
+  estimatedDeliveryDays: Joi.number().integer().min(1),
+  active: Joi.boolean(),
+  isDisable: Joi.boolean(),
+};
+
 const toBodySchema = (body) =>
   body && typeof body.validate === "function" ? body : Joi.object(body);
 
@@ -208,4 +244,7 @@ module.exports = {
   taxRuleParamSchema: idParam("taxRuleId"),
   createTaxRuleSchema: createSchema(Joi.object(taxRuleBody).or("taxId", "tax_id")),
   updateTaxRuleSchema: updateSchema("taxRuleId", taxRuleUpdateBody),
+  zipCodeParamSchema: idParam("zipCodeId"),
+  createZipCodeSchema: createSchema(zipCodeBody),
+  updateZipCodeSchema: updateSchema("zipCodeId", zipCodeUpdateBody),
 };

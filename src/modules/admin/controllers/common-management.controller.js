@@ -7,6 +7,7 @@ const {
   AdminTaxModel,
   AdminSubTaxModel,
   AdminTaxRuleModel,
+  AdminZipCodeModel,
 } = require("../models/common-management.model");
 
 class CommonManagementController {
@@ -39,6 +40,12 @@ class CommonManagementController {
   updateCity = async (req, res) => res.json(okResponse(await this.commonManagementService.updateCity(req.params.cityId, req.body)));
   setCityStatus = async (req, res) => res.json(okResponse(await this.commonManagementService.setStatus(AdminCityModel, req.body.ids || req.body._id, req.body.isDisable)));
   deleteCities = async (req, res) => res.json(okResponse(await this.commonManagementService.deleteMany(AdminCityModel, req.body.ids || req.body._id || req.params.cityId)));
+
+  listZipCodes = async (req, res) => this.sendList(res, await this.commonManagementService.listZipCodes(req.query));
+  createZipCode = async (req, res) => res.status(201).json(okResponse(await this.commonManagementService.createZipCode(req.body)));
+  updateZipCode = async (req, res) => res.json(okResponse(await this.commonManagementService.updateZipCode(req.params.zipCodeId, req.body)));
+  setZipCodeStatus = async (req, res) => res.json(okResponse(await this.commonManagementService.setStatus(AdminZipCodeModel, req.body.ids || req.body._id, req.body.isDisable)));
+  deleteZipCodes = async (req, res) => res.json(okResponse(await this.commonManagementService.deleteMany(AdminZipCodeModel, req.body.ids || req.body._id || req.params.zipCodeId)));
 
   listTaxes = async (req, res) => this.sendList(res, await this.commonManagementService.listTaxes(req.query));
   createTax = async (req, res) => res.status(201).json(okResponse(await this.commonManagementService.createTax(req.body)));

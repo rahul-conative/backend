@@ -280,6 +280,46 @@ const CATEGORY_PRESETS = {
   },
 };
 
+const OPTION_MASTER_BY_LABEL = new Map();
+
+function valueCode(value = "") {
+  return slugify(value).replace(/-/g, "_");
+}
+
+async function seedPlatformOptionsFromPresets() {
+  const byLabel = new Map();
+  Object.values(CATEGORY_PRESETS).forEach((preset) => {
+    preset.schema.forEach(([, label, , options]) => {
+      if (!byLabel.has(label)) byLabel.set(label, new Set());
+      options.forEach((option) => byLabel.get(label).add(option));
+    });
+  });
+
+  for (const [label, values] of byLabel.entries()) {
+    const option = await PlatformProductOptionModel.create({
+      name: label,
+      slug: slugify(label),
+      displayType: label === "Color" || label === "Shade" ? "color_swatch" : "dropdown",
+      description: `Seeded reusable ${label} option master`,
+      active: true,
+    });
+    OPTION_MASTER_BY_LABEL.set(label, option);
+
+    await PlatformProductOptionValueModel.insertMany(
+      Array.from(values).map((name, index) => ({
+        optionId: String(option._id),
+        option_id: String(option._id),
+        optionName: option.name,
+        name,
+        valueCode: valueCode(name),
+        sortOrder: index,
+        active: true,
+      })),
+      { ordered: false },
+    );
+  }
+}
+
 function rootType(rootTitle) {
   if (rootTitle === "Fashion") return "fashion";
   if (rootTitle === "Electronics") return "electronics";
@@ -290,6 +330,8 @@ function rootType(rootTitle) {
 
 function attributeSchema(type) {
   return CATEGORY_PRESETS[type].schema.map(([key, label, fieldType, options, variant]) => ({
+    platformOptionId: OPTION_MASTER_BY_LABEL.get(label)?._id ? String(OPTION_MASTER_BY_LABEL.get(label)._id) : "",
+    allowCustomOptions: false,
     key,
     label,
     type: fieldType,
@@ -304,6 +346,10 @@ function attributeSchema(type) {
 
 function pick(list, index) {
   return list[index % list.length];
+}
+
+function optionsForKey(schema, key) {
+  return schema.find((field) => field.key === key)?.options || [];
 }
 
 function makeCategoryDocs() {
@@ -399,8 +445,8 @@ function makeProduct(leaf, leafIndex, itemIndex, familyCode, brand, preset) {
     stock: 20 + offset * 5 + (itemIndex % 9),
     attributes: {
       ...attributes,
-      size: attributes.size ? pick(["S", "M", "L", "XL"], itemIndex + offset) : attributes.size,
-      color: attributes.color ? pick(["Black", "Blue", "White", "Red"], itemIndex + offset) : attributes.color,
+      size: attributes.size ? pick(optionsForKey(schema, "size"), itemIndex + offset) : attributes.size,
+      color: attributes.color ? pick(optionsForKey(schema, "color"), itemIndex + offset) : attributes.color,
     },
     images: [imageUrl(13000 + leafIndex * 100 + itemIndex * 3 + offset, `${leaf.title} ${brand}`, 1200, 1200)],
     status: "active",
@@ -442,6 +488,7 @@ function makeProduct(leaf, leafIndex, itemIndex, familyCode, brand, preset) {
       .map((f, idx) => ({
         name: f.label,
         slug: f.key,
+        platformOptionId: f.platformOptionId,
         values: f.options,
         required: true,
         displayType: f.key === "color" || f.key === "shade" ? "color_swatch" : "button",
@@ -523,6 +570,8 @@ async function main() {
     PlatformProductOptionModel.deleteMany({}),
     PlatformProductOptionValueModel.deleteMany({}),
   ]);
+
+  await seedPlatformOptionsFromPresets();
 
   const categories = makeCategoryDocs();
   await CategoryTreeModel.insertMany(categories, { ordered: true });

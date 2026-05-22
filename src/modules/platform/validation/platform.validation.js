@@ -24,6 +24,7 @@ const createCategorySchema = Joi.object({
       .items(
         Joi.object({
           platformOptionId: Joi.string().trim().allow("", null),
+          allowCustomOptions: Joi.boolean().default(false),
           key: Joi.string().trim().required(),
           label: Joi.string().trim().required(),
           type: Joi.string()
@@ -58,6 +59,7 @@ const updateCategorySchema = Joi.object({
     attributeSchema: Joi.array().items(
       Joi.object({
         platformOptionId: Joi.string().trim().allow("", null),
+        allowCustomOptions: Joi.boolean(),
         key: Joi.string().trim().required(),
         label: Joi.string().trim().required(),
         type: Joi.string().valid("text", "number", "select", "multi_select", "boolean", "date"),
@@ -735,6 +737,7 @@ const createProductOptionValueSchema = Joi.object({
   body: Joi.object({
     optionId: Joi.string(),
     option_id: Joi.string(),
+    optionName: Joi.string().trim().allow("", null),
     value: Joi.string().trim(),
     label: Joi.string().trim(),
     name: Joi.string().trim().required(),
@@ -755,6 +758,7 @@ const updateProductOptionValueSchema = Joi.object({
   body: Joi.object({
     optionId: Joi.string(),
     option_id: Joi.string(),
+    optionName: Joi.string().trim().allow("", null),
     value: Joi.string().trim(),
     label: Joi.string().trim(),
     name: Joi.string().trim(),

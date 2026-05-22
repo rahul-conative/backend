@@ -31,14 +31,14 @@ async function createApp() {
   app.use(helmet());
   app.use(cors());
 
-  app.use(
-    rateLimit({
-      windowMs: 60 * 1000,
-      max: 300,
-      standardHeaders: true,
-      legacyHeaders: false,
-    })
-  );
+  // app.use(
+  //   rateLimit({
+  //     windowMs: 60 * 1000,
+  //     max: 300,
+  //     standardHeaders: true,
+  //     legacyHeaders: false,
+  //   })
+  // );
 
   app.use(
     express.json({

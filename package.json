@@ -18,12 +18,14 @@
     "db:seed:catalog-media": "node scripts/db/seed-catalog-media.js",
     "db:seed:category-children": "node scripts/db/seed-category-children.js",
     "db:seed:menu-categories": "node scripts/db/seed-menu-categories.js",
+    "seed:catalog-options": "node scripts/db/seed-product-options.js && node scripts/db/seed-product-option-values.js && node scripts/db/seed-category-attributes.js",
     "db:master:bootstrap": "node scripts/db/master-bootstrap.js",
     "db:seed:platform": "node scripts/db/seed-platform-metadata.js",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:reset:all": "node scripts/db/reset-all-databases.js",
     "db:create-super-admin": "node scripts/db/create-super-admin.js",
     "db:seed:rbac": "node scripts/db/seed-rbac.js",
+    "seed:locations": "node scripts/db/seed-locations.js",
     "postman:sync": "node scripts/postman/sync-postman-collection.js"
   },
   "engines": {
