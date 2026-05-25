@@ -7,7 +7,10 @@ const { RbacService } = require("../../modules/rbac/services/rbac.service");
 
 const rbacService = new RbacService();
 const permissionCache = new Map();
-const PERMISSION_CACHE_TTL_MS = 30 * 1000;
+const PERMISSION_CACHE_TTL_MS = Math.max(
+  Number(env.rbacPermissionCacheTtlMs ?? 0) || 0,
+  0,
+);
 
 function isSuperAdminPayload(payload = {}) {
   return payload.isSuperAdmin === true || payload.role === ROLES.SUPER_ADMIN;
@@ -18,9 +21,15 @@ async function hydrateAuthPermissions(payload = {}) {
     return { ...payload, permissions: [] };
   }
 
-  const cached = permissionCache.get(payload.sub);
-  if (cached && cached.expiresAt > Date.now()) {
-    return { ...payload, permissions: cached.permissions, allowedModules: cached.allowedModules };
+  if (PERMISSION_CACHE_TTL_MS > 0) {
+    const cached = permissionCache.get(payload.sub);
+    if (cached && cached.expiresAt > Date.now()) {
+      return {
+        ...payload,
+        permissions: cached.permissions,
+        allowedModules: cached.allowedModules,
+      };
+    }
   }
 
   try {
@@ -36,11 +45,13 @@ async function hydrateAuthPermissions(payload = {}) {
           .filter(Boolean),
       ]),
     );
-    permissionCache.set(payload.sub, {
-      permissions,
-      allowedModules,
-      expiresAt: Date.now() + PERMISSION_CACHE_TTL_MS,
-    });
+    if (PERMISSION_CACHE_TTL_MS > 0) {
+      permissionCache.set(payload.sub, {
+        permissions,
+        allowedModules,
+        expiresAt: Date.now() + PERMISSION_CACHE_TTL_MS,
+      });
+    }
     return { ...payload, permissions, allowedModules };
   } catch (error) {
     return { ...payload, permissions: [] };

@@ -654,17 +654,16 @@ class SellerService {
     return source
       .map((item) => {
         const moduleName = cleanModuleName(item.module || item.slug);
-        const actions = Array.from(
-          new Set(
-            (item.actions || [])
-              .map((action) => this.normalizePermissionAction(action))
-              .filter(Boolean),
-          ),
-        );
-
         if (!moduleName || !allowedModuleSet.has(moduleName)) {
-          return null;
+          throw new AppError(`Permission assignment includes unavailable seller module: ${moduleName || "unknown"}`, 403);
         }
+        const actions = Array.from(new Set((item.actions || []).map((action) => {
+          const normalized = this.normalizePermissionAction(action);
+          if (!normalized) {
+            throw new AppError(`Permission assignment includes invalid action: ${action}`, 400);
+          }
+          return normalized;
+        })));
 
         return {
           module: moduleName,
@@ -672,8 +671,7 @@ class SellerService {
             ? Array.from(new Set(["view", ...actions]))
             : ["view"],
         };
-      })
-      .filter(Boolean);
+      });
   }
 
   getPermissionAssignmentData(permissions = [], moduleAllowed, forceAssigned) {
@@ -890,9 +888,13 @@ class SellerService {
     }
 
     const actorModuleScope = new Set((actor.allowedModules || []).map(cleanModuleName));
-    const scopedAllowed = allowedModules.filter(
-      (module) => actorModuleScope.has(module) && actorPermissionMap.has(module),
+    const deniedModules = allowedModules.filter(
+      (module) => !actorModuleScope.has(module) || !actorPermissionMap.has(module),
     );
+    if (deniedModules.length) {
+      throw new AppError(`Forbidden: cannot assign unavailable seller modules (${deniedModules.join(", ")})`, 403);
+    }
+    const scopedAllowed = allowedModules;
     if (!scopedAllowed.length) {
       throw new AppError("Forbidden: no assignable modules in request", 403);
     }
@@ -902,13 +904,16 @@ class SellerService {
         const moduleName = cleanModuleName(entry.module);
         if (!moduleName || !scopedAllowed.includes(moduleName)) return null;
         const grantActions = actorPermissionMap.get(moduleName) || new Set();
-        const actions = Array.from(
-          new Set(
-            (entry.actions || []).filter(
-              (action) => action === "view" || grantActions.has(action),
-            ),
-          ),
+        const deniedActions = (entry.actions || []).filter(
+          (action) => !grantActions.has(action),
         );
+        if (deniedActions.length) {
+          throw new AppError(
+            `Forbidden: cannot assign unavailable seller actions for ${moduleName} (${deniedActions.join(", ")})`,
+            403,
+          );
+        }
+        const actions = Array.from(new Set(entry.actions || []));
         if (!actions.includes("view")) actions.unshift("view");
         return { module: moduleName, actions };
       })
@@ -923,6 +928,9 @@ class SellerService {
   }
 
   async createSellerSubAdmin(payload, actor) {
+    if (actor.role === ROLES.SELLER_SUB_ADMIN) {
+      throw new AppError("Forbidden: seller sub admins cannot create staff", 403);
+    }
     const sellerId = this.assertSellerOwnerActor(actor);
     const existing = await this.sellerRepository.findUserByEmail(payload.email);
     if (existing) {
@@ -956,6 +964,12 @@ class SellerService {
       passwordHash,
       role: targetRole,
       profile: payload.profile,
+      createdBy: actor.userId || null,
+      createdByRole: actor.role || null,
+      parentSellerId: sellerId,
+      parentAdminId: actor.ownerAdminId || null,
+      hierarchyLevel: targetRole === ROLES.SELLER_ADMIN ? 3 : 4,
+      ownerAdminId: actor.ownerAdminId || null,
       ownerSellerId: sellerId,
       allowedModules: finalAllowedModules,
       accountStatus: "active",

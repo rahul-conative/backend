@@ -1,5 +1,6 @@
 const { okResponse } = require("../../../shared/http/reply");
 const { RbacService } = require("../services/rbac.service");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 
 class ModuleController {
   constructor({ rbacService = new RbacService() } = {}) {
@@ -12,7 +13,8 @@ class ModuleController {
   };
 
   sidebarModules = async (req, res) => {
-    const result = await this.rbacService.listSidebarModules(req.query);
+    const actor = getCurrentUser(req);
+    const result = await this.rbacService.listSidebarModules(req.query, actor);
     res.json(okResponse(result));
   };
 

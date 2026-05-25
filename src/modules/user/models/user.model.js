@@ -156,6 +156,11 @@ const userSchema = new mongoose.Schema(
     emailVerified: { type: Boolean, default: false },
     accountStatus: { type: String, default: "active", index: true },
     allowedModules: [{ type: String }],
+    createdBy: { type: String, index: true },
+    createdByRole: { type: String, enum: Object.values(ROLES) },
+    parentAdminId: { type: String, index: true },
+    parentSellerId: { type: String, index: true },
+    hierarchyLevel: { type: Number, default: 0, index: true },
     ownerAdminId: { type: String, index: true },
     ownerSellerId: { type: String, index: true },
     authProviders: [

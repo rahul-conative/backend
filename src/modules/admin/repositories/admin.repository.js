@@ -52,7 +52,7 @@ class AdminRepository {
     };
   }
 
-  async listVendors({ q = "", status = null, onboardingStatus = null, limit = 50, page = 1 } = {}) {
+  async listVendors({ q = "", status = null, onboardingStatus = null, limit = 50, page = 1, ownerAdminId = null, ownerSellerId = null, parentAdminId = null, parentSellerId = null } = {}) {
     const filter = { role: "seller" };
     if (status) {
       filter.accountStatus = status;
@@ -67,11 +67,15 @@ class AdminRepository {
         { "sellerProfile.legalBusinessName": { $regex: q, $options: "i" } },
       ];
     }
+    if (ownerAdminId) filter.ownerAdminId = ownerAdminId;
+    if (ownerSellerId) filter.ownerSellerId = ownerSellerId;
+    if (parentAdminId) filter.parentAdminId = parentAdminId;
+    if (parentSellerId) filter.parentSellerId = parentSellerId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const [items, total] = await Promise.all([
       UserModel.find(filter)
-        .select("email phone role accountStatus profile sellerProfile createdAt updatedAt")
+        .select("email phone role accountStatus profile sellerProfile allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -81,13 +85,15 @@ class AdminRepository {
     return { items, total };
   }
 
-  async listUsers({ q = "", role = null, accountStatus = null, emailVerified = null, page = 1, limit = 50 } = {}) {
+  async listUsers({ q = "", role = null, roles = null, accountStatus = null, status = null, emailVerified = null, page = 1, limit = 50, ownerAdminId = null, ownerSellerId = null, parentAdminId = null, parentSellerId = null, createdBy = null } = {}) {
     const filter = {};
-    if (role) {
+    if (Array.isArray(roles) && roles.length) {
+      filter.role = { $in: roles };
+    } else if (role) {
       filter.role = role;
     }
-    if (accountStatus) {
-      filter.accountStatus = accountStatus;
+    if (accountStatus || status) {
+      filter.accountStatus = accountStatus || status;
     }
     if (emailVerified !== null && emailVerified !== undefined) {
       filter.emailVerified = emailVerified === true || emailVerified === "true";
@@ -100,11 +106,16 @@ class AdminRepository {
         { "profile.lastName": { $regex: q, $options: "i" } },
       ];
     }
+    if (ownerAdminId) filter.ownerAdminId = ownerAdminId;
+    if (ownerSellerId) filter.ownerSellerId = ownerSellerId;
+    if (parentAdminId) filter.parentAdminId = parentAdminId;
+    if (parentSellerId) filter.parentSellerId = parentSellerId;
+    if (createdBy) filter.createdBy = createdBy;
 
     const skip = (Number(page) - 1) * Number(limit);
     const [items, total] = await Promise.all([
       UserModel.find(filter)
-        .select("email phone role accountStatus emailVerified profile sellerProfile createdAt updatedAt lastLoginAt")
+        .select("email phone role accountStatus emailVerified profile sellerProfile allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -158,8 +169,17 @@ class AdminRepository {
       $set: {
         ...(payload.accountStatus ? { accountStatus: payload.accountStatus } : {}),
         ...(payload.role ? { role: payload.role } : {}),
+        ...(payload.phone !== undefined ? { phone: payload.phone } : {}),
         ...(payload.profile ? { profile: payload.profile } : {}),
         ...(payload.sellerProfile ? { sellerProfile: payload.sellerProfile } : {}),
+        ...(payload.allowedModules ? { allowedModules: payload.allowedModules } : {}),
+        ...(payload.createdBy !== undefined ? { createdBy: payload.createdBy } : {}),
+        ...(payload.createdByRole !== undefined ? { createdByRole: payload.createdByRole } : {}),
+        ...(payload.parentAdminId !== undefined ? { parentAdminId: payload.parentAdminId } : {}),
+        ...(payload.parentSellerId !== undefined ? { parentSellerId: payload.parentSellerId } : {}),
+        ...(payload.hierarchyLevel !== undefined ? { hierarchyLevel: payload.hierarchyLevel } : {}),
+        ...(payload.ownerAdminId !== undefined ? { ownerAdminId: payload.ownerAdminId } : {}),
+        ...(payload.ownerSellerId !== undefined ? { ownerSellerId: payload.ownerSellerId } : {}),
       },
     };
     return UserModel.findByIdAndUpdate(userId, update, {
@@ -469,28 +489,56 @@ class AdminRepository {
 
   async listSubAdmins({
     ownerAdminId = null,
+    ownerSellerId = null,
     roles = ["sub-admin"],
+    q = "",
+    status = null,
+    page = 1,
+    limit = 100,
   } = {}) {
     const filter = { role: { $in: roles } };
     if (ownerAdminId) {
       filter.ownerAdminId = ownerAdminId;
     }
-    return UserModel.find(filter)
-      .select("email phone role profile accountStatus allowedModules ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt")
-      .sort({ createdAt: -1 });
+    if (ownerSellerId) {
+      filter.ownerSellerId = ownerSellerId;
+    }
+    if (status) filter.accountStatus = status;
+    if (q) {
+      filter.$or = [
+        { email: { $regex: q, $options: "i" } },
+        { phone: { $regex: q, $options: "i" } },
+        { "profile.firstName": { $regex: q, $options: "i" } },
+        { "profile.lastName": { $regex: q, $options: "i" } },
+        { role: { $regex: q, $options: "i" } },
+      ];
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const [items, total] = await Promise.all([
+      UserModel.find(filter)
+        .select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      UserModel.countDocuments(filter),
+    ]);
+    return { items, total };
   }
 
-  async updateSubAdminModules(userId, ownerAdminId, allowedModules, roles = ["sub-admin"]) {
+  async updateSubAdminModules(userId, ownerAdminId, allowedModules, roles = ["sub-admin"], ownerSellerId = null) {
     const filter = { _id: userId, role: { $in: roles } };
     if (ownerAdminId) {
       filter.ownerAdminId = ownerAdminId;
+    }
+    if (ownerSellerId) {
+      filter.ownerSellerId = ownerSellerId;
     }
 
     return UserModel.findOneAndUpdate(
       filter,
       { $set: { allowedModules } },
       { new: true },
-    ).select("email phone role profile accountStatus allowedModules ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
+    ).select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
   }
 
   async upsertFeatureFlag({ flagKey, description, enabled, rolloutPercentage, targetRules, actorId }) {

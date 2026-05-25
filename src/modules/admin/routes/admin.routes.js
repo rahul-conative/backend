@@ -303,30 +303,99 @@ adminRoutes.post(
 );
 adminRoutes.get(
   "/access/admins",
-  allowRoles(ROLES.SUPER_ADMIN),
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   checkInput(listAdminsSchema),
   catchErrors(adminController.listAdmins),
 );
 adminRoutes.post(
   "/access/sub-admins",
-  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
-  allowPermissions("rbac:add"),
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   checkInput(createPlatformSubAdminSchema),
   catchErrors(adminController.createPlatformSubAdmin),
 );
 adminRoutes.get(
   "/access/sub-admins",
-  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
-  allowPermissions("rbac:view"),
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   checkInput(listPlatformSubAdminsSchema),
   catchErrors(adminController.listPlatformSubAdmins),
 );
 adminRoutes.patch(
   "/access/sub-admins/:userId/modules",
-  allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN),
-  allowPermissions("rbac:update"),
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   checkInput(updatePlatformSubAdminModulesSchema),
   catchErrors(adminController.updatePlatformSubAdminModules),
+);
+adminRoutes.get(
+  "/admin-users/admins",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(listAdminsSchema),
+  catchErrors(adminController.listAdmins),
+);
+adminRoutes.get(
+  "/admin-users/sub-admins",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(listPlatformSubAdminsSchema),
+  catchErrors(adminController.listPlatformSubAdmins),
+);
+adminRoutes.post(
+  "/admin-users/admin",
+  allowRoles(ROLES.SUPER_ADMIN),
+  checkInput(createAdminSchema),
+  catchErrors(adminController.createAdmin),
+);
+adminRoutes.post(
+  "/admin-users/sub-admin",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(createPlatformSubAdminSchema),
+  catchErrors(adminController.createPlatformSubAdmin),
+);
+adminRoutes.put(
+  "/admin-users/:userId",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(updateUserSchema),
+  catchErrors(adminController.updateUser),
+);
+adminRoutes.put(
+  "/admin-users/:userId/permissions",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(updatePlatformSubAdminModulesSchema),
+  catchErrors(adminController.updatePlatformSubAdminModules),
+);
+adminRoutes.put(
+  "/admin-users/:userId/status",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(updateUserSchema),
+  catchErrors(adminController.updateUser),
+);
+adminRoutes.get(
+  "/seller-users/sellers",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(listVendorsSchema),
+  catchErrors(adminController.listSellerUsers),
+);
+adminRoutes.get(
+  "/seller-users/seller-admins",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(listPlatformSubAdminsSchema),
+  catchErrors(adminController.listSellerAdmins),
+);
+adminRoutes.get(
+  "/seller-users/seller-sub-admins",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(listPlatformSubAdminsSchema),
+  catchErrors(adminController.listSellerSubAdmins),
+);
+adminRoutes.post(
+  "/seller-users/seller-admin",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(createPlatformSubAdminSchema),
+  catchErrors(adminController.createSellerAdmin),
+);
+adminRoutes.post(
+  "/seller-users/seller-sub-admin",
+  allowRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  checkInput(createPlatformSubAdminSchema),
+  catchErrors(adminController.createSellerSubAdmin),
 );
 
 adminRoutes.get(

@@ -77,6 +77,7 @@ const listUsersSchema = Joi.object({
       "admin",
       "sub-admin",
       "seller",
+      "seller-admin",
       "seller-sub-admin",
       "buyer",
       "super-admin",
@@ -95,6 +96,16 @@ const createManagedUserSchema = Joi.object({
     phone: Joi.string().allow("", null),
     password: Joi.string().min(8).required(),
     role: Joi.string().valid("buyer", "seller").default("buyer"),
+    allowedModules: Joi.array().items(Joi.string()).default([]),
+    modulePermissions: Joi.array().items(
+      Joi.object({
+        module: Joi.string().required(),
+        actions: Joi.array()
+          .items(Joi.string().valid(...permissionActions))
+          .min(1)
+          .required(),
+      }),
+    ).default([]),
     accountStatus: Joi.string()
       .valid("active", "suspended", "pending_approval"),
     profile: Joi.object({
@@ -132,10 +143,12 @@ const updateUserSchema = Joi.object({
       "admin",
       "sub-admin",
       "seller",
+      "seller-admin",
       "seller-sub-admin",
       "buyer",
       "super-admin",
     ),
+    phone: Joi.string().allow("", null),
     accountStatus: Joi.string().valid(...accountStatuses),
     profile: Joi.object({
       firstName: Joi.string().allow("", null),
@@ -684,7 +697,10 @@ const listAdminsSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({
     q: Joi.string().allow(""),
-    accountStatus: Joi.string().valid("active", "suspended"),
+    search: Joi.string().allow(""),
+    status: Joi.string().valid(...accountStatuses),
+    accountStatus: Joi.string().valid(...accountStatuses),
+    role: Joi.string().valid("admin", "seller"),
     page: Joi.number().integer().min(1),
     limit: Joi.number().integer().min(1).max(100),
   }).required(),
@@ -696,6 +712,10 @@ const createPlatformSubAdminSchema = Joi.object({
     email: Joi.string().email().required(),
     phone: Joi.string().allow("", null),
     password: Joi.string().min(8).required(),
+    role: Joi.string()
+      .valid("sub-admin", "seller", "seller-admin", "seller-sub-admin")
+      .default("sub-admin"),
+    parentSellerId: Joi.string().allow("", null),
     profile: Joi.object({
       firstName: Joi.string().required(),
       lastName: Joi.string().allow("", null),
@@ -719,6 +739,12 @@ const listPlatformSubAdminsSchema = Joi.object({
   body: Joi.object({}).required(),
   query: Joi.object({
     ownerAdminId: Joi.string(),
+    ownerSellerId: Joi.string(),
+    q: Joi.string().allow(""),
+    search: Joi.string().allow(""),
+    status: Joi.string().valid(...accountStatuses),
+    page: Joi.number().integer().min(1),
+    limit: Joi.number().integer().min(1).max(100),
   }).required(),
   params: Joi.object({}).required(),
 });

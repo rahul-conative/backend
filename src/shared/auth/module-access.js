@@ -10,6 +10,10 @@ const MODULE_ALIASES = {
   admin_users: "rbac",
   "user-permissions": "rbac",
   user_permissions: "rbac",
+  "seller-users": "sellers",
+  seller_users: "sellers",
+  "seller-staff": "sellers",
+  seller_staff: "sellers",
   product: "products",
   "product-catalog": "products",
   seller: "sellers",
@@ -56,7 +60,10 @@ function getRequestModule(req) {
   const third = parts[apiIndex + 4];
 
   if (first === "admin") {
-    if (second === "access" && third === "modules") {
+    if (
+      second === "access" &&
+      ["modules", "admins", "sub-admins"].includes(third)
+    ) {
       return null;
     }
 
@@ -76,6 +83,7 @@ function getRequestModule(req) {
       access: "rbac",
       cms: "cms",
       dashboard: "admin",
+      "seller-users": "sellers",
       users: "users",
       vendors: "sellers",
       products: "products",

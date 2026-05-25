@@ -22,12 +22,14 @@ class AdminController {
   };
 
   listVendors = async (req, res) => {
-    const result = await this.adminService.listVendors(req.query);
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listVendors(req.query, actor);
     res.json(okResponse(result.items, { total: result.total }));
   };
 
   listUsers = async (req, res) => {
-    const result = await this.adminService.listUsers(req.query);
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listUsers(req.query, actor);
     res.json(okResponse(result.items, { total: result.total }));
   };
 
@@ -38,7 +40,8 @@ class AdminController {
   };
 
   getUser = async (req, res) => {
-    const user = await this.adminService.getUser(req.params.userId);
+    const actor = getCurrentUser(req);
+    const user = await this.adminService.getUser(req.params.userId, actor);
     res.json(okResponse(user));
   };
 
@@ -46,6 +49,7 @@ class AdminController {
     const user = await this.adminService.updateUser(
       req.params.userId,
       req.body,
+      getCurrentUser(req),
     );
     res.json(okResponse(user));
   };
@@ -54,6 +58,7 @@ class AdminController {
     const user = await this.adminService.deactivateUser(
       req.params.userId,
       req.body,
+      getCurrentUser(req),
     );
     res.json(okResponse(user));
   };
@@ -334,7 +339,8 @@ class AdminController {
   };
 
   listAccessModules = async (req, res) => {
-    const modules = await this.adminService.listAccessModules(req.query);
+    const actor = getCurrentUser(req);
+    const modules = await this.adminService.listAccessModules(req.query, actor);
     res.json(okResponse(modules));
   };
 
@@ -345,7 +351,8 @@ class AdminController {
   };
 
   listAdmins = async (req, res) => {
-    const result = await this.adminService.listAdmins(req.query);
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listAdmins(req.query, actor);
     res.json(okResponse(result.items, { total: result.total }));
   };
 
@@ -365,6 +372,52 @@ class AdminController {
       actor,
     );
     res.json(okResponse(users));
+  };
+
+  listSellerUsers = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listSellerUsers(req.query, actor);
+    res.json(okResponse(result.items, { total: result.total }));
+  };
+
+  listSellerAdmins = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listSellerStaffByRole(
+      req.query,
+      actor,
+      "seller-admin",
+    );
+    res.json(okResponse(result.items, { total: result.total }));
+  };
+
+  listSellerSubAdmins = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const result = await this.adminService.listSellerStaffByRole(
+      req.query,
+      actor,
+      "seller-sub-admin",
+    );
+    res.json(okResponse(result.items, { total: result.total }));
+  };
+
+  createSellerAdmin = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const user = await this.adminService.createSellerStaff(
+      req.body,
+      actor,
+      "seller-admin",
+    );
+    res.status(201).json(okResponse(user));
+  };
+
+  createSellerSubAdmin = async (req, res) => {
+    const actor = getCurrentUser(req);
+    const user = await this.adminService.createSellerStaff(
+      req.body,
+      actor,
+      "seller-sub-admin",
+    );
+    res.status(201).json(okResponse(user));
   };
 
   updatePlatformSubAdminModules = async (req, res) => {

@@ -1,5 +1,6 @@
 const { okResponse } = require("../../../shared/http/reply");
 const { RbacService } = require("../services/rbac.service");
+const { getCurrentUser } = require("../../../shared/auth/current-user");
 
 class PermissionAssignmentController {
   constructor({ rbacService = new RbacService() } = {}) {
@@ -17,11 +18,13 @@ class PermissionAssignmentController {
     const { userId } = req.params;
     const { permissionId } = req.body;
     const grantedBy = req.auth?.sub;
+    const actor = getCurrentUser(req);
 
     const result = await this.rbacService.assignPermissionToUser(
       userId,
       permissionId,
       grantedBy,
+      actor,
     );
     res.status(201).json(okResponse(result));
   };
@@ -29,10 +32,12 @@ class PermissionAssignmentController {
   removePermissionFromUser = async (req, res) => {
     const { userId } = req.params;
     const { permissionId } = req.body;
+    const actor = getCurrentUser(req);
 
     const result = await this.rbacService.removePermissionFromUser(
       userId,
       permissionId,
+      actor,
     );
     res.json(okResponse(result));
   };
@@ -41,11 +46,13 @@ class PermissionAssignmentController {
     const { userId } = req.params;
     const { permissionIds } = req.body;
     const grantedBy = req.auth?.sub;
+    const actor = getCurrentUser(req);
 
     const result = await this.rbacService.bulkAssignPermissionsToUser(
       userId,
       permissionIds,
       grantedBy,
+      actor,
     );
     res.json(okResponse(result));
   };
@@ -68,11 +75,13 @@ class PermissionAssignmentController {
     const { userId } = req.params;
     const { roleId } = req.body;
     const assignedBy = req.auth?.sub;
+    const actor = getCurrentUser(req);
 
     const result = await this.rbacService.assignRoleToUser(
       userId,
       roleId,
       assignedBy,
+      actor,
     );
     res.status(201).json(okResponse(result));
   };
@@ -80,8 +89,9 @@ class PermissionAssignmentController {
   removeRoleFromUser = async (req, res) => {
     const { userId } = req.params;
     const { roleId } = req.body;
+    const actor = getCurrentUser(req);
 
-    const result = await this.rbacService.removeRoleFromUser(userId, roleId);
+    const result = await this.rbacService.removeRoleFromUser(userId, roleId, actor);
     res.json(okResponse(result));
   };
 
@@ -89,11 +99,13 @@ class PermissionAssignmentController {
     const { userId } = req.params;
     const { roleIds } = req.body;
     const assignedBy = req.auth?.sub;
+    const actor = getCurrentUser(req);
 
     const result = await this.rbacService.bulkAssignRolesToUser(
       userId,
       roleIds,
       assignedBy,
+      actor,
     );
     res.json(okResponse(result));
   };

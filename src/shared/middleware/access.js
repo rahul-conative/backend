@@ -31,6 +31,54 @@ function isOwnerSellerBypass(userRoles, permissionSlugs) {
   return isOwnerSeller && permissionSlugs.every((slug) => slug.startsWith("sellers:"));
 }
 
+function extractModuleSlugFromPermission(permissionSlug = "") {
+  const value = String(permissionSlug || "").trim().toLowerCase();
+  if (!value.includes(":")) return "";
+  return cleanModuleName(value.split(":")[0]);
+}
+
+function getAuthorizedModuleScope(auth = {}) {
+  const allowedModules = Array.isArray(auth.allowedModules)
+    ? auth.allowedModules.map(cleanModuleName).filter(Boolean)
+    : [];
+  const permissionModules = Array.isArray(auth.permissions)
+    ? auth.permissions
+        .map(extractModuleSlugFromPermission)
+        .filter(Boolean)
+    : [];
+  return new Set([...allowedModules, ...permissionModules]);
+}
+
+const PERMISSION_ACTION_ALIASES = {
+  create: ["add"],
+  add: ["create"],
+  edit: ["update"],
+  update: ["edit"],
+  approve: ["approval"],
+  approval: ["approve"],
+  status: ["status_change", "action"],
+  status_change: ["status", "action"],
+  manage: ["status", "action"],
+  action: ["status", "status_change", "manage"],
+};
+
+function buildPermissionCandidates(permissionSlug = "") {
+  const value = String(permissionSlug || "").trim().toLowerCase();
+  if (!value.includes(":")) {
+    return [value].filter(Boolean);
+  }
+  const [moduleSlug, actionSlug] = value.split(":");
+  const aliases = PERMISSION_ACTION_ALIASES[actionSlug] || [];
+  const actionCandidates = Array.from(new Set([actionSlug, ...aliases]));
+  return Array.from(
+    new Set([
+      value,
+      ...actionCandidates,
+      ...actionCandidates.map((action) => `${moduleSlug}:${action}`),
+    ]),
+  );
+}
+
 function enforceModuleScope(req) {
   if (!usesModuleAccess(req.auth)) {
     return null;
@@ -41,15 +89,14 @@ function enforceModuleScope(req) {
     return null;
   }
 
-    const allowedModules = Array.isArray(req.auth?.allowedModules)
-    ? req.auth.allowedModules.map(cleanModuleName)
-    : [];
+  const allowedModules = getAuthorizedModuleScope(req.auth);
+  const normalizedRequestModule = cleanModuleName(requestModule);
 
-  if (!allowedModules.length) {
+  if (!allowedModules.size) {
     return new AppError("Forbidden: no modules assigned", 403);
   }
 
-  if (!allowedModules.includes(cleanModuleName(requestModule))) {
+  if (!allowedModules.has(normalizedRequestModule)) {
     return new AppError(
       `Forbidden: module access denied for ${requestModule}`,
       403,
@@ -149,15 +196,15 @@ function allowPermissions(...permissionSlugs) {
       ? req.auth.permissions
       : [];
     const allowed = permissionSlugs.every((permission) => {
-      if (grantedPermissions.includes(permission)) {
+      const permissionCandidates = buildPermissionCandidates(permission);
+      if (permissionCandidates.some((candidate) => grantedPermissions.includes(candidate))) {
         return true;
       }
-      const legacyRbacPermission = permission.startsWith("rbac:")
-        ? permission.replace(/^rbac:/, "")
-        : null;
       if (
-        legacyRbacPermission &&
-        grantedPermissions.includes(legacyRbacPermission)
+        permission.startsWith("rbac:") &&
+        permissionCandidates
+          .map((candidate) => candidate.replace(/^rbac:/, ""))
+          .some((candidate) => grantedPermissions.includes(candidate))
       ) {
         return true;
       }

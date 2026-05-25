@@ -112,7 +112,7 @@ class SellerRepository {
       ownerSellerId: sellerId,
       accountStatus: { $ne: "deleted" },
     })
-      .select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt")
+      .select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt")
       .sort({ createdAt: -1 });
   }
 
@@ -123,7 +123,7 @@ class SellerRepository {
       role: { $in: ["seller-admin", "seller-sub-admin"] },
       ownerSellerId: sellerId,
       accountStatus: { $ne: "deleted" },
-    }).select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt");
+    }).select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
   }
 
   async updateSellerSubAdminModules(sellerId, userId, allowedModules) {
@@ -137,7 +137,7 @@ class SellerRepository {
       },
       { $set: { allowedModules } },
       { new: true },
-    ).select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt");
+    ).select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
   }
 
   async updateSellerSubAdminStatus(sellerId, userId, accountStatus) {
@@ -151,7 +151,7 @@ class SellerRepository {
       },
       { $set: { accountStatus } },
       { new: true },
-    ).select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt");
+    ).select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
   }
 
   async deleteSellerSubAdmin(sellerId, userId) {
@@ -171,7 +171,7 @@ class SellerRepository {
         },
       },
       { new: true },
-    ).select("email phone role profile accountStatus allowedModules ownerSellerId createdAt updatedAt");
+    ).select("email phone role profile accountStatus allowedModules createdBy createdByRole parentAdminId parentSellerId hierarchyLevel ownerAdminId ownerSellerId createdAt updatedAt lastLoginAt");
   }
 
   async fetchDashboardSummary(sellerId, fromDate, toDate) {

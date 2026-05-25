@@ -116,18 +116,9 @@ class RbacRepository {
     let assignedPermissionIds = new Set();
 
     if (userId) {
-      const userPermissions = await UserPermission.findAll({
-        where: { userId, revokedAt: null },
-        include: [{ association: "permission" }],
-      });
-
+      const effectivePermissions = await this.getUserEffectivePermissions(userId);
       assignedPermissionIds = new Set(
-        (userPermissions || [])
-          .map(
-            (userPermission) =>
-              userPermission.permissionId || userPermission.permission?.id,
-          )
-          .filter(Boolean),
+        (effectivePermissions || []).map((permission) => permission.id).filter(Boolean),
       );
     } else if (roleId || roleSlug) {
       role = await Role.findOne({
@@ -577,7 +568,6 @@ class RbacRepository {
           {
             association: "permission",
             required: true,
-            where: { moduleId: { [Op.in]: moduleIds } },
           },
         ],
         transaction,

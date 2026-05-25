@@ -27,6 +27,38 @@ const {
   hasCompleteSellerBankDetails,
 } = require("../../../shared/domain/seller-onboarding");
 
+const ADMIN_MANAGED_ROLES = [
+  ROLES.SUB_ADMIN,
+  ROLES.SELLER,
+  ROLES.SELLER_ADMIN,
+  ROLES.SELLER_SUB_ADMIN,
+];
+const SUBORDINATE_ROLES = [
+  ROLES.SUB_ADMIN,
+];
+const SELLER_STAFF_ROLES = [ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN];
+const ACCESS_MANAGED_ROLES = [
+  ROLES.ADMIN,
+  ROLES.SUB_ADMIN,
+  ROLES.SELLER,
+  ROLES.SELLER_ADMIN,
+  ROLES.SELLER_SUB_ADMIN,
+];
+const SELLER_SIDE_ROLES = [
+  ROLES.SELLER,
+  ROLES.SELLER_ADMIN,
+  ROLES.SELLER_SUB_ADMIN,
+];
+const ROLE_LEVEL = {
+  [ROLES.SUPER_ADMIN]: 0,
+  [ROLES.ADMIN]: 1,
+  [ROLES.SELLER]: 2,
+  [ROLES.SUB_ADMIN]: 2,
+  [ROLES.SELLER_ADMIN]: 3,
+  [ROLES.SELLER_SUB_ADMIN]: 4,
+  [ROLES.BUYER]: 9,
+};
+
 class AdminService {
   constructor({
     adminRepository = new AdminRepository(),
@@ -320,20 +352,127 @@ class AdminService {
     });
   }
 
-  async listVendors(query) {
-    const result = await this.adminRepository.listVendors(query);
+  withActorHierarchyFilter(query = {}, actor = {}) {
+    if (!actor.userId || actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      return { ...query };
+    }
+    if (actor.role === ROLES.ADMIN) {
+      return { ...query, ownerAdminId: actor.ownerAdminId || actor.userId };
+    }
+    if (SELLER_SIDE_ROLES.includes(actor.role)) {
+      return { ...query, ownerSellerId: actor.ownerSellerId || actor.userId };
+    }
+    return { ...query, createdBy: actor.userId };
+  }
+
+  assertActorCanSeeUser(user = {}, actor = {}) {
+    if (!actor.userId || actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) return;
+    if (
+      actor.role === ROLES.ADMIN &&
+      String(user.ownerAdminId || "") === String(actor.ownerAdminId || actor.userId)
+    ) {
+      return;
+    }
+    if (
+      SELLER_SIDE_ROLES.includes(actor.role) &&
+      String(user.ownerSellerId || "") === String(actor.ownerSellerId || actor.userId)
+    ) {
+      return;
+    }
+    if (String(user.createdBy || "") === String(actor.userId)) return;
+    throw new AppError("Forbidden: user is outside your hierarchy", 403);
+  }
+
+  async listVendors(query, actor = {}) {
+    const result = await this.adminRepository.listVendors(
+      this.withActorHierarchyFilter(query, actor),
+    );
     return {
       ...result,
       items: await this.enrichSellersForAdmin(result.items),
     };
   }
 
-  async listUsers(query) {
-    const result = await this.adminRepository.listUsers(query);
+  async listUsers(query, actor = {}) {
+    const result = await this.adminRepository.listUsers(
+      this.withActorHierarchyFilter(query, actor),
+    );
     return {
       ...result,
       items: await this.enrichSellersForAdmin(result.items),
     };
+  }
+
+  getHierarchyPayload(role, actor = {}, payload = {}) {
+    const createdBy = actor.userId || null;
+    const createdByRole = actor.role || null;
+    const parentAdminId =
+      payload.parentAdminId ||
+      (role === ROLES.ADMIN
+        ? null
+        : actor.role === ROLES.ADMIN || actor.role === ROLES.SUB_ADMIN
+          ? actor.ownerAdminId || actor.userId
+          : null);
+    const parentSellerId =
+      payload.parentSellerId ||
+      (SELLER_SIDE_ROLES.includes(role)
+        ? payload.ownerSellerId || actor.ownerSellerId || null
+        : null);
+
+    return {
+      createdBy,
+      createdByRole,
+      parentAdminId,
+      parentSellerId,
+      hierarchyLevel: ROLE_LEVEL[role] ?? 9,
+      ownerAdminId: parentAdminId,
+      ownerSellerId: parentSellerId,
+    };
+  }
+
+  getAllowedChildRoles(actor = {}) {
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      return [ROLES.ADMIN, ...ADMIN_MANAGED_ROLES];
+    }
+    if (actor.role === ROLES.ADMIN) {
+      return ADMIN_MANAGED_ROLES;
+    }
+    if (actor.role === ROLES.SELLER) {
+      return [ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN];
+    }
+    if (actor.role === ROLES.SELLER_ADMIN) {
+      return [ROLES.SELLER_SUB_ADMIN];
+    }
+    return [];
+  }
+
+  assertCanCreateRole(actor = {}, role) {
+    if (!this.getAllowedChildRoles(actor).includes(role)) {
+      throw new AppError("Forbidden: invalid hierarchy for requested role", 403);
+    }
+  }
+
+  async enrichPermissionSummary(items = []) {
+    const list = items.map((item) => this.toPlainObject(item));
+    const summaries = await Promise.all(
+      list.map(async (user) => {
+        const userId = this.getRecordId(user);
+        if (!userId) return { moduleCount: 0, actionCount: 0, permissions: [] };
+        const permissions = await this.rbacService.getUserEffectivePermissions(userId);
+        const slugs = permissions.map((permission) => permission.slug).filter(Boolean);
+        return {
+          moduleCount: new Set(slugs.map((slug) => slug.split(":")[0]).filter(Boolean)).size,
+          actionCount: slugs.length,
+          permissions: slugs,
+        };
+      }),
+    );
+    return list.map((user, index) => ({
+      ...user,
+      permissionSummary: summaries[index],
+      assignedModuleCount: summaries[index].moduleCount || (user.allowedModules || []).length,
+      assignedActionCount: summaries[index].actionCount,
+    }));
   }
 
   async createUser(payload, actor = {}) {
@@ -343,7 +482,16 @@ class AdminService {
     }
 
     const role = payload.role || ROLES.BUYER;
+    if (role !== ROLES.BUYER) {
+      this.assertCanCreateRole(actor, role);
+    }
     const isSeller = role === ROLES.SELLER;
+    const allowedModules = isSeller
+      ? this.sanitizeModules(payload.allowedModules || DEFAULT_SELLER_MODULES, ROLES.SELLER)
+      : [];
+    const modulePermissions = isSeller
+      ? this.normalizeModulePermissions(payload.modulePermissions, allowedModules)
+      : [];
     const passwordHash = await hashText(payload.password);
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
@@ -379,7 +527,8 @@ class AdminService {
       emailVerified: true,
       authProviders: [],
       refreshSessions: [],
-      allowedModules: [],
+      allowedModules,
+      ...this.getHierarchyPayload(role, actor, payload),
     });
 
     await this.rbacService.assignRoleToUserBySlug(
@@ -392,14 +541,23 @@ class AdminService {
       },
     );
 
+    if (modulePermissions.length) {
+      await this.rbacService.syncUserModulePermissions(
+        String(user.id),
+        modulePermissions,
+        actor.userId,
+      );
+    }
+
     return this.sanitizeUserForAdmin(user);
   }
 
-  async getUser(userId) {
+  async getUser(userId, actor = {}) {
     const user = await this.adminRepository.getUserById(userId);
     if (!user) {
       throw new AppError("User not found", 404);
     }
+    this.assertActorCanSeeUser(user, actor);
     if (user.role === ROLES.SELLER) {
       const kycBySellerId = await this.getSellerKycByIdMap([userId]);
       return this.enrichSellerForAdmin(
@@ -410,11 +568,12 @@ class AdminService {
     return user;
   }
 
-  async updateUser(userId, payload) {
+  async updateUser(userId, payload, actor = {}) {
     const existingUser = await this.adminRepository.getUserById(userId);
     if (!existingUser) {
       throw new AppError("User not found", 404);
     }
+    this.assertActorCanSeeUser(existingUser, actor);
     const nextPayload = { ...payload };
     let kyc = null;
 
@@ -449,7 +608,12 @@ class AdminService {
     return user;
   }
 
-  async deactivateUser(userId, payload) {
+  async deactivateUser(userId, payload, actor = {}) {
+    const existingUser = await this.adminRepository.getUserById(userId);
+    if (!existingUser) {
+      throw new AppError("User not found", 404);
+    }
+    this.assertActorCanSeeUser(existingUser, actor);
     const user = await this.adminRepository.deactivateUserById(
       userId,
       payload?.reason || null,
@@ -985,7 +1149,7 @@ class AdminService {
   }
 
   getAssignableModuleSlugs(role) {
-    if ([ROLES.SELLER, ROLES.SELLER_SUB_ADMIN].includes(role)) {
+    if (SELLER_SIDE_ROLES.includes(role)) {
       return DEFAULT_SELLER_MODULES;
     }
     if (role === ROLES.BUYER) {
@@ -1110,17 +1274,17 @@ class AdminService {
     return source
       .map((item) => {
         const moduleName = cleanModuleName(item.module || item.slug);
-        const actions = Array.from(
-          new Set(
-            (item.actions || [])
-              .map((action) => this.normalizePermissionAction(action))
-              .filter(Boolean),
-          ),
-        );
-
         if (!moduleName || !allowedModuleSet.has(moduleName)) {
-          return null;
+          throw new AppError(`Permission assignment includes unavailable module: ${moduleName || "unknown"}`, 403);
         }
+        const rawActions = item.actions || [];
+        const actions = Array.from(new Set(rawActions.map((action) => {
+          const normalized = this.normalizePermissionAction(action);
+          if (!normalized) {
+            throw new AppError(`Permission assignment includes invalid action: ${action}`, 400);
+          }
+          return normalized;
+        })));
 
         const normalizedActions = actions.length
           ? Array.from(new Set(["view", ...actions]))
@@ -1130,16 +1294,23 @@ class AdminService {
           module: moduleName,
           actions: normalizedActions,
         };
-      })
-      .filter(Boolean);
+      });
   }
 
-  async listAccessModules(query = {}) {
+  async listAccessModules(query = {}, actor = {}) {
     const accessUser = query.userId
       ? this.toPlainObject(await this.adminRepository.getUserById(query.userId))
       : null;
     if (query.userId && !accessUser?._id && !accessUser?.id) {
       throw new AppError("User not found", 404);
+    }
+    if (
+      accessUser &&
+      !actor.isSuperAdmin &&
+      actor.role === ROLES.ADMIN &&
+      String(accessUser.ownerAdminId || "") !== String(actor.ownerAdminId || actor.userId)
+    ) {
+      throw new AppError("Forbidden: user is outside your hierarchy", 403);
     }
 
     const targetRole =
@@ -1151,8 +1322,7 @@ class AdminService {
     );
     const shouldUseAssignedModules =
       Boolean(accessUser) &&
-      this.roleUsesAssignedModules(targetRole) &&
-      !(targetRole === ROLES.ADMIN && assignedModuleSet.size === 0);
+      this.roleUsesAssignedModules(targetRole);
     let permissionMatrix = null;
 
     try {
@@ -1172,6 +1342,19 @@ class AdminService {
       });
     }
 
+    const assignedModulesFromPermissions = new Set(
+      (permissionMatrix?.modules || [])
+        .filter((module) =>
+          (module.permissions || []).some((permission) => permission.assigned),
+        )
+        .map((module) => cleanModuleName(module.slug || module.moduleSlug || module.moduleKey))
+        .filter(Boolean),
+    );
+    const effectiveAssignedModuleSet = new Set([
+      ...assignedModuleSet,
+      ...assignedModulesFromPermissions,
+    ]);
+
     const rbacModulesBySlug = this.getRbacModuleMap(
       permissionMatrix.modules,
     );
@@ -1181,7 +1364,7 @@ class AdminService {
       const metadata = rbacModule?.metadata || {};
       const moduleAllowed =
         !shouldUseAssignedModules ||
-        assignedModuleSet.has(cleanModuleName(moduleSlug));
+        effectiveAssignedModuleSet.has(cleanModuleName(moduleSlug));
       const forceAssigned =
         moduleAllowed &&
         this.roleHasFullModuleAccess(targetRole) &&
@@ -1291,11 +1474,78 @@ class AdminService {
     if (!actorPermissionMap) return;
     const rbacActions = actorPermissionMap.get("rbac") || new Set();
     const userActions = actorPermissionMap.get("users") || new Set();
-    const canAssign = ["add", "edit", "update", "approval", "status"].some(
+    const canAssign = [
+      "add",
+      "create",
+      "edit",
+      "update",
+      "assign",
+      "approval",
+      "approve",
+      "status",
+      "status_change",
+      "action",
+      "delete",
+    ].some(
       (action) => rbacActions.has(action) || userActions.has(action),
     );
     if (!canAssign) {
       throw new AppError("Forbidden: missing permission to manage access", 403);
+    }
+  }
+
+  assertRoleManagementCapability(actorPermissionMap, targetRole) {
+    if (!actorPermissionMap) return;
+    const moduleCandidates = SELLER_SIDE_ROLES.includes(targetRole)
+      ? ["sellers", "seller-management", "rbac", "users"]
+      : ["rbac", "users"];
+    const canManageNamedArea = moduleCandidates.some((moduleName) => {
+      const actions = actorPermissionMap.get(moduleName) || new Set();
+      return [
+        "add",
+        "create",
+        "edit",
+        "update",
+        "assign",
+        "status",
+        "status_change",
+        "action",
+        "approval",
+        "approve",
+        "delete",
+      ].some((action) =>
+        actions.has(action),
+      );
+    });
+    const hasDelegatablePermission = Array.from(actorPermissionMap.values()).some((actions) =>
+      actions instanceof Set && actions.size > 0,
+    );
+    const canManage = canManageNamedArea || (
+      [ROLES.SUB_ADMIN, ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(targetRole) &&
+      hasDelegatablePermission
+    );
+    if (!canManage) {
+      throw new AppError("Forbidden: missing permission to manage this role", 403);
+    }
+  }
+
+  async assertSellerBelongsToActor(parentSellerId, actor = {}) {
+    if (!parentSellerId) {
+      throw new AppError("Parent seller is required for seller staff", 400);
+    }
+    const seller = await this.adminRepository.getUserById(parentSellerId);
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      if (!seller || seller.role !== ROLES.SELLER) {
+        throw new AppError("Parent seller not found", 404);
+      }
+      return;
+    }
+    if (
+      !seller ||
+      seller.role !== ROLES.SELLER ||
+      String(seller.ownerAdminId || "") !== String(actor.ownerAdminId || actor.userId)
+    ) {
+      throw new AppError("Forbidden: parent seller is outside your hierarchy", 403);
     }
   }
 
@@ -1310,11 +1560,13 @@ class AdminService {
     }
 
     const actorModuleScope = new Set((actor.allowedModules || []).map(cleanModuleName));
-    const scopedAllowed = allowedModules.filter(
-      (module) =>
-        actorModuleScope.has(module) &&
-        actorPermissionMap.has(module),
+    const deniedModules = allowedModules.filter(
+      (module) => !actorModuleScope.has(module) || !actorPermissionMap.has(module),
     );
+    if (deniedModules.length) {
+      throw new AppError(`Forbidden: cannot assign unavailable modules (${deniedModules.join(", ")})`, 403);
+    }
+    const scopedAllowed = allowedModules;
     if (!scopedAllowed.length) {
       throw new AppError("Forbidden: no assignable modules in request", 403);
     }
@@ -1324,13 +1576,16 @@ class AdminService {
         const moduleName = cleanModuleName(entry.module);
         if (!moduleName || !scopedAllowed.includes(moduleName)) return null;
         const grantActions = actorPermissionMap.get(moduleName) || new Set();
-        const actions = Array.from(
-          new Set(
-            (entry.actions || []).filter(
-              (action) => action === "view" || grantActions.has(action),
-            ),
-          ),
+        const deniedActions = (entry.actions || []).filter(
+          (action) => !grantActions.has(action),
         );
+        if (deniedActions.length) {
+          throw new AppError(
+            `Forbidden: cannot assign unavailable actions for ${moduleName} (${deniedActions.join(", ")})`,
+            403,
+          );
+        }
+        const actions = Array.from(new Set(entry.actions || []));
         if (!actions.includes("view")) actions.unshift("view");
         return { module: moduleName, actions };
       })
@@ -1345,6 +1600,7 @@ class AdminService {
   }
 
   async createAdmin(payload, actor = {}) {
+    this.assertCanCreateRole(actor, ROLES.ADMIN);
     const existing = await this.adminRepository.findUserByEmail(payload.email);
     if (existing) {
       throw new AppError("User already exists", 409);
@@ -1366,6 +1622,7 @@ class AdminService {
       authProviders: [],
       refreshSessions: [],
       allowedModules,
+      ...this.getHierarchyPayload(ROLES.ADMIN, actor, payload),
     });
 
     await this.rbacService.assignRoleToUserBySlug(
@@ -1389,19 +1646,35 @@ class AdminService {
     return user;
   }
 
-  async listAdmins(query = {}) {
-    return this.adminRepository.listUsers({
-      ...query,
-      role: ROLES.ADMIN,
-    });
+  async listAdmins(query = {}, actor = {}) {
+    const listQuery = { ...query };
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      listQuery.roles = [ROLES.ADMIN];
+    } else if (actor.role === ROLES.ADMIN) {
+      listQuery.roles = [ROLES.ADMIN];
+      listQuery.ownerAdminId = actor.ownerAdminId || actor.userId;
+    } else {
+      throw new AppError("Forbidden", 403);
+    }
+    delete listQuery.role;
+    const result = await this.adminRepository.listUsers(listQuery);
+    return {
+      ...result,
+      items: await this.enrichPermissionSummary(await this.enrichSellersForAdmin(result.items)),
+    };
   }
 
   async createPlatformSubAdmin(payload, actor) {
+    const targetRole = payload.role || ROLES.SUB_ADMIN;
+    this.assertCanCreateRole(actor, targetRole);
+    if ([ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(targetRole)) {
+      await this.assertSellerBelongsToActor(payload.parentSellerId, actor);
+    }
     const existing = await this.adminRepository.findUserByEmail(payload.email);
     if (existing) {
       throw new AppError("User already exists", 409);
     }
-    const allowedModules = this.sanitizeModules(payload.allowedModules, ROLES.SUB_ADMIN);
+    const allowedModules = this.sanitizeModules(payload.allowedModules, targetRole);
     if (!allowedModules.length) {
       throw new AppError("At least one valid module is required", 400);
     }
@@ -1410,7 +1683,7 @@ class AdminService {
       allowedModules,
     );
     const actorPermissionMap = await this.getActorAssignablePermissionMap(actor);
-    this.assertRbacAssignmentCapability(actorPermissionMap);
+    this.assertRoleManagementCapability(actorPermissionMap, targetRole);
     const constrained = this.constrainModuleAssignmentByActor(
       actor,
       actorPermissionMap,
@@ -1420,23 +1693,35 @@ class AdminService {
     const finalAllowedModules = constrained.allowedModules;
     modulePermissions = constrained.modulePermissions;
     const passwordHash = await hashText(payload.password);
+    const isSeller = targetRole === ROLES.SELLER;
     const user = await this.adminRepository.createManagedUser({
       email: payload.email,
       phone: payload.phone,
       passwordHash,
-      role: ROLES.SUB_ADMIN,
+      role: targetRole,
       profile: payload.profile,
-      ownerAdminId: actor.ownerAdminId || actor.userId,
+      ...(isSeller
+        ? {
+            sellerProfile: {
+              displayName: payload.sellerProfile?.displayName || payload.profile?.firstName || "",
+              legalBusinessName: payload.sellerProfile?.legalBusinessName || payload.profile?.firstName || "",
+              supportEmail: payload.sellerProfile?.supportEmail || payload.email,
+              supportPhone: payload.sellerProfile?.supportPhone || payload.phone,
+              onboardingStatus: "initiated",
+            },
+          }
+        : {}),
       allowedModules: finalAllowedModules,
       accountStatus: "active",
       emailVerified: true,
       authProviders: [],
       refreshSessions: [],
+      ...this.getHierarchyPayload(targetRole, actor, payload),
     });
 
     await this.rbacService.assignRoleToUserBySlug(
       String(user.id),
-      ROLES.SUB_ADMIN,
+      targetRole,
       actor.userId,
       {
         ignoreMissing: true,
@@ -1454,16 +1739,90 @@ class AdminService {
   }
 
   async listPlatformSubAdmins(query, actor) {
-    const ownerAdminId = actor.isSuperAdmin || actor.role === ROLES.ADMIN
-      ? query.ownerAdminId || null
-      : actor.ownerAdminId || actor.userId;
-    return this.adminRepository.listSubAdmins({ ownerAdminId });
+    const listQuery = {
+      ...query,
+      roles: SUBORDINATE_ROLES,
+    };
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      if (query.ownerAdminId) listQuery.ownerAdminId = query.ownerAdminId;
+      if (query.ownerSellerId) listQuery.ownerSellerId = query.ownerSellerId;
+    } else if (actor.role === ROLES.ADMIN) {
+      listQuery.ownerAdminId = actor.ownerAdminId || actor.userId;
+    } else {
+      throw new AppError("Forbidden", 403);
+    }
+    const result = await this.adminRepository.listSubAdmins(listQuery);
+    return {
+      ...result,
+      items: await this.enrichPermissionSummary(result.items),
+    };
+  }
+
+  async listSellerUsers(query = {}, actor = {}) {
+    const listQuery = { ...query, roles: [ROLES.SELLER] };
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      if (query.ownerAdminId) listQuery.ownerAdminId = query.ownerAdminId;
+    } else if (actor.role === ROLES.ADMIN) {
+      listQuery.ownerAdminId = actor.ownerAdminId || actor.userId;
+    } else {
+      throw new AppError("Forbidden", 403);
+    }
+    delete listQuery.role;
+    const result = await this.adminRepository.listUsers(listQuery);
+    return {
+      ...result,
+      items: await this.enrichPermissionSummary(
+        await this.enrichSellersForAdmin(result.items),
+      ),
+    };
+  }
+
+  async listSellerStaffByRole(query = {}, actor = {}, role = ROLES.SELLER_ADMIN) {
+    if (!SELLER_STAFF_ROLES.includes(role)) {
+      throw new AppError("Invalid seller staff role", 400);
+    }
+    const listQuery = {
+      ...query,
+      roles: [role],
+    };
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) {
+      if (query.ownerAdminId) listQuery.ownerAdminId = query.ownerAdminId;
+      if (query.ownerSellerId) listQuery.ownerSellerId = query.ownerSellerId;
+    } else if (actor.role === ROLES.ADMIN) {
+      listQuery.ownerAdminId = actor.ownerAdminId || actor.userId;
+    } else {
+      throw new AppError("Forbidden", 403);
+    }
+    const result = await this.adminRepository.listSubAdmins(listQuery);
+    return {
+      ...result,
+      items: await this.enrichPermissionSummary(result.items),
+    };
+  }
+
+  async createSellerStaff(payload = {}, actor = {}, role = ROLES.SELLER_ADMIN) {
+    if (!SELLER_STAFF_ROLES.includes(role)) {
+      throw new AppError("Invalid seller staff role", 400);
+    }
+    return this.createPlatformSubAdmin(
+      {
+        ...payload,
+        role,
+      },
+      actor,
+    );
   }
 
   async updatePlatformSubAdminModules(userId, payload, actor) {
     const existingUser = await this.adminRepository.getUserById(userId);
-    if (!existingUser || existingUser.role !== ROLES.SUB_ADMIN) {
-      throw new AppError("Sub-admin not found", 404);
+    if (!existingUser || !ACCESS_MANAGED_ROLES.includes(existingUser.role)) {
+      throw new AppError("Managed user not found", 404);
+    }
+    if (
+      actor.role === ROLES.ADMIN &&
+      String(existingUser.ownerAdminId || "") !== String(actor.ownerAdminId || actor.userId)
+    ) {
+      throw new AppError("Forbidden: user is outside your hierarchy", 403);
     }
 
     let allowedModules = this.sanitizeModules(payload.allowedModules, existingUser.role);
@@ -1475,7 +1834,7 @@ class AdminService {
       allowedModules,
     );
     const actorPermissionMap = await this.getActorAssignablePermissionMap(actor);
-    this.assertRbacAssignmentCapability(actorPermissionMap);
+    this.assertRoleManagementCapability(actorPermissionMap, existingUser.role);
     const constrained = this.constrainModuleAssignmentByActor(
       actor,
       actorPermissionMap,
@@ -1486,11 +1845,12 @@ class AdminService {
     modulePermissions = constrained.modulePermissions;
     const updated = await this.adminRepository.updateSubAdminModules(
       userId,
-      actor.isSuperAdmin || actor.role === ROLES.ADMIN || existingUser.role === ROLES.SELLER_SUB_ADMIN
+      actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN || actor.role === ROLES.ADMIN
         ? null
         : actor.ownerAdminId || actor.userId,
       allowedModules,
       [existingUser.role],
+      actor.role === ROLES.ADMIN ? null : undefined,
     );
     if (!updated) {
       throw new AppError("Sub-admin not found", 404);

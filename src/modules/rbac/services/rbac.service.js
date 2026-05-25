@@ -1,5 +1,7 @@
 const { RbacRepository } = require("../repositories/rbac.repository");
 const { AppError } = require("../../../shared/errors/app-error");
+const { ROLES } = require("../../../shared/constants/roles");
+const { UserModel } = require("../../user/models/user.model");
 
 const slugifyModule = (value = "") =>
   String(value || "")
@@ -115,8 +117,27 @@ class RbacService {
     };
   }
 
-  async listSidebarModules() {
-    const rows = await this.rbacRepository.listSidebarModules();
+  async listSidebarModules(filters = {}, actor = {}) {
+    const isSuperAdmin = actor.isSuperAdmin || actor.role === "super-admin";
+    const allowedModules = Array.isArray(actor.allowedModules)
+      ? actor.allowedModules.map(slugifyModule).filter(Boolean)
+      : [];
+    const permissionModules = Array.isArray(actor.permissions)
+      ? actor.permissions
+          .map((permission) => String(permission || "").toLowerCase().split(":")[0])
+          .map(slugifyModule)
+          .filter(Boolean)
+      : [];
+    const moduleScope = Array.from(new Set([...allowedModules, ...permissionModules]));
+
+    if (!isSuperAdmin && !moduleScope.length) {
+      return [];
+    }
+    const rows = await this.rbacRepository.listSidebarModules(
+      isSuperAdmin
+        ? filters
+        : { ...filters, moduleKeys: moduleScope },
+    );
     const modules = rows.map((row) => this.serializeModule(row));
     const byId = new Map(modules.map((item) => [item.id, { ...item, children: [] }]));
     const byKey = new Map(modules.map((item) => [item.moduleKey || item.moduleSlug, byId.get(item.id)]));
@@ -368,7 +389,38 @@ class RbacService {
   }
 
   // USER PERMISSION ASSIGNMENT
-  async assignPermissionToUser(userId, permissionId, grantedBy) {
+  async assertCanAssignUserPermissions(actor = {}, targetUserId, permissionIds = []) {
+    if (!actor.userId) return;
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) return;
+
+    const target = await UserModel.findById(targetUserId).select("role ownerAdminId ownerSellerId");
+    if (!target) throw new AppError("User not found", 404);
+
+    const role = actor.role;
+    const targetRole = target.role;
+    const validAdminTarget =
+      role === ROLES.ADMIN &&
+      [ROLES.SUB_ADMIN, ROLES.SELLER, ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(targetRole) &&
+      String(target.ownerAdminId || "") === String(actor.ownerAdminId || actor.userId);
+    const validSellerTarget =
+      [ROLES.SELLER, ROLES.SELLER_ADMIN].includes(role) &&
+      [ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(targetRole) &&
+      String(target.ownerSellerId || "") === String(actor.ownerSellerId || actor.userId);
+
+    if (!validAdminTarget && !validSellerTarget) {
+      throw new AppError("Forbidden: user is outside your assignable hierarchy", 403);
+    }
+
+    const actorPermissions = await this.getUserEffectivePermissions(actor.userId);
+    const actorPermissionIds = new Set(actorPermissions.map((permission) => permission.id).filter(Boolean));
+    const denied = permissionIds.filter((permissionId) => !actorPermissionIds.has(permissionId));
+    if (denied.length) {
+      throw new AppError("Forbidden: cannot assign permissions you do not have", 403);
+    }
+  }
+
+  async assignPermissionToUser(userId, permissionId, grantedBy, actor = {}) {
+    await this.assertCanAssignUserPermissions(actor, userId, [permissionId]);
     return this.rbacRepository.assignPermissionToUser(
       userId,
       permissionId,
@@ -376,11 +428,13 @@ class RbacService {
     );
   }
 
-  async removePermissionFromUser(userId, permissionId) {
+  async removePermissionFromUser(userId, permissionId, actor = {}) {
+    await this.assertCanAssignUserPermissions(actor, userId, []);
     return this.rbacRepository.removePermissionFromUser(userId, permissionId);
   }
 
-  async bulkAssignPermissionsToUser(userId, permissionIds, grantedBy) {
+  async bulkAssignPermissionsToUser(userId, permissionIds, grantedBy, actor = {}) {
+    await this.assertCanAssignUserPermissions(actor, userId, permissionIds);
     const results = [];
     const errors = [];
 
@@ -413,7 +467,20 @@ class RbacService {
   }
 
   // USER ROLE ASSIGNMENT
-  async assignRoleToUser(userId, roleId, assignedBy) {
+  async assertCanAssignUserRole(actor = {}, userId, roleId) {
+    if (!actor.userId) return;
+    if (actor.isSuperAdmin || actor.role === ROLES.SUPER_ADMIN) return;
+    const role = await this.rbacRepository.getRoleById(roleId).catch(() => null);
+    const target = await UserModel.findById(userId).select("role ownerAdminId ownerSellerId");
+    const roleSlug = role?.slug;
+    if (!target || !roleSlug || roleSlug !== target.role) {
+      throw new AppError("Forbidden: cannot assign mismatched or higher-level role", 403);
+    }
+    await this.assertCanAssignUserPermissions(actor, userId, []);
+  }
+
+  async assignRoleToUser(userId, roleId, assignedBy, actor = {}) {
+    await this.assertCanAssignUserRole(actor, userId, roleId);
     return this.rbacRepository.assignRoleToUser(userId, roleId, assignedBy);
   }
 
@@ -442,16 +509,18 @@ class RbacService {
     }
   }
 
-  async removeRoleFromUser(userId, roleId) {
+  async removeRoleFromUser(userId, roleId, actor = {}) {
+    await this.assertCanAssignUserRole(actor, userId, roleId);
     return this.rbacRepository.removeRoleFromUser(userId, roleId);
   }
 
-  async bulkAssignRolesToUser(userId, roleIds, assignedBy) {
+  async bulkAssignRolesToUser(userId, roleIds, assignedBy, actor = {}) {
     const results = [];
     const errors = [];
 
     for (const roleId of roleIds) {
       try {
+        await this.assertCanAssignUserRole(actor, userId, roleId);
         const result = await this.rbacRepository.assignRoleToUser(
           userId,
           roleId,
