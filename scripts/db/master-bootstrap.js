@@ -12,7 +12,7 @@ const steps = [
   { name: "Seed category depth-2 children", cmd: ["node", "scripts/db/seed-category-children.js"] },
   { name: "Seed CMS pages", cmd: ["node", "scripts/db/seed-cms.js"] },
   { name: "Seed CMS static content keys", cmd: ["node", "scripts/db/seed-cms-static-content.js"] },
-  { name: "Seed catalog media", cmd: ["node", "scripts/db/seed-catalog-media.js"] },
+  // { name: "Seed catalog media", cmd: ["node", "scripts/db/seed-catalog-media.js"] },
 ];
 
 function runStep(step) {

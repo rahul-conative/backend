@@ -40,7 +40,7 @@ class CommonManagementService {
     if (query.active !== undefined) {
       finalFilter.active = query.active === true || query.active === "true";
     }
-    if (q) {
+    if (q && !finalFilter.$or) {
       finalFilter.$or = [
         { name: regex(q) },
         { code: regex(q) },
@@ -203,6 +203,10 @@ class CommonManagementService {
     if (query.stateId) filter.stateId = query.stateId;
     if (query.countryId) filter.countryId = query.countryId;
     if (query.serviceable !== undefined) filter.serviceable = query.serviceable === true || query.serviceable === "true";
+    const q = query.q || query.keyWord || query.search || "";
+    if (q) {
+      filter.$or = [{ zipCode: regex(q) }, { areaName: regex(q) }];
+    }
     const result = await this.list(AdminZipCodeModel, query, filter, { zipCode: 1 }, [
       { path: "countryId", select: "name code" },
       { path: "stateId", select: "name" },

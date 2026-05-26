@@ -104,6 +104,13 @@ class PlatformService {
     if (query.parentKey) filter.parentKey = query.parentKey;
     if (query.active !== undefined) filter.active = query.active === true || query.active === "true";
     if (query.categoryKey) filter.categoryKey = query.categoryKey;
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { categoryKey: { $regex: q, $options: "i" } },
+      ];
+    }
 
     const result = await this.platformRepository.listCategories(filter, pagination);
 
@@ -150,6 +157,13 @@ class PlatformService {
     if (query.category) filter.category = query.category;
     if (query.sellerId) filter.sellerId = query.sellerId;
     if (query.status) filter.status = query.status;
+    const q = query.q || query.keyWord || query.search;
+    if (q) {
+      filter.$or = [
+        { title: { $regex: q, $options: "i" } },
+        { familyCode: { $regex: q, $options: "i" } },
+      ];
+    }
     return this.platformRepository.listProductFamilies(filter, pagination);
   }
 
