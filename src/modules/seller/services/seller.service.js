@@ -20,6 +20,24 @@ const {
   getSellerOnboardingStatus,
 } = require("../../../shared/domain/seller-onboarding");
 
+const composeProfileName = (firstName = "", lastName = "") => {
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  if (!last) return first;
+  if (!first) return last;
+
+  const firstParts = first.toLowerCase().split(/\s+/);
+  const lastParts = last.toLowerCase().split(/\s+/);
+  const alreadyIncludesLast =
+    lastParts.length <= firstParts.length &&
+    lastParts.every(
+      (part, index) =>
+        firstParts[firstParts.length - lastParts.length + index] === part,
+    );
+
+  return alreadyIncludesLast ? first : `${first} ${last}`;
+};
+
 class SellerService {
   constructor({
     sellerRepository = new SellerRepository(),
@@ -87,10 +105,10 @@ class SellerService {
 
   applySellerProfileDefaults(sellerProfile = {}, user = {}, kyc = null) {
     const profile = this.mergeKycIntoSellerProfile(sellerProfile, kyc);
-    const profileName = [user?.profile?.firstName, user?.profile?.lastName]
-      .map((value) => String(value || "").trim())
-      .filter(Boolean)
-      .join(" ");
+    const profileName = composeProfileName(
+      user?.profile?.firstName,
+      user?.profile?.lastName,
+    );
 
     return {
       ...profile,

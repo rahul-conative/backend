@@ -32,6 +32,24 @@ const {
   hasCompleteSellerProfile: hasCompleteSellerProfileForOnboarding,
   getSellerOnboardingStatus,
 } = require("../../../shared/domain/seller-onboarding");
+
+const composeProfileName = (firstName = "", lastName = "") => {
+  const first = String(firstName || "").trim();
+  const last = String(lastName || "").trim();
+  if (!last) return first;
+  if (!first) return last;
+
+  const firstParts = first.toLowerCase().split(/\s+/);
+  const lastParts = last.toLowerCase().split(/\s+/);
+  const alreadyIncludesLast =
+    lastParts.length <= firstParts.length &&
+    lastParts.every(
+      (part, index) =>
+        firstParts[firstParts.length - lastParts.length + index] === part,
+    );
+
+  return alreadyIncludesLast ? first : `${first} ${last}`;
+};
 const {
   AUTH_ERROR_CODES,
   authError,
@@ -86,10 +104,10 @@ class AuthService {
   }
 
   makeInitialSellerProfile(payload = {}) {
-    const profileName = [payload.profile?.firstName, payload.profile?.lastName]
-      .map((value) => String(value || "").trim())
-      .filter(Boolean)
-      .join(" ");
+    const profileName = composeProfileName(
+      payload.profile?.firstName,
+      payload.profile?.lastName,
+    );
 
     return {
       displayName: profileName,
@@ -189,7 +207,7 @@ class AuthService {
     });
 
     return {
-      user: { id: user.id, email: user.email, role: user.role },
+      user: flowState.user,
       requiresOnboarding: Boolean(flowState.requiresOnboarding),
       onboardingToken,
       flowState,
@@ -451,6 +469,16 @@ class AuthService {
       bankVerificationStatus !== "rejected" &&
       user.accountStatus === "active";
     const flowState = {
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone || "",
+        role: user.role,
+        profile: {
+          firstName: user.profile?.firstName || "",
+          lastName: user.profile?.lastName || "",
+        },
+      },
       role: user.role,
       emailVerified: Boolean(user.emailVerified),
       accountStatus: user.accountStatus || "active",
