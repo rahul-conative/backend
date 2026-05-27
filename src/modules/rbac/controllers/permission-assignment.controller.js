@@ -57,6 +57,22 @@ class PermissionAssignmentController {
     res.json(okResponse(result));
   };
 
+  syncUserPermissions = async (req, res) => {
+    const { userId } = req.params;
+    const { permissionIds = [], deniedPermissionIds = [] } = req.body;
+    const grantedBy = req.auth?.sub;
+    const actor = getCurrentUser(req);
+
+    const result = await this.rbacService.syncUserPermissions(
+      userId,
+      permissionIds,
+      deniedPermissionIds,
+      grantedBy,
+      actor,
+    );
+    res.json(okResponse(result));
+  };
+
   getUserEffectivePermissions = async (req, res) => {
     const { userId } = req.params;
     const permissions =

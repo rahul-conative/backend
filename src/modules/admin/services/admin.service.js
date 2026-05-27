@@ -97,18 +97,28 @@ class AdminService {
   inferActivityModule(path = "") {
     const parts = String(path || "").split("?")[0].split("/").filter(Boolean);
     const apiIndex = parts.indexOf("api");
-    const first = apiIndex >= 0 ? parts[apiIndex + 1] : parts[0];
-    const second = apiIndex >= 0 ? parts[apiIndex + 2] : parts[1];
-    const third = apiIndex >= 0 ? parts[apiIndex + 3] : parts[2];
+    const afterApi = apiIndex >= 0 ? parts[apiIndex + 1] : null;
+    const startIndex = apiIndex >= 0
+      ? (/^v\d+$/i.test(afterApi || "") ? apiIndex + 2 : apiIndex + 1)
+      : 0;
+    const first = parts[startIndex];
+    const second = parts[startIndex + 1];
+    const third = parts[startIndex + 2];
+    const fourth = parts[startIndex + 3];
 
     if (first === "auth") return "auth";
     if (first === "admin") {
       if (second === "access") return "rbac";
       if (second === "referral") return third === "fraud" ? "fraud" : "referral";
-      if (second === "cms") return "cms";
+      if (second === "cms") return "cms_pages";
       if (second === "dashboard") return "admin";
       if (second === "vendors") return "sellers";
-      if (second === "common" || second === "platform") return "platform";
+      if (second === "sellers" && fourth === "kyc") return "seller_kyc";
+      if (second === "sellers" && fourth === "bank") return "seller_bank";
+      if (second === "common") {
+        return cleanModuleName(third || "platform");
+      }
+      if (second === "platform") return cleanModuleName(third || "platform");
       return second || "admin";
     }
     return cleanModuleName(first || "system");

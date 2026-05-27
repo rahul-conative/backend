@@ -2,6 +2,8 @@
 
 This module provides a comprehensive Role-Based Access Control (RBAC) system with permission management, role assignment, and super admin functionality.
 
+For a practical walkthrough of the runtime flow, sidebar access, and how to assign module/action permissions, see [`docs/RBAC_FLOW.md`](../../../docs/RBAC_FLOW.md).
+
 ## Features
 
 - **Super Admin System**: One-time creation of super admin with full platform permissions
@@ -9,6 +11,7 @@ This module provides a comprehensive Role-Based Access Control (RBAC) system wit
 - **Permission Management**: Create and assign standard permissions with actions (add, edit, update, delete, view)
 - **Role Management**: Define roles and assign permissions to roles
 - **User-Level Permissions**: Assign permissions directly to users or through roles
+- **User-Level Denies**: Deny specific user permissions with `metadata.effect = "deny"` so they override role grants
 - **Effective Permissions**: Get the combined set of permissions a user has through roles and direct assignments
 - **Permission Checking**: Verify if a user has specific permissions or roles
 
@@ -152,6 +155,7 @@ GET    /api/rbac/users/:userId/permissions/check     - Check permission (query: 
 POST   /api/rbac/users/:userId/permissions           - Assign permission to user
 DELETE /api/rbac/users/:userId/permissions           - Remove permission from user
 POST   /api/rbac/users/:userId/permissions/bulk      - Bulk assign permissions
+PUT    /api/rbac/users/:userId/permissions           - Sync direct allow and deny permissions
 ```
 
 ### User Roles
@@ -261,6 +265,16 @@ POST /api/rbac/roles/roleId/permissions/bulk
 Body: { "permissionIds": ["perm1", "perm2", "perm3"] }
 ```
 
+### Sync User Allow/Deny Permissions
+
+```bash
+PUT /api/rbac/users/user123/permissions
+Body: {
+  "permissionIds": ["allowPermissionId"],
+  "deniedPermissionIds": ["denyPermissionId"]
+}
+```
+
 ## Service Methods
 
 The `RbacService` provides these key methods:
@@ -293,6 +307,7 @@ bulkAssignPermissionsToRole(roleId, permissionIds)
 assignPermissionToUser(userId, permissionId, grantedBy)
 removePermissionFromUser(userId, permissionId)
 getUserPermissions(userId)
+syncUserPermissions(userId, permissionIds, deniedPermissionIds, grantedBy)
 bulkAssignPermissionsToUser(userId, permissionIds, grantedBy)
 
 // User Roles

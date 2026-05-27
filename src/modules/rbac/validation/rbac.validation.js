@@ -216,6 +216,13 @@ const syncPermissionsSchema = {
   }),
 };
 
+const syncUserPermissionsSchema = {
+  body: Joi.object({
+    permissionIds: Joi.array().items(Joi.string().uuid()).default([]),
+    deniedPermissionIds: Joi.array().items(Joi.string().uuid()).default([]),
+  }),
+};
+
 const userPermissionParamSchema = {
   params: Joi.object({
     userId: Joi.string().required(),
@@ -272,6 +279,7 @@ module.exports = {
   removePermissionSchema,
   bulkAssignPermissionsSchema,
   syncPermissionsSchema,
+  syncUserPermissionsSchema,
   userPermissionParamSchema,
   assignRoleSchema,
   removeRoleSchema,

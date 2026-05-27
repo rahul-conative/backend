@@ -29,7 +29,7 @@ const STANDARD_PERMISSION_ACTIONS = [
   { key: "action", label: "Action" },
 ];
 
-const LEGACY_MODULE_SLUGS = ["product", "user", "order", "seller", "settings"];
+const LEGACY_MODULE_SLUGS = ["product", "user", "order", "seller", "settings", "locations"];
 
 function makeModuleList() {
   const platformModules = MODULE_CATALOG.map((module, index) => ({

@@ -36,6 +36,7 @@ const {
   removePermissionSchema,
   bulkAssignPermissionsSchema,
   syncPermissionsSchema,
+  syncUserPermissionsSchema,
   userPermissionParamSchema,
   assignRoleSchema,
   removeRoleSchema,
@@ -287,6 +288,16 @@ rbacRoutes.post(
   }),
   allowPermissions("rbac:assign"),
   catchErrors(permissionAssignmentController.bulkAssignPermissionsToUser),
+);
+
+rbacRoutes.put(
+  "/users/:userId/permissions",
+  checkInput({
+    ...userPermissionParamSchema,
+    body: syncUserPermissionsSchema.body,
+  }),
+  allowPermissions("rbac:assign"),
+  catchErrors(permissionAssignmentController.syncUserPermissions),
 );
 
 // USER ROLES ROUTES

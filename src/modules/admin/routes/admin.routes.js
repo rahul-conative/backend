@@ -21,6 +21,12 @@ const {
   referralAdminRoutes,
 } = require("../../referral/routes/referral-admin.routes");
 const {
+  adminInventoryRoutes,
+} = require("../../inventory/routes/admin-inventory.routes");
+const {
+  adminShippingRoutes,
+} = require("../../delivery/routes/admin-shipping.routes");
+const {
   commonManagementRoutes,
 } = require("./common-management.routes");
 const {
@@ -283,6 +289,8 @@ adminRoutes.get(
 adminRoutes.use(authenticate, allowRoles(ROLES.ADMIN, ROLES.SUB_ADMIN));
 adminRoutes.use("/referral", referralAdminRoutes);
 adminRoutes.use("/common", commonManagementRoutes);
+adminRoutes.use("/inventory", adminInventoryRoutes);
+adminRoutes.use("/shipping", adminShippingRoutes);
 
 adminRoutes.get(
   "/access/modules",

@@ -13,26 +13,10 @@ const { AppError } = require("../../../shared/errors/app-error");
 const {
   sequelize,
 } = require("../../../infrastructure/sequelize/sequelize-client");
-
-const PERMISSION_ACTIONS = [
-  "view",
-  "create",
-  "add",
-  "edit",
-  "update",
-  "delete",
-  "approve",
-  "approval",
-  "reject",
-  "assign",
-  "export",
-  "import",
-  "status_change",
-  "status",
-  "restore",
-  "bulk_action",
-  "action",
-];
+const {
+  PERMISSION_ACTIONS,
+  PERMISSION_EFFECTS,
+} = require("../../../shared/auth/rbac-permissions");
 const PERMISSION_ACTION_ORDER = PERMISSION_ACTIONS.reduce(
   (lookup, action, index) => {
     lookup[action] = index;
@@ -292,6 +276,15 @@ class RbacRepository {
     });
   }
 
+  async getPermissionsBySlugs(permissionSlugs = []) {
+    const slugs = Array.from(new Set((permissionSlugs || []).filter(Boolean)));
+    if (!slugs.length) return [];
+    return Permission.findAll({
+      where: { slug: { [Op.in]: slugs }, active: true },
+      include: [{ association: "module" }],
+    });
+  }
+
   async getPermissionIdsBySlugs(permissionSlugs = []) {
     const slugs = Array.from(new Set((permissionSlugs || []).filter(Boolean)));
     if (!slugs.length) return [];
@@ -481,6 +474,16 @@ class RbacRepository {
     });
 
     if (existing) {
+      if ((existing.metadata || {}).effect === PERMISSION_EFFECTS.DENY) {
+        return existing.update({
+          grantedBy,
+          grantedAt: new Date(),
+          metadata: {
+            ...(existing.metadata || {}),
+            effect: PERMISSION_EFFECTS.ALLOW,
+          },
+        });
+      }
       throw new AppError("Permission already assigned to user", 409);
     }
 
@@ -490,6 +493,7 @@ class RbacRepository {
       permissionId,
       grantedBy,
       grantedAt: new Date(),
+      metadata: { effect: PERMISSION_EFFECTS.ALLOW },
     });
   }
 
@@ -588,16 +592,29 @@ class RbacRepository {
       });
 
       let revoked = 0;
+      let assigned = 0;
       const currentPermissionIds = new Set();
       for (const assignment of currentAssignments) {
         currentPermissionIds.add(assignment.permissionId);
         if (!desiredPermissionIds.has(assignment.permissionId)) {
           await assignment.update({ revokedAt: new Date() }, { transaction });
           revoked += 1;
+        } else if ((assignment.metadata || {}).effect === PERMISSION_EFFECTS.DENY) {
+          await assignment.update(
+            {
+              grantedBy,
+              grantedAt: new Date(),
+              metadata: {
+                ...(assignment.metadata || {}),
+                effect: PERMISSION_EFFECTS.ALLOW,
+              },
+            },
+            { transaction },
+          );
+          assigned += 1;
         }
       }
 
-      let assigned = 0;
       for (const permissionId of desiredPermissionIds) {
         if (currentPermissionIds.has(permissionId)) {
           continue;
@@ -610,6 +627,7 @@ class RbacRepository {
             permissionId,
             grantedBy,
             grantedAt: new Date(),
+            metadata: { effect: PERMISSION_EFFECTS.ALLOW },
           },
           { transaction },
         );
@@ -619,6 +637,92 @@ class RbacRepository {
       return {
         permissionIds: Array.from(desiredPermissionIds),
         assigned,
+        revoked,
+      };
+    });
+  }
+
+  async syncUserPermissions(
+    userId,
+    permissionIds = [],
+    deniedPermissionIds = [],
+    grantedBy,
+  ) {
+    const allowSet = new Set((permissionIds || []).filter(Boolean));
+    const denySet = new Set((deniedPermissionIds || []).filter(Boolean));
+    denySet.forEach((permissionId) => allowSet.delete(permissionId));
+
+    const desiredEffectByPermissionId = new Map();
+    allowSet.forEach((permissionId) =>
+      desiredEffectByPermissionId.set(permissionId, PERMISSION_EFFECTS.ALLOW),
+    );
+    denySet.forEach((permissionId) =>
+      desiredEffectByPermissionId.set(permissionId, PERMISSION_EFFECTS.DENY),
+    );
+
+    return sequelize.transaction(async (transaction) => {
+      const currentAssignments = await UserPermission.findAll({
+        where: { userId, revokedAt: null },
+        transaction,
+      });
+
+      let assigned = 0;
+      let denied = 0;
+      let revoked = 0;
+      const seenPermissionIds = new Set();
+
+      for (const assignment of currentAssignments) {
+        const desiredEffect = desiredEffectByPermissionId.get(assignment.permissionId);
+        if (!desiredEffect) {
+          await assignment.update({ revokedAt: new Date() }, { transaction });
+          revoked += 1;
+          continue;
+        }
+
+        seenPermissionIds.add(assignment.permissionId);
+        const currentEffect = (assignment.metadata || {}).effect || PERMISSION_EFFECTS.ALLOW;
+        if (currentEffect !== desiredEffect) {
+          await assignment.update(
+            {
+              grantedBy,
+              grantedAt: new Date(),
+              metadata: {
+                ...(assignment.metadata || {}),
+                effect: desiredEffect,
+              },
+            },
+            { transaction },
+          );
+        }
+        if (desiredEffect === PERMISSION_EFFECTS.DENY) denied += 1;
+        else assigned += 1;
+      }
+
+      for (const [permissionId, effect] of desiredEffectByPermissionId.entries()) {
+        if (seenPermissionIds.has(permissionId)) {
+          continue;
+        }
+
+        await UserPermission.create(
+          {
+            id: uuidv4(),
+            userId,
+            permissionId,
+            grantedBy,
+            grantedAt: new Date(),
+            metadata: { effect },
+          },
+          { transaction },
+        );
+        if (effect === PERMISSION_EFFECTS.DENY) denied += 1;
+        else assigned += 1;
+      }
+
+      return {
+        permissionIds: Array.from(allowSet),
+        deniedPermissionIds: Array.from(denySet),
+        assigned,
+        denied,
         revoked,
       };
     });
@@ -686,22 +790,46 @@ class RbacRepository {
 
   async getUserEffectivePermissions(userId) {
     const query = `
-      SELECT DISTINCT
-        p.*,
-        m.slug AS "moduleSlug",
-        m.module_key AS "moduleKey",
-        m.name AS "moduleName"
-      FROM permissions p
-      INNER JOIN modules m ON m.id = p.module_id
-      LEFT JOIN role_permissions rp ON p.id = rp.permission_id
-      LEFT JOIN user_roles ur ON rp.role_id = ur.role_id
-      LEFT JOIN user_permissions up ON p.id = up.permission_id
-      WHERE (
-        (ur.user_id = :userId AND ur.revoked_at IS NULL)
-        OR (up.user_id = :userId AND up.revoked_at IS NULL)
+      WITH denied AS (
+        SELECT up.permission_id
+        FROM user_permissions up
+        WHERE up.user_id = :userId
+          AND up.revoked_at IS NULL
+          AND COALESCE(up.metadata->>'effect', 'allow') = 'deny'
+      ),
+      granted AS (
+        SELECT DISTINCT
+          p.*,
+          m.slug AS "moduleSlug",
+          m.module_key AS "moduleKey",
+          m.name AS "moduleName"
+        FROM permissions p
+        INNER JOIN modules m ON m.id = p.module_id
+        INNER JOIN role_permissions rp ON p.id = rp.permission_id
+        INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+        WHERE ur.user_id = :userId
+          AND ur.revoked_at IS NULL
+          AND p.active = true
+        UNION
+        SELECT DISTINCT
+          p.*,
+          m.slug AS "moduleSlug",
+          m.module_key AS "moduleKey",
+          m.name AS "moduleName"
+        FROM permissions p
+        INNER JOIN modules m ON m.id = p.module_id
+        INNER JOIN user_permissions up ON p.id = up.permission_id
+        WHERE up.user_id = :userId
+          AND up.revoked_at IS NULL
+          AND COALESCE(up.metadata->>'effect', 'allow') <> 'deny'
+          AND p.active = true
       )
-      AND p.active = true
-      ORDER BY p.id
+      SELECT DISTINCT granted.*
+      FROM granted
+      WHERE NOT EXISTS (
+        SELECT 1 FROM denied WHERE denied.permission_id = granted.id
+      )
+      ORDER BY granted.id
     `;
 
     return sequelize.query(query, {
@@ -723,6 +851,55 @@ class RbacRepository {
       INNER JOIN user_permissions up ON p.id = up.permission_id
       WHERE up.user_id = :userId
         AND up.revoked_at IS NULL
+        AND COALESCE(up.metadata->>'effect', 'allow') <> 'deny'
+        AND p.active = true
+      ORDER BY p.id
+    `;
+
+    return sequelize.query(query, {
+      replacements: { userId },
+      type: sequelize.QueryTypes.SELECT,
+      raw: true,
+    });
+  }
+
+  async getUserRoleEffectivePermissions(userId) {
+    const query = `
+      SELECT DISTINCT
+        p.*,
+        m.slug AS "moduleSlug",
+        m.module_key AS "moduleKey",
+        m.name AS "moduleName"
+      FROM permissions p
+      INNER JOIN modules m ON m.id = p.module_id
+      INNER JOIN role_permissions rp ON p.id = rp.permission_id
+      INNER JOIN user_roles ur ON rp.role_id = ur.role_id
+      WHERE ur.user_id = :userId
+        AND ur.revoked_at IS NULL
+        AND p.active = true
+      ORDER BY p.id
+    `;
+
+    return sequelize.query(query, {
+      replacements: { userId },
+      type: sequelize.QueryTypes.SELECT,
+      raw: true,
+    });
+  }
+
+  async getUserDeniedPermissions(userId) {
+    const query = `
+      SELECT DISTINCT
+        p.*,
+        m.slug AS "moduleSlug",
+        m.module_key AS "moduleKey",
+        m.name AS "moduleName"
+      FROM permissions p
+      INNER JOIN modules m ON m.id = p.module_id
+      INNER JOIN user_permissions up ON p.id = up.permission_id
+      WHERE up.user_id = :userId
+        AND up.revoked_at IS NULL
+        AND COALESCE(up.metadata->>'effect', 'allow') = 'deny'
         AND p.active = true
       ORDER BY p.id
     `;
