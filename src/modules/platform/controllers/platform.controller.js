@@ -1,4 +1,5 @@
-const { okResponse } = require("../../../shared/http/reply");
+const { okResponse, paginationMeta } = require("../../../shared/http/reply");
+const { getPage } = require("../../../shared/tools/page");
 const { PlatformService } = require("../services/platform.service");
 
 class PlatformController {
@@ -6,14 +7,16 @@ class PlatformController {
     this.platformService = platformService;
   }
 
+  // ── Categories ──────────────────────────────────────────────────────────────
+
   createCategory = async (req, res) => {
-    const category = await this.platformService.createCategory(req.body);
-    res.status(201).json(okResponse(category));
+    const category = await this.platformService.createCategory(req.body, req);
+    res.status(201).json(okResponse(category, { message: "Category created successfully." }));
   };
 
   updateCategory = async (req, res) => {
-    const category = await this.platformService.updateCategory(req.params.categoryKey, req.body);
-    res.json(okResponse(category));
+    const category = await this.platformService.updateCategory(req.params.categoryKey, req.body, req);
+    res.json(okResponse(category, { message: "Category updated successfully." }));
   };
 
   getCategory = async (req, res) => {
@@ -27,14 +30,18 @@ class PlatformController {
   };
 
   listCategories = async (req, res) => {
+    const isTreeRequested = req.query.tree === true || req.query.tree === "true";
+    const { page, limit } = isTreeRequested ? { page: 1, limit: 1000 } : getPage(req.query);
     const result = await this.platformService.listCategories(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteCategory = async (req, res) => {
-    const category = await this.platformService.deleteCategory(req.params.categoryKey);
-    res.json(okResponse(category));
+    const category = await this.platformService.deleteCategory(req.params.categoryKey, req);
+    res.json(okResponse(category, { message: "Category deleted successfully." }));
   };
+
+  // ── Product Families ────────────────────────────────────────────────────────
 
   createProductFamily = async (req, res) => {
     const family = await this.platformService.createProductFamily(req.body);
@@ -52,14 +59,17 @@ class PlatformController {
   };
 
   listProductFamilies = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listProductFamilies(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteProductFamily = async (req, res) => {
     const family = await this.platformService.deleteProductFamily(req.params.familyCode);
     res.json(okResponse(family));
   };
+
+  // ── Product Variants ────────────────────────────────────────────────────────
 
   createProductVariant = async (req, res) => {
     const variant = await this.platformService.createProductVariant(req.body);
@@ -77,14 +87,17 @@ class PlatformController {
   };
 
   listProductVariants = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listProductVariants(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteProductVariant = async (req, res) => {
     const variant = await this.platformService.deleteProductVariant(req.params.variantId);
     res.json(okResponse(variant));
   };
+
+  // ── HSN Codes ───────────────────────────────────────────────────────────────
 
   createHsnCode = async (req, res) => {
     const item = await this.platformService.createHsnCode(req.body);
@@ -102,14 +115,17 @@ class PlatformController {
   };
 
   listHsnCodes = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listHsnCodes(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteHsnCode = async (req, res) => {
     const item = await this.platformService.deleteHsnCode(req.params.hsnCode);
     res.json(okResponse(item));
   };
+
+  // ── Geography ───────────────────────────────────────────────────────────────
 
   createGeography = async (req, res) => {
     const item = await this.platformService.createGeography(req.body);
@@ -127,8 +143,9 @@ class PlatformController {
   };
 
   listGeographies = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listGeographies(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteGeography = async (req, res) => {
@@ -136,9 +153,12 @@ class PlatformController {
     res.json(okResponse(item));
   };
 
+  // ── Product Reviews ─────────────────────────────────────────────────────────
+
   listProductReviews = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listProductReviews(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   updateProductReview = async (req, res) => {
@@ -151,14 +171,16 @@ class PlatformController {
     res.json(okResponse(item));
   };
 
+  // ── Brands ──────────────────────────────────────────────────────────────────
+
   createBrand = async (req, res) => {
-    const item = await this.platformService.createBrand(req.body);
-    res.status(201).json(okResponse(item));
+    const item = await this.platformService.createBrand(req.body, req);
+    res.status(201).json(okResponse(item, { message: "Brand created successfully." }));
   };
 
   updateBrand = async (req, res) => {
-    const item = await this.platformService.updateBrand(req.params.brandId, req.body);
-    res.json(okResponse(item));
+    const item = await this.platformService.updateBrand(req.params.brandId, req.body, req);
+    res.json(okResponse(item, { message: "Brand updated successfully." }));
   };
 
   getBrand = async (req, res) => {
@@ -167,14 +189,17 @@ class PlatformController {
   };
 
   listBrands = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listBrands(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteBrand = async (req, res) => {
-    const item = await this.platformService.deleteBrand(req.params.brandId);
-    res.json(okResponse(item));
+    const item = await this.platformService.deleteBrand(req.params.brandId, req);
+    res.json(okResponse(item, { message: "Brand deleted successfully." }));
   };
+
+  // ── Warranty Templates ──────────────────────────────────────────────────────
 
   createWarrantyTemplate = async (req, res) => {
     const item = await this.platformService.createWarrantyTemplate(req.body);
@@ -192,14 +217,17 @@ class PlatformController {
   };
 
   listWarrantyTemplates = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listWarrantyTemplates(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteWarrantyTemplate = async (req, res) => {
     const item = await this.platformService.deleteWarrantyTemplate(req.params.templateId);
     res.json(okResponse(item));
   };
+
+  // ── Finishes ────────────────────────────────────────────────────────────────
 
   createFinish = async (req, res) => {
     const item = await this.platformService.createFinish(req.body);
@@ -212,14 +240,17 @@ class PlatformController {
   };
 
   listFinishes = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listFinishes(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteFinish = async (req, res) => {
     const item = await this.platformService.deleteFinish(req.params.finishId);
     res.json(okResponse(item));
   };
+
+  // ── Dimensions ──────────────────────────────────────────────────────────────
 
   createDimension = async (req, res) => {
     const item = await this.platformService.createDimension(req.body);
@@ -232,14 +263,17 @@ class PlatformController {
   };
 
   listDimensions = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listDimensions(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteDimension = async (req, res) => {
     const item = await this.platformService.deleteDimension(req.params.dimensionId);
     res.json(okResponse(item));
   };
+
+  // ── Batches ─────────────────────────────────────────────────────────────────
 
   createBatch = async (req, res) => {
     const item = await this.platformService.createBatch(req.body);
@@ -252,8 +286,9 @@ class PlatformController {
   };
 
   listBatches = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listBatches(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteBatch = async (req, res) => {
@@ -261,25 +296,30 @@ class PlatformController {
     res.json(okResponse(item));
   };
 
+  // ── Product Options ─────────────────────────────────────────────────────────
+
   createProductOption = async (req, res) => {
-    const item = await this.platformService.createProductOption(req.body);
-    res.status(201).json(okResponse(item));
+    const item = await this.platformService.createProductOption(req.body, req);
+    res.status(201).json(okResponse(item, { message: "Product option created successfully." }));
   };
 
   updateProductOption = async (req, res) => {
-    const item = await this.platformService.updateProductOption(req.params.optionId, req.body);
-    res.json(okResponse(item));
+    const item = await this.platformService.updateProductOption(req.params.optionId, req.body, req);
+    res.json(okResponse(item, { message: "Product option updated successfully." }));
   };
 
   listProductOptions = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listProductOptions(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteProductOption = async (req, res) => {
-    const item = await this.platformService.deleteProductOption(req.params.optionId);
-    res.json(okResponse(item));
+    const item = await this.platformService.deleteProductOption(req.params.optionId, req);
+    res.json(okResponse(item, { message: "Product option deleted successfully." }));
   };
+
+  // ── Product Option Values ───────────────────────────────────────────────────
 
   createProductOptionValue = async (req, res) => {
     const item = await this.platformService.createProductOptionValue(req.body);
@@ -292,14 +332,17 @@ class PlatformController {
   };
 
   listProductOptionValues = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.platformService.listProductOptionValues(req.query);
-    res.json(okResponse(result.items, { total: result.total }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   deleteProductOptionValue = async (req, res) => {
     const item = await this.platformService.deleteProductOptionValue(req.params.optionValueId);
     res.json(okResponse(item));
   };
+
+  // ── Catalog Prefill ─────────────────────────────────────────────────────────
 
   getCatalogPrefillData = async (req, res) => {
     const result = await this.platformService.getCatalogPrefillData(req.query);

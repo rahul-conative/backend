@@ -21,7 +21,7 @@ class SellerController {
 
   reviewKyc = async (req, res) => {
     const actor = getCurrentUser(req);
-    const kyc = await this.sellerService.reviewKyc(req.params.sellerId, req.body, actor);
+    const kyc = await this.sellerService.reviewKyc(req.params.sellerId, req.body, { ...actor, _req: req });
     res.json(okResponse(kyc));
   };
 
@@ -99,7 +99,7 @@ class SellerController {
 
   createSubAdmin = async (req, res) => {
     const actor = getCurrentUser(req);
-    const user = await this.sellerService.createSellerSubAdmin(req.body, actor);
+    const user = await this.sellerService.createSellerSubAdmin(req.body, { ...actor, _req: req });
     res.status(201).json(okResponse(user));
   };
 
@@ -123,7 +123,7 @@ class SellerController {
 
   deleteSubAdmin = async (req, res) => {
     const actor = getCurrentUser(req);
-    const result = await this.sellerService.deleteSellerSubAdmin(req.params.userId, actor);
+    const result = await this.sellerService.deleteSellerSubAdmin(req.params.userId, { ...actor, _req: req });
     res.json(okResponse(result));
   };
 }

@@ -36,7 +36,7 @@ const env = {
   elasticsearchNode: process.env.ELASTICSEARCH_NODE || "http://localhost:9200",
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || "access-secret",
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "refresh-secret",
-  jwtAccessTtl: process.env.JWT_ACCESS_TTL || "15m",
+  jwtAccessTtl: process.env.JWT_ACCESS_TTL || "7d",
   jwtRefreshTtl: process.env.JWT_REFRESH_TTL || "7d",
   googleClientIds: (process.env.GOOGLE_CLIENT_IDS || "")
     .split(",")

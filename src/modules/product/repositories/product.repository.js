@@ -32,7 +32,7 @@ class ProductRepository {
   // ─── Pagination & listing ─────────────────────────────────────────────────
 
   async paginate(filter, pagination) {
-    const sort = this._buildSort(pagination.sortBy);
+    const sort = this._buildSort(pagination.sortBy, pagination.sortDir);
     const [items, total] = await Promise.all([
       ProductModel.find(filter)
         .skip(pagination.skip)
@@ -47,7 +47,8 @@ class ProductRepository {
     return this.paginate({ ...filter, sellerId }, pagination);
   }
 
-  _buildSort(sortBy = "newest") {
+  _buildSort(sortBy = "newest", sortDir = "desc") {
+    const direction = sortDir === "asc" ? 1 : -1;
     const map = {
       price_asc: { price: 1 },
       price_desc: { price: -1 },
@@ -56,6 +57,15 @@ class ProductRepository {
       rating: { rating: -1 },
       popular: { "analytics.purchases": -1 },
     };
+    const fieldMap = {
+      title: "title",
+      sku: "sku",
+      stock: "stock",
+      reservedStock: "reservedStock",
+      createdAt: "createdAt",
+      updatedAt: "updatedAt",
+    };
+    if (fieldMap[sortBy]) return { [fieldMap[sortBy]]: direction };
     return map[sortBy] || { createdAt: -1 };
   }
 

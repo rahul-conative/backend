@@ -9,6 +9,8 @@ const { eventPublisher } = require("../../../infrastructure/events/event-publish
 const { v4: uuidv4 } = require("uuid");
 const { WalletService } = require("../../wallet/services/wallet.service");
 const { ProductModel } = require("../../product/models/product.model");
+const { validateStatusTransition } = require("../../../shared/domain/status-transition");
+const { auditService } = require("../../../shared/logger/audit.service");
 
 class OrderService {
   constructor({
@@ -129,7 +131,7 @@ class OrderService {
   async getOrder(orderId, actor) {
     const order = await this.orderRepository.findByIdWithItems(orderId);
     if (!order) {
-      throw new AppError("Order not found", 404);
+      throw AppError.notFound("Order");
     }
 
     const isOwner = order.buyer_id === actor.userId;
@@ -156,7 +158,7 @@ class OrderService {
   async updateOrderStatus(orderId, nextStatus, actor) {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
-      throw new AppError("Order not found", 404);
+      throw AppError.notFound("Order");
     }
 
     await this.assertOrderTransitionAllowed(orderId, order, nextStatus, actor);
@@ -189,6 +191,15 @@ class OrderService {
       ),
     );
 
+    auditService.statusChange(actor._req, {
+      module:     "orders",
+      entityId:   orderId,
+      entityType: "Order",
+      oldData:    { status: order.status },
+      newData:    { status: nextStatus },
+      reason:     actor.cancellationReason || undefined,
+    });
+
     return updatedOrder;
   }
 
@@ -201,13 +212,12 @@ class OrderService {
       ? await this.orderRepository.isSellerInOrder(orderId, sellerId)
       : false;
 
+    // Validate the status transition is structurally allowed before checking roles
+    validateStatusTransition("order", order.status, nextStatus);
+
     if (nextStatus === ORDER_STATUS.CANCELLED) {
       if (!isOwner && !isAdmin) {
         throw new AppError("Only the buyer or admin can cancel this order", 403);
-      }
-
-      if (![ORDER_STATUS.PENDING_PAYMENT, ORDER_STATUS.PAYMENT_FAILED, ORDER_STATUS.CONFIRMED].includes(order.status)) {
-        throw new AppError("Order can no longer be cancelled", 409);
       }
       return;
     }

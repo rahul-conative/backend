@@ -20,6 +20,15 @@ const toPage = ({ page = 1, limit = 20, size } = {}) => {
 };
 
 const regex = (value = "") => ({ $regex: String(value || ""), $options: "i" });
+const SORTABLE_FIELDS = new Set(["name", "code", "dialCode", "active", "createdAt", "updatedAt"]);
+
+const getSort = (query = {}, fallback = { createdAt: -1 }) => {
+  const sortBy = query.sortBy || query.sort;
+  if (!SORTABLE_FIELDS.has(sortBy)) return fallback;
+
+  const direction = query.sortOrder || query.sortDir;
+  return { [sortBy]: direction === "asc" ? 1 : -1 };
+};
 
 class CommonManagementService {
   toLegacy(record = {}, extras = {}) {
@@ -39,6 +48,8 @@ class CommonManagementService {
     const finalFilter = { ...filter };
     if (query.active !== undefined) {
       finalFilter.active = query.active === true || query.active === "true";
+    } else if (query.status === "active" || query.status === "inactive") {
+      finalFilter.active = query.status === "active";
     }
     if (q && !finalFilter.$or) {
       finalFilter.$or = [
@@ -48,7 +59,7 @@ class CommonManagementService {
       ];
     }
 
-    let findQuery = model.find(finalFilter).sort(sort).skip(page.skip).limit(page.limit);
+    let findQuery = model.find(finalFilter).sort(getSort(query, sort)).skip(page.skip).limit(page.limit);
     if (populate) findQuery = findQuery.populate(populate);
     const [items, total] = await Promise.all([
       findQuery,

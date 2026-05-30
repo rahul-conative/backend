@@ -1424,54 +1424,76 @@ class AdminService {
       ...assignedModulesFromPermissions,
     ]);
 
+    const actorPermissionMap = await this.getActorAssignablePermissionMap(actor);
     const rbacModulesBySlug = this.getRbacModuleMap(
       permissionMatrix.modules,
     );
     const includePermissions = query.includePermissions !== false;
-    const modules = assignableModuleSlugs.map((moduleSlug) => {
-      const rbacModule = rbacModulesBySlug.get(moduleSlug) || null;
-      const metadata = rbacModule?.metadata || {};
-      const moduleAllowed =
-        !shouldUseAssignedModules ||
-        effectiveAssignedModuleSet.has(cleanModuleName(moduleSlug));
-      const forceAssigned =
-        moduleAllowed &&
-        this.roleHasFullModuleAccess(targetRole) &&
-        !permissionMatrix.role;
-      const assignmentData = includePermissions
-        ? this.getPermissionAssignmentData(
-            rbacModule?.permissions || [],
-            moduleAllowed,
-            forceAssigned,
-          )
-        : {};
+    const modules = assignableModuleSlugs
+      .filter((moduleSlug) => {
+        if (!actorPermissionMap) return true;
+        const actorActions = actorPermissionMap.get(cleanModuleName(moduleSlug));
+        return Boolean(actorActions?.has("view"));
+      })
+      .map((moduleSlug) => {
+        const rbacModule = rbacModulesBySlug.get(moduleSlug) || null;
+        const metadata = rbacModule?.metadata || {};
+        const actorActions = actorPermissionMap?.get(cleanModuleName(moduleSlug)) || null;
+        const moduleAllowed =
+          !shouldUseAssignedModules ||
+          effectiveAssignedModuleSet.has(cleanModuleName(moduleSlug));
+        const forceAssigned =
+          moduleAllowed &&
+          this.roleHasFullModuleAccess(targetRole) &&
+          !permissionMatrix.role;
+        const assignmentData = includePermissions
+          ? this.getPermissionAssignmentData(
+              rbacModule?.permissions || [],
+              moduleAllowed,
+              forceAssigned,
+            )
+          : {};
+        const permissions = includePermissions
+          ? (assignmentData.permissions || []).map((permission) => ({
+              ...permission,
+              assignable: !actorActions || actorActions.has(permission.action),
+            }))
+          : undefined;
+        const permissionsByAction = includePermissions
+          ? Object.keys(assignmentData.permissionsByAction || {}).reduce(
+              (lookup, action) => {
+                const permission =
+                  permissions.find((item) => item.action === action) || null;
+                lookup[action] = permission;
+                return lookup;
+              },
+              {},
+            )
+          : undefined;
 
-      return {
-        slug: moduleSlug,
-        name: rbacModule?.name || this.formatModuleName(moduleSlug),
-        icon: rbacModule?.icon || null,
-        description: rbacModule?.description || null,
-        tab: metadata.tab || null,
-        forPlatform: metadata.forPlatform !== false,
-        forSeller: metadata.forSeller === true,
-        apiPath: metadata.apiPath || null,
-        apiAliases: metadata.apiAliases || [],
-        metadata,
-        assignable: true,
-        assigned: moduleAllowed,
-        source: rbacModule ? "rbac" : "platform",
-        permissions: includePermissions
-          ? assignmentData.permissions
-          : undefined,
-        permissionsByAction: includePermissions
-          ? assignmentData.permissionsByAction
-          : undefined,
-        permissionKeys: includePermissions
-          ? assignmentData.permissionKeys
-          : undefined,
-        assignedPermissionCount: assignmentData.assignedPermissionCount || 0,
-      };
-    });
+        return {
+          slug: moduleSlug,
+          name: rbacModule?.name || this.formatModuleName(moduleSlug),
+          icon: rbacModule?.icon || null,
+          description: rbacModule?.description || null,
+          tab: metadata.tab || null,
+          forPlatform: metadata.forPlatform !== false,
+          forSeller: metadata.forSeller === true,
+          apiPath: metadata.apiPath || null,
+          apiAliases: metadata.apiAliases || [],
+          metadata,
+          assignable: true,
+          assignableActions: actorActions ? Array.from(actorActions) : undefined,
+          assigned: moduleAllowed,
+          source: rbacModule ? "rbac" : "platform",
+          permissions,
+          permissionsByAction,
+          permissionKeys: includePermissions
+            ? assignmentData.permissionKeys
+            : undefined,
+          assignedPermissionCount: assignmentData.assignedPermissionCount || 0,
+        };
+      });
 
     return {
       role: targetRole,

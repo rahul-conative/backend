@@ -33,13 +33,21 @@ class OrderController {
 
   cancel = async (req, res) => {
     const actor = getCurrentUser(req);
-    const order = await this.orderService.cancelOrder(req.params.orderId, req.body, actor);
+    const order = await this.orderService.cancelOrder(
+      req.params.orderId,
+      req.body,
+      { ...actor, _req: req },
+    );
     res.json(okResponse(order));
   };
 
   updateStatus = async (req, res) => {
     const actor = getCurrentUser(req);
-    const order = await this.orderService.updateOrderStatus(req.params.orderId, req.body.status, actor);
+    const order = await this.orderService.updateOrderStatus(
+      req.params.orderId,
+      req.body.status,
+      { ...actor, _req: req },
+    );
     res.json(okResponse(order));
   };
 }

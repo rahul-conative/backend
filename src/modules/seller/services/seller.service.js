@@ -4,6 +4,7 @@ const { DOMAIN_EVENTS } = require("../../../contracts/events/domain-events");
 const { eventPublisher } = require("../../../infrastructure/events/event-publisher");
 const { KYC_STATUS } = require("../../../shared/domain/commerce-constants");
 const { AppError } = require("../../../shared/errors/app-error");
+const { auditService } = require("../../../shared/logger/audit.service");
 const { hashText } = require("../../../shared/tools/hash");
 const { ROLES } = require("../../../shared/constants/roles");
 const { DEFAULT_SELLER_MODULES, cleanModuleName } = require("../../../shared/auth/module-access");
@@ -187,7 +188,7 @@ class SellerService {
     const sellerId = this.getSellerId(actor);
     const existingSeller = await this.sellerRepository.findSellerById(sellerId);
     if (!existingSeller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     const kycRecord = await this.sellerRepository.findKycBySellerId(sellerId);
@@ -213,7 +214,7 @@ class SellerService {
     ]);
 
     if (!seller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     return {
@@ -301,7 +302,7 @@ class SellerService {
     ]);
 
     if (!seller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     const onboardingState = makeSellerOnboardingState({
@@ -414,7 +415,7 @@ class SellerService {
     const sellerId = this.assertSellerWebActor(actor);
     const detail = await this.sellerRepository.fetchSellerTrackingOrderDetail(sellerId, orderId);
     if (!detail) {
-      throw new AppError("Seller order tracking record not found", 404);
+      throw AppError.notFound("Seller order tracking record");
     }
 
     return {
@@ -436,7 +437,7 @@ class SellerService {
       this.sellerRepository.findKycBySellerId(sellerId),
     ]);
     if (!existingSeller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     const existingProfile = this.toPlainObject(existingSeller.sellerProfile || {});
@@ -470,7 +471,7 @@ class SellerService {
       this.sellerRepository.findKycBySellerId(sellerId),
     ]);
     if (!existingSeller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     const nextProfile = this.mergeSellerProfile(existingSeller.sellerProfile || {}, payload);
@@ -501,7 +502,7 @@ class SellerService {
     const sellerId = this.getSellerId(actor);
     const existingSeller = await this.sellerRepository.findSellerById(sellerId);
     if (!existingSeller) {
-      throw new AppError("Seller profile not found", 404);
+      throw AppError.notFound("Seller profile");
     }
 
     const nextSettings = {
@@ -566,13 +567,14 @@ class SellerService {
   }
 
   async reviewKyc(sellerId, payload, actor) {
+    const existing = await this.sellerRepository.findKycBySellerId(sellerId);
     const record = await this.sellerRepository.reviewKyc(sellerId, {
       ...payload,
       reviewedBy: actor.userId,
     });
 
     if (!record) {
-      throw new AppError("Seller KYC record not found", 404);
+      throw AppError.notFound("Seller KYC record");
     }
 
     const seller = await this.sellerRepository.findSellerById(sellerId);
@@ -601,6 +603,16 @@ class SellerService {
         },
       ),
     );
+
+    const action = payload.verificationStatus === KYC_STATUS.VERIFIED ? "approve" : "reject";
+    auditService[action](actor._req, {
+      module:     "seller_kyc",
+      entityId:   sellerId,
+      entityType: "SellerKyc",
+      oldData:    existing ? { verificationStatus: existing.verification_status } : undefined,
+      newData:    { verificationStatus: record.verification_status },
+      reason:     payload.rejectionReason || payload.notes || undefined,
+    });
 
     return record;
   }
@@ -763,7 +775,7 @@ class SellerService {
       query.userId,
     );
     if (!accessUser) {
-      throw new AppError("Seller sub-seller not found", 404);
+      throw AppError.notFound("Seller sub-admin");
     }
     return this.toPlainObject(accessUser);
   }
@@ -877,7 +889,7 @@ class SellerService {
       return null;
     }
     if (![ROLES.SELLER_ADMIN, ROLES.SELLER_SUB_ADMIN].includes(actor.role)) {
-      throw new AppError("Forbidden", 403);
+      throw AppError.forbidden();
     }
     const matrix = await this.rbacService.getPermissionManagementMatrix({
       userId: actor.userId,
@@ -906,7 +918,7 @@ class SellerService {
       sellerActions.has(action),
     );
     if (!canAssign) {
-      throw new AppError("Forbidden: missing permission to manage access", 403);
+      throw AppError.forbidden("You do not have permission to manage seller access.");
     }
   }
 
@@ -962,12 +974,13 @@ class SellerService {
 
   async createSellerSubAdmin(payload, actor) {
     if (actor.role === ROLES.SELLER_SUB_ADMIN) {
-      throw new AppError("Forbidden: seller sub admins cannot create staff", 403);
+      throw AppError.forbidden("Seller sub-admins cannot create staff.");
     }
+    const req = actor._req;
     const sellerId = this.assertSellerOwnerActor(actor);
     const existing = await this.sellerRepository.findUserByEmail(payload.email);
     if (existing) {
-      throw new AppError("User already exists", 409);
+      throw AppError.duplicate("User email", payload.email);
     }
     const allowedModules = this.sanitizeModules(payload.allowedModules);
     if (!allowedModules.length) {
@@ -1027,6 +1040,13 @@ class SellerService {
       actor.userId,
     );
 
+    auditService.create(req, {
+      module:     "seller-management",
+      entityId:   String(user.id),
+      entityType: "SellerSubAdmin",
+      newData:    { email: payload.email, role: targetRole, allowedModules: finalAllowedModules },
+    });
+
     return user;
   }
 
@@ -1044,7 +1064,7 @@ class SellerService {
       accountStatus,
     );
     if (!updated) {
-      throw new AppError("Seller sub-seller not found", 404);
+      throw AppError.notFound("Seller sub-admin");
     }
     return updated;
   }
@@ -1053,8 +1073,13 @@ class SellerService {
     const sellerId = this.assertSellerOwnerActor(actor);
     const deleted = await this.sellerRepository.deleteSellerSubAdmin(sellerId, userId);
     if (!deleted) {
-      throw new AppError("Seller sub-seller not found", 404);
+      throw AppError.notFound("Seller sub-admin");
     }
+    auditService.remove(actor._req, {
+      module:     "seller-management",
+      entityId:   userId,
+      entityType: "SellerSubAdmin",
+    });
     return { success: true, userId };
   }
 
@@ -1080,7 +1105,7 @@ class SellerService {
     modulePermissions = constrained.modulePermissions;
     const updated = await this.sellerRepository.updateSellerSubAdminModules(sellerId, userId, allowedModules);
     if (!updated) {
-      throw new AppError("Seller sub-seller not found", 404);
+      throw AppError.notFound("Seller sub-admin");
     }
     await this.rbacService.syncUserModulePermissions(
       String(userId),

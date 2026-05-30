@@ -463,7 +463,7 @@ class ProductService {
   // ─── List ─────────────────────────────────────────────────────────────────
 
   async listProducts(query) {
-    const pagination = { ...getPage(query), sortBy: query.sortBy || query.sort };
+    const pagination = { ...getPage(query), sortBy: query.sortBy || query.sort, sortDir: query.sortDir };
     const filter = {};
 
     if (query.category) {
@@ -491,9 +491,7 @@ class ProductService {
       if (query.maxPrice !== undefined) filter.price.$lte = Number(query.maxPrice);
     }
 
-    if (query.inStock === true || query.inStock === "true") {
-      filter.$expr = { $gt: [{ $subtract: ["$stock", "$reservedStock"] }, 0] };
-    }
+    this.applyStockFilters(filter, query);
 
     const searchTerm = query.q || query.keyWord || query.search;
     if (searchTerm) {
@@ -523,7 +521,7 @@ class ProductService {
   }
 
   async listSellerProducts(query, actor) {
-    const pagination = { ...getPage(query), sortBy: query.sortBy || query.sort };
+    const pagination = { ...getPage(query), sortBy: query.sortBy || query.sort, sortDir: query.sortDir };
     const sellerId = actor.ownerSellerId || actor.userId;
     const filter = {};
     if (isScopedSellerRole(actor)) filter.createdBy = actor.userId;
@@ -538,8 +536,54 @@ class ProductService {
       filter.productFamilyCode = query.productFamilyCode || query.family || query.familyCode;
     }
     if (query.productType) filter.productType = query.productType;
+    this.applyStockFilters(filter, query);
     this.applyAttributeFilters(filter, query);
     return this.productRepository.paginateBySeller(sellerId, filter, pagination);
+  }
+
+  applyStockFilters(filter, query = {}) {
+    const availableStock = {
+      $subtract: [
+        { $ifNull: ["$stock", 0] },
+        { $ifNull: ["$reservedStock", 0] },
+      ],
+    };
+    const lowStockThreshold = { $ifNull: ["$inventorySettings.lowStockThreshold", 5] };
+    const stockStatus = query.stockStatus || query.inventoryStatus;
+
+    if (stockStatus && stockStatus !== "all") {
+      if (stockStatus === "out_of_stock") {
+        this.appendExpressionFilter(filter, { $lte: [availableStock, 0] });
+      } else if (stockStatus === "low_stock") {
+        this.appendExpressionFilter(filter, {
+          $and: [
+            { $gt: [availableStock, 0] },
+            { $lte: [availableStock, lowStockThreshold] },
+          ],
+        });
+      } else if (stockStatus === "in_stock") {
+        this.appendExpressionFilter(filter, { $gt: [availableStock, lowStockThreshold] });
+      }
+      return;
+    }
+
+    if (query.inStock === true || query.inStock === "true") {
+      this.appendExpressionFilter(filter, { $gt: [availableStock, 0] });
+    }
+  }
+
+  appendExpressionFilter(filter, expression) {
+    if (!filter.$expr) {
+      filter.$expr = expression;
+      return;
+    }
+
+    filter.$and = [
+      ...(filter.$and || []),
+      { $expr: filter.$expr },
+      { $expr: expression },
+    ];
+    delete filter.$expr;
   }
 
   applyAttributeFilters(filter, query = {}) {
@@ -568,9 +612,12 @@ class ProductService {
       "minPrice",
       "maxPrice",
       "inStock",
+      "stockStatus",
+      "inventoryStatus",
       "includeAllStatuses",
       "sort",
       "sortBy",
+      "sortDir",
       "rating",
     ]);
 

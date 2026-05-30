@@ -1,4 +1,5 @@
-const { okResponse } = require("../../../shared/http/reply");
+const { okResponse, paginationMeta } = require("../../../shared/http/reply");
+const { getPage } = require("../../../shared/tools/page");
 const { ProductService } = require("../services/product.service");
 const { getCurrentUser } = require("../../../shared/auth/current-user");
 
@@ -14,28 +15,16 @@ class ProductController {
   };
 
   list = async (req, res) => {
+    const { page, limit } = getPage(req.query);
     const result = await this.productService.listProducts(req.query);
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 20);
-    res.json(okResponse(result.items, {
-      total: result.total,
-      page,
-      limit,
-      totalPages: Math.max(Math.ceil((result.total || 0) / limit), 1),
-    }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   listMine = async (req, res) => {
     const actor = getCurrentUser(req);
+    const { page, limit } = getPage(req.query);
     const result = await this.productService.listSellerProducts(req.query, actor);
-    const page = Number(req.query.page || 1);
-    const limit = Number(req.query.limit || 20);
-    res.json(okResponse(result.items, {
-      total: result.total,
-      page,
-      limit,
-      totalPages: Math.max(Math.ceil((result.total || 0) / limit), 1),
-    }));
+    res.json(okResponse(result.items, { pagination: paginationMeta(page, limit, result.total) }));
   };
 
   getOne = async (req, res) => {

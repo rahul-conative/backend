@@ -286,6 +286,7 @@ const listProductSchema = Joi.object({
     search: Joi.string().allow(""),
     category: Joi.string(),
     status: Joi.string(),
+    stockStatus: Joi.string().valid("in_stock", "low_stock", "out_of_stock", "all", ""),
     productType: Joi.string().valid(...Object.values(PRODUCT_TYPE)),
     visibility: Joi.string(),
     hsnCode: Joi.string(),
@@ -306,7 +307,21 @@ const listProductSchema = Joi.object({
     rating: Joi.number().min(0).max(5),
     includeAllStatuses: Joi.boolean(),
     sort: Joi.string().valid("price_asc", "price_desc", "newest", "oldest", "rating", "popular", ""),
-    sortBy: Joi.string().valid("price_asc", "price_desc", "newest", "oldest", "rating", "popular"),
+    sortBy: Joi.string().valid(
+      "price_asc",
+      "price_desc",
+      "newest",
+      "oldest",
+      "rating",
+      "popular",
+      "title",
+      "sku",
+      "stock",
+      "reservedStock",
+      "createdAt",
+      "updatedAt",
+    ),
+    sortDir: Joi.string().valid("asc", "desc"),
   })
     .pattern(/^attr_[A-Za-z0-9_-]+$/, Joi.string().allow(""))
     .pattern(/^attribute\.[A-Za-z0-9_-]+$/, Joi.string().allow(""))

@@ -1,9 +1,9 @@
 const Joi = require("joi");
+const { v } = require("../../../shared/validation/validation-helpers");
 
-const paginationQuery = Joi.object({
-  page: Joi.number().integer().min(1),
-  limit: Joi.number().integer().min(1).max(100),
-});
+// Base list query — replaces the old paginationQuery + repeated q/keyWord/search fields.
+// v.listQuery() already covers page, limit, search, sortBy, sortDir, status, startDate, endDate.
+const listQuery = v.listQuery();
 
 const withCategoryAliases = (schema) =>
   schema
@@ -86,7 +86,7 @@ const updateCategorySchema = Joi.object({
 
 const listCategoriesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
       parentKey: Joi.string(),
       active: Joi.boolean(),
@@ -136,7 +136,7 @@ const updateProductFamilySchema = Joi.object({
 
 const listProductFamiliesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
       category: Joi.string(),
       sellerId: Joi.string(),
@@ -188,11 +188,8 @@ const updateProductVariantSchema = Joi.object({
 
 const listProductVariantsSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       productId: Joi.string(),
       familyCode: Joi.string(),
       sellerId: Joi.string(),
@@ -247,11 +244,8 @@ const updateHsnCodeSchema = Joi.object({
 
 const listHsnCodesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       category: Joi.string(),
       active: Joi.boolean(),
     }),
@@ -306,7 +300,7 @@ const updateGeographySchema = Joi.object({
 
 const listGeographiesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(Joi.object({ active: Joi.boolean() })),
+  query: listQuery.concat(Joi.object({ active: Joi.boolean() })),
   params: Joi.object({}).required(),
 });
 
@@ -456,11 +450,8 @@ const updateContentPageSchema = Joi.object({
 
 const listContentPagesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       pageType: Joi.string(),
       status: Joi.string().valid("draft", "published", "archived"),
       language: Joi.string(),
@@ -480,11 +471,8 @@ const contentPageSlugSchema = Joi.object({
 
 const listProductReviewsSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       productId: Joi.string(),
       buyerId: Joi.string(),
       orderId: Joi.string(),
@@ -519,15 +507,15 @@ const productReviewIdSchema = Joi.object({
 
 const createBrandSchema = Joi.object({
   body: Joi.object({
-    name: Joi.string().trim().required(),
-    slug: Joi.string().trim().allow(""),
-    description: Joi.string().trim().allow(""),
-    logo: Joi.string().allow(""),
-    logoUrl: Joi.string().allow(""),
-    thumbnails: Joi.string().allow(""),
-    imageUrl: Joi.string().allow(""),
-    active: Joi.boolean().default(true),
-    sortOrder: Joi.number().integer().default(0),
+    name:        v.name({ label: "Brand name", max: 200 }),
+    slug:        v.slug().optional(),
+    description: v.text({ max: 1000 }),
+    logo:        v.url({ required: false }),
+    logoUrl:     v.url({ required: false }),
+    thumbnails:  v.url({ required: false }),
+    imageUrl:    v.url({ required: false }),
+    active:      Joi.boolean().default(true),
+    sortOrder:   Joi.number().integer().default(0),
   }).required(),
   query: Joi.object({}).required(),
   params: Joi.object({}).required(),
@@ -553,11 +541,8 @@ const updateBrandSchema = Joi.object({
 
 const listBrandsSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       active: Joi.boolean(),
     }),
   ),
@@ -601,11 +586,8 @@ const updateWarrantyTemplateSchema = Joi.object({
 
 const listWarrantyTemplatesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       active: Joi.boolean(),
     }),
   ),
@@ -632,7 +614,7 @@ const updateFinishSchema = Joi.object({
 });
 const listFinishesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  query: listQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
   params: Joi.object({}).required(),
 });
 const finishIdSchema = Joi.object({
@@ -659,7 +641,7 @@ const updateDimensionSchema = Joi.object({
 });
 const listDimensionsSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  query: listQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
   params: Joi.object({}).required(),
 });
 const dimensionIdSchema = Joi.object({
@@ -690,7 +672,7 @@ const updateBatchSchema = Joi.object({
 });
 const listBatchesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  query: listQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
   params: Joi.object({}).required(),
 });
 const batchIdSchema = Joi.object({
@@ -724,7 +706,7 @@ const updateProductOptionSchema = Joi.object({
 });
 const listProductOptionsSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
+  query: listQuery.concat(Joi.object({ q: Joi.string().allow(""), keyWord: Joi.string().allow(""), search: Joi.string().allow(""), active: Joi.boolean() })),
   params: Joi.object({}).required(),
 });
 const productOptionIdSchema = Joi.object({
@@ -776,11 +758,8 @@ const updateProductOptionValueSchema = Joi.object({
 });
 const listProductOptionValuesSchema = Joi.object({
   body: Joi.object({}).required(),
-  query: paginationQuery.concat(
+  query: listQuery.concat(
     Joi.object({
-      q: Joi.string().allow(""),
-      keyWord: Joi.string().allow(""),
-      search: Joi.string().allow(""),
       option_id: Joi.string(),
       optionId: Joi.string(),
       active: Joi.boolean(),
